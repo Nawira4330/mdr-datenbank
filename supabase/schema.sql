@@ -62,21 +62,32 @@ create trigger horses_set_updated_at
 before update on public.horses
 for each row execute function public.set_updated_at();
 
--- Row Level Security: jede*r sieht/bearbeitet nur eigene Pferde
+-- Row Level Security: alle eingeloggten Nutzer*innen (Admin- wie
+-- Benutzername-Konten) duerfen alle Pferde sehen und bearbeiten - geteilte
+-- Datenbank statt privater Bestaende pro Konto. "user_id" wird beim
+-- Anlegen weiterhin gesetzt (haelt fest, wer das Pferd angelegt hat),
+-- ist aber keine Zugriffsschranke mehr. Wer neue Konten anlegen darf,
+-- wird nicht hierueber geregelt, sondern bleibt exklusiv im
+-- Supabase-Dashboard (siehe verwaltung.html).
 alter table public.horses enable row level security;
 
 drop policy if exists "horses_select_own" on public.horses;
-create policy "horses_select_own" on public.horses
-  for select using (auth.uid() = user_id);
-
 drop policy if exists "horses_insert_own" on public.horses;
-create policy "horses_insert_own" on public.horses
-  for insert with check (auth.uid() = user_id);
-
 drop policy if exists "horses_update_own" on public.horses;
-create policy "horses_update_own" on public.horses
-  for update using (auth.uid() = user_id);
-
 drop policy if exists "horses_delete_own" on public.horses;
-create policy "horses_delete_own" on public.horses
-  for delete using (auth.uid() = user_id);
+
+drop policy if exists "horses_select_authenticated" on public.horses;
+create policy "horses_select_authenticated" on public.horses
+  for select to authenticated using (true);
+
+drop policy if exists "horses_insert_authenticated" on public.horses;
+create policy "horses_insert_authenticated" on public.horses
+  for insert to authenticated with check (true);
+
+drop policy if exists "horses_update_authenticated" on public.horses;
+create policy "horses_update_authenticated" on public.horses
+  for update to authenticated using (true);
+
+drop policy if exists "horses_delete_authenticated" on public.horses;
+create policy "horses_delete_authenticated" on public.horses
+  for delete to authenticated using (true);

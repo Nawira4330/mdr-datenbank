@@ -9,7 +9,10 @@ neue Pferde anlegen, bearbeiten, löschen, filtern und alle bestehenden Einträg
 - **Login**: Benutzername/Passwort über Supabase Auth, damit nicht jede*r Besucher*in
   deiner öffentlichen GitHub-Pages-Seite deine Pferdedaten sehen/ändern kann. Die
   Admin-Person (Projekteigentümer*in) meldet sich stattdessen mit ihrer echten
-  E-Mail-Adresse an (siehe "Benutzerkonten anlegen" unten)
+  E-Mail-Adresse an (siehe "Benutzerkonten anlegen" unten). Alle eingeloggten Konten
+  sehen und bearbeiten dieselbe, geteilte Pferdedatenbank - nur das **Anlegen neuer
+  Konten** bleibt exklusiv der Admin-Person vorbehalten (im Supabase-Dashboard, nicht
+  in der App)
 - **Text-Import**: Pferdeseite im Spiel markieren (Strg+A), kopieren (Strg+C), in das
   Formular einfügen, "Automatisch auslesen" klicken – die erkannten Werte (Name,
   Geschlecht, Farbe, Stammbaum, Exterieur, Interieur, Disziplin- und Eigenschaftswerte
@@ -57,8 +60,9 @@ const SUPABASE_CONFIG = {
 ```
 
 Der `anon`-Key ist dafür gedacht, öffentlich im Frontend zu stehen – der eigentliche
-Schutz kommt über die Row-Level-Security-Regeln (jede*r sieht nur die eigenen Pferde)
-und den Login. Der **`service_role`-Key gehört niemals hierhin**.
+Schutz kommt über die Row-Level-Security-Regeln (nur eingeloggte Konten haben
+überhaupt Zugriff, dafür aber auf alle Pferde gemeinsam) und den Login. Der
+**`service_role`-Key gehört niemals hierhin**.
 
 ## 3. Auf GitHub veröffentlichen
 
