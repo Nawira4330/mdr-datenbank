@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pferde – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>🐴 MDR Pferdedatenbank</h1>
+    <nav>
+      <a class="btn secondary" href="horse.html">+ Neues Pferd</a>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <form id="filter-form" class="filter-bar">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input type="text" id="f-name" placeholder="Suche…" />
+      </div>
+      <div class="field">
+        <label for="f-breed">Rasse</label>
+        <select id="f-breed"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="f-gender">Geschlecht</label>
+        <select id="f-gender">
+          <option value="">Alle</option>
+          <option value="Stute">Stute</option>
+          <option value="Hengst">Hengst</option>
+          <option value="Wallach">Wallach</option>
+          <option value="Hengstfohlen">Hengstfohlen</option>
+          <option value="Stutfohlen">Stutfohlen</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-folder">Ordner</label>
+        <select id="f-folder"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="f-color">Fellfarbe</label>
+        <input type="text" id="f-color" placeholder="Suche…" />
+      </div>
+      <div class="field">
+        <label for="f-owner">Besitzer</label>
+        <input type="text" id="f-owner" placeholder="Suche…" />
+      </div>
+      <div class="field">
+        <label for="f-breeding">Zuchtzulassung</label>
+        <select id="f-breeding">
+          <option value="">Alle</option>
+          <option value="yes">Ja</option>
+          <option value="no">Nein</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-min-value">Wert min (DD)</label>
+        <input type="number" id="f-min-value" min="0" />
+      </div>
+      <div class="field">
+        <label for="f-max-value">Wert max (DD)</label>
+        <input type="number" id="f-max-value" min="0" />
+      </div>
+      <div class="actions">
+        <button type="button" id="reset-filters" class="secondary">Zurücksetzen</button>
+        <button type="submit">Filtern</button>
+      </div>
+    </form>
+
+    <div class="list-header">
+      <span id="result-count" class="muted small"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="horse-table">
+        <thead>
+          <tr>
+            <th data-sort="name">Name</th>
+            <th data-sort="gender">Geschlecht</th>
+            <th data-sort="breed">Rasse</th>
+            <th data-sort="birth_date">Alter</th>
+            <th data-sort="coat_color">Fellfarbe</th>
+            <th data-sort="value_dd">Wert</th>
+            <th data-sort="folder">Ordner</th>
+            <th data-sort="breeding_allowed">Zucht</th>
+            <th data-sort="owner">Besitzer</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="10">Lade…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/list.js"></script>
+</body>
+</html>

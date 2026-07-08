@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Anmelden – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="auth-page">
+  <main class="auth-box">
+    <h1>MDR Pferdedatenbank</h1>
+    <p class="muted">Anmeldung mit deinem Datenbank-Konto.</p>
+
+    <form id="login-form">
+      <label for="email">E-Mail</label>
+      <input type="email" id="email" required autocomplete="username" />
+
+      <label for="password">Passwort</label>
+      <input type="password" id="password" required autocomplete="current-password" />
+
+      <p id="login-error" class="error"></p>
+
+      <button type="submit">Anmelden</button>
+    </form>
+
+    <p class="muted small">
+      Noch kein Konto? Ein Admin muss es einmalig im Supabase-Dashboard unter
+      "Authentication → Users → Add user" anlegen (siehe README.md).
+    </p>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
