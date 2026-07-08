@@ -102,7 +102,8 @@ async function loadHorses() {
 
 function rowHtml(h) {
   const gp = h.tournament_potential?.['Gesamtpotenzial'];
-  const ext = h.exterior_genetics?.overall;
+  const extAvg = averageScore(h.exterior_descriptive, scoreExteriorTerm);
+  const extPercent = h.exterior_genetics?.overall?.percent;
   const intAvg = averageScore(h.temperament, scoreTemperamentTerm);
 
   return `<tr>
@@ -112,8 +113,8 @@ function rowHtml(h) {
     <td>${escapeHtml(h.coat_color || '')}</td>
     <td class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(colorCodeOf(h))}</td>
     <td>${gp != null ? escapeHtml(String(gp)) : ''}</td>
-    <td>${ext ? escapeHtml(ext.score) : ''}</td>
-    <td>${ext ? ext.percent + '%' : ''}</td>
+    <td>${extAvg != null ? extAvg.toFixed(2) : ''}</td>
+    <td>${extPercent != null ? extPercent + '%' : ''}</td>
     <td>${intAvg != null ? intAvg.toFixed(2) : ''}</td>
     <td>${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td>${diseaseFreePill(h.disease_free)}</td>
