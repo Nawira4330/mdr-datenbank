@@ -1,10 +1,9 @@
 const TEXT_FIELDS = [
-  'name', 'gender', 'breed', 'age_text', 'coat_color', 'owner', 'rider_partner',
-  'folder', 'subfolder', 'breeder', 'hlp_slp', 'covering_sire', 'notes', 'image_url',
+  'name', 'gender', 'breed', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
 ];
-const DATE_FIELDS = ['birth_date', 'foaling_date'];
-const NUMBER_FIELDS = ['purebred_pct', 'height_cm', 'value_dd', 'offspring_count', 'ico', 'fertility_pct'];
-const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed', 'pregnant'];
+const DATE_FIELDS = [];
+const NUMBER_FIELDS = ['purebred_pct', 'ico', 'fertility_pct'];
+const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree', 'raw_text',

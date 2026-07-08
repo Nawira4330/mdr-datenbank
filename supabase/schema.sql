@@ -10,29 +10,17 @@ create table if not exists public.horses (
   gender text,
   breed text,
   purebred_pct numeric,
-  birth_date date,
-  age_text text,
   coat_color text,
-  height_cm integer,
   disease_free boolean,
 
   -- Verwaltung
   owner text,
-  rider_partner text,
-  value_dd integer,
-  folder text,
-  subfolder text,
 
   -- Papiere / Zucht
-  breeder text,
   breeding_allowed boolean,
   hlp_slp text,
-  offspring_count integer,
   ico numeric,
   fertility_pct numeric,
-  pregnant boolean,
-  covering_sire text,
-  foaling_date date,
 
   -- Strukturierte Detaildaten (aus dem Text-Parser)
   genetic_diseases jsonb,       -- Erbkrankheiten-Tabelle
@@ -57,7 +45,6 @@ create table if not exists public.horses (
 create index if not exists horses_user_id_idx on public.horses (user_id);
 create index if not exists horses_name_idx on public.horses (lower(name));
 create index if not exists horses_breed_idx on public.horses (breed);
-create index if not exists horses_folder_idx on public.horses (folder);
 
 -- updated_at automatisch pflegen
 create or replace function public.set_updated_at()

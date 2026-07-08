@@ -18,14 +18,8 @@ function parseHorseText(rawText) {
   Object.assign(result, extractHeaderBlock(lines));
 
   // --- Einfache "Label: Wert" Zeilen ---
-  setIf(result, 'birth_date', parseGermanDate(findValueForLabel(nonEmpty, 'Geburtstag')));
   setIf(result, 'coat_color', findValueForLabel(nonEmpty, 'Fellfarbe'));
-  setIf(result, 'height_cm', parseIntSafe(findValueForLabel(nonEmpty, 'Stockmaß')));
   setIf(result, 'owner', findValueForLabel(nonEmpty, 'Besitzer'));
-  setIf(result, 'rider_partner', findValueForLabel(nonEmpty, 'Reitbeteiligung'));
-  setIf(result, 'value_dd', parseIntSafe(findValueForLabel(nonEmpty, 'Wert')));
-  setIf(result, 'folder', findValueForLabel(nonEmpty, 'Ordner'));
-  setIf(result, 'subfolder', findValueForLabel(nonEmpty, 'Unterordner'));
 
   const erbkrankheitStatus =
     findValueForLabel(nonEmpty, 'Testergebnis') || findValueForLabel(nonEmpty, 'Erbkrankheit');
@@ -41,26 +35,17 @@ function parseHorseText(rawText) {
     const m = reinrassigkeit.match(/([\d.,]+)\s*%/);
     if (m) result.purebred_pct = parseFloat(m[1].replace(',', '.'));
   }
-  setIf(result, 'breeder', findValueForLabel(nonEmpty, 'Züchter'));
   const zuchtzulassungLine = nonEmpty.find((l) => /^Zuchtzulassung\b/i.test(l));
   if (zuchtzulassungLine) {
     result.breeding_allowed = /ja/i.test(zuchtzulassungLine.replace(/^Zuchtzulassung/i, ''));
   }
   setIf(result, 'hlp_slp', findValueForLabel(nonEmpty, 'HLP/SLP'));
-  setIf(result, 'offspring_count', parseIntSafe(findValueForLabel(nonEmpty, 'Nachkommen insgesamt')));
 
   // --- Zucht ---
   const icoVal = findValueForLabel(nonEmpty, 'ICO');
   if (icoVal) result.ico = parseFloat(icoVal.replace(',', '.').replace('%', '').trim());
   const fruchtbarkeit = findValueForLabel(nonEmpty, 'Fruchtbarkeit');
   if (fruchtbarkeit) result.fertility_pct = parseFloat(fruchtbarkeit.replace(',', '.').replace('%', '').trim());
-  const tragend = findValueForLabel(nonEmpty, 'Tragend?');
-  if (tragend) {
-    result.pregnant = /^ja/i.test(tragend.trim());
-    const vonMatch = tragend.match(/von\s+(.+)$/i);
-    if (vonMatch) result.covering_sire = vonMatch[1].trim();
-  }
-  setIf(result, 'foaling_date', parseGermanDate(findValueForLabel(nonEmpty, 'Abfohltermin')));
 
   // --- Tabellen ---
   result.genetic_diseases = extractSimpleTable(lines, 'Erbkrankheiten', ['Farben']);
@@ -96,20 +81,6 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function parseIntSafe(str) {
-  if (!str) return null;
-  const m = str.match(/-?\d+/);
-  return m ? parseInt(m[0], 10) : null;
-}
-
-function parseGermanDate(str) {
-  if (!str) return null;
-  const m = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
-}
-
 // Sucht eine Zeile im Format "Label: Wert" (auch wenn danach noch Text auf
 // derselben Zeile folgt, z.B. "Reinrassigkeit: 100.00 % Rasseanteile anzeigen?").
 function findValueForLabel(nonEmptyLines, label) {
@@ -133,7 +104,6 @@ function extractHeaderBlock(lines) {
 
   const out = {};
   if (nameIdx >= 0) out.name = lines[nameIdx];
-  out.age_text = lines[ageIdx];
 
   const genderLine = lines[ageIdx + 1];
   if (genderLine && /^(Stute|Hengst|Wallach|Hengstfohlen|Stutfohlen|Fohlen)$/i.test(genderLine)) {

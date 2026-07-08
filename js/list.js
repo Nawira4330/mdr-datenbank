@@ -13,10 +13,9 @@ async function init() {
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('breed, folder');
+  const { data, error } = await supabaseClient.from('horses').select('breed');
   if (error || !data) return;
   fillSelect('#f-breed', [...new Set(data.map((d) => d.breed).filter(Boolean))].sort());
-  fillSelect('#f-folder', [...new Set(data.map((d) => d.folder).filter(Boolean))].sort());
 }
 
 function fillSelect(selector, values) {
@@ -35,23 +34,17 @@ function buildQuery() {
   const name = document.querySelector('#f-name').value.trim();
   const breed = document.querySelector('#f-breed').value;
   const gender = document.querySelector('#f-gender').value;
-  const folder = document.querySelector('#f-folder').value;
   const owner = document.querySelector('#f-owner').value.trim();
   const color = document.querySelector('#f-color').value.trim();
   const breeding = document.querySelector('#f-breeding').value;
-  const minValue = document.querySelector('#f-min-value').value;
-  const maxValue = document.querySelector('#f-max-value').value;
 
   if (name) q = q.ilike('name', `%${name}%`);
   if (breed) q = q.eq('breed', breed);
   if (gender) q = q.eq('gender', gender);
-  if (folder) q = q.eq('folder', folder);
   if (owner) q = q.ilike('owner', `%${owner}%`);
   if (color) q = q.ilike('coat_color', `%${color}%`);
   if (breeding === 'yes') q = q.eq('breeding_allowed', true);
   if (breeding === 'no') q = q.eq('breeding_allowed', false);
-  if (minValue) q = q.gte('value_dd', Number(minValue));
-  if (maxValue) q = q.lte('value_dd', Number(maxValue));
 
   return q.order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
 }
@@ -59,17 +52,17 @@ function buildQuery() {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="10">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7">Lade…</td></tr>';
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="10" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="10">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -82,15 +75,11 @@ async function loadHorses() {
 }
 
 function rowHtml(h) {
-  const folder = [h.folder, h.subfolder].filter(Boolean).join(' / ');
   return `<tr>
     <td><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
     <td>${escapeHtml(h.gender || '')}</td>
     <td>${escapeHtml(h.breed || '')}</td>
-    <td>${escapeHtml(h.age_text || '')}</td>
     <td>${escapeHtml(h.coat_color || '')}</td>
-    <td>${h.value_dd != null ? escapeHtml(String(h.value_dd)) + ' DD' : ''}</td>
-    <td>${escapeHtml(folder)}</td>
     <td>${breedingPill(h.breeding_allowed)}</td>
     <td>${escapeHtml(h.owner || '')}</td>
     <td class="actions-cell">
