@@ -27,6 +27,12 @@
 
 * { box-sizing: border-box; }
 
+/* Ohne diese Regel gewinnt z.B. ".btn { display: inline-block }" gegen das
+   Browser-Standardverhalten von [hidden], da beide dieselbe Spezifitaet
+   haben und Autoren-CSS dabei die User-Agent-Regel schlaegt - Elemente mit
+   hidden-Attribut blieben dadurch trotzdem sichtbar. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -189,7 +195,7 @@ label {
   align-items: center;
   margin-bottom: 0.75rem;
 }
-#bulk-actions:not([hidden]) {
+#bulk-actions {
   display: flex;
   align-items: center;
   gap: 0.6rem;
