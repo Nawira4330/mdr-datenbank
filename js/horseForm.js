@@ -108,6 +108,10 @@ async function onSave(e) {
     errorEl.textContent = 'Name ist ein Pflichtfeld.';
     return;
   }
+  if (formData.breeding_allowed !== true) {
+    errorEl.textContent = 'Nur Pferde mit Zuchtzulassung können gespeichert werden. Bitte bei "Zuchtzulassung" "Ja" auswählen.';
+    return;
+  }
 
   const payload = { ...formData };
   for (const k of JSONB_KEYS) {

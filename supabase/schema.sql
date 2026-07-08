@@ -42,6 +42,14 @@ create table if not exists public.horses (
   updated_at timestamptz not null default now()
 );
 
+-- Nur Pferde mit Zuchtzulassung duerfen gespeichert werden (zusaetzlich
+-- zur Pruefung im Formular, damit die Regel auch bei direkten
+-- API-Aufrufen greift).
+alter table public.horses
+  drop constraint if exists horses_breeding_allowed_required;
+alter table public.horses
+  add constraint horses_breeding_allowed_required check (breeding_allowed = true);
+
 create index if not exists horses_user_id_idx on public.horses (user_id);
 create index if not exists horses_name_idx on public.horses (lower(name));
 create index if not exists horses_breed_idx on public.horses (breed);
