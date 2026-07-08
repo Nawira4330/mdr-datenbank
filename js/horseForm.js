@@ -148,7 +148,7 @@ function renderDetailTables(data) {
   const parts = [];
 
   if (data.genetic_diseases?.length) parts.push(simpleTableHtml('Erbkrankheiten', data.genetic_diseases));
-  if (data.colors?.length) parts.push(simpleTableHtml('Farbgenetik', data.colors));
+  if (data.colors?.length) parts.push(colorGeneticsHtml(data.colors, data.coat_color));
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
     parts.push(scoredTableHtml(
@@ -163,7 +163,7 @@ function renderDetailTables(data) {
     ));
   }
   if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
-    parts.push(kvTableHtml('Turnierpotenzial', data.tournament_potential));
+    parts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
   }
   if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines));
   if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits));
@@ -200,9 +200,50 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
-function kvTableHtml(title, obj) {
-  const body = Object.entries(obj).map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
-  return `<div class="group-heading">${escapeHtml(title)}</div><table class="detail-table">${body}</table>`;
+// Name (Fellfarbe) + zusammengefasster Gencode. "0" in einem Locus bedeutet
+// im Spiel "noch nicht getestet" - hier klar als "?" markiert statt eine
+// verdeckte Erbanlage zu erraten, da die genaue Vererbungsregel dafür
+// spielspezifisch ist und nicht zuverlässig genug bekannt, um sie als
+// gesichert auszugeben.
+function colorGeneticsHtml(rows, coatColorName) {
+  const body = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
+  const fullCode = rows.map((r) => r.value).join(' ');
+  const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
+  let extra = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
+  if (/0/.test(fullCode)) {
+    const safeCode = fullCode.replace(/0/g, '?');
+    extra += `<p class="small muted">Sichere (bestätigte) Anteile: <strong>${escapeHtml(safeCode)}</strong> (? = noch nicht getestetes Allel)</p>`;
+  }
+  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${extra}`;
+}
+
+// GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
+// Hauptdisziplin (übergeordnete Kategorie der Begabung, z.B. "Western" für
+// "Trail") wird hier aus den bereits geparsten Disziplin-Gruppen abgeleitet.
+function findDisciplineCategory(disciplines, name) {
+  if (!disciplines || !name) return null;
+  for (const [category, entries] of Object.entries(disciplines)) {
+    if (entries.some((e) => e.name === name)) return category;
+  }
+  return null;
+}
+
+function tournamentSummaryHtml(tp, disciplines) {
+  const gp = tp['Gesamtpotenzial'];
+  const begabung = tp['Begabung'];
+  const hauptdisziplin = findDisciplineCategory(disciplines, begabung);
+
+  const rows = [];
+  if (gp) rows.push(['GP (Gesamtpotenzial)', gp]);
+  if (begabung) rows.push(['Begabung', begabung]);
+  if (hauptdisziplin) rows.push(['Hauptdisziplin', hauptdisziplin]);
+  for (const [k, v] of Object.entries(tp)) {
+    if (k === 'Gesamtpotenzial' || k === 'Begabung') continue;
+    rows.push([k, v]);
+  }
+
+  const body = rows.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
+  return `<div class="group-heading">Turnierpotenzial</div><table class="detail-table">${body}</table>`;
 }
 
 function percentGroupsHtml(title, groups) {
@@ -214,11 +255,33 @@ function percentGroupsHtml(title, groups) {
   return html;
 }
 
+// Der erste Eintrag im Stammbaum ist immer das Pferd selbst. Die restlichen
+// Vorfahren stehen in der Reihenfolge des kopierten Texts; bei einem
+// vollständigen 3-Generationen-Stammbaum sind das 2 Eltern, 4 Großeltern
+// und 8 Urgroßeltern (2+4+8=14) - diese Reihenfolge (statt z.B. Sire-Linie
+// zuerst komplett durch) passt auch zu den im Text mitgelieferten
+// Potenzial-Werten, die nur für die ersten 6 Vorfahren (Eltern+Großeltern)
+// angegeben werden. Eine Baumstruktur (wer ist Vater/Mutter von wem) lässt
+// sich aus dem Text ohne Einrückung trotzdem nicht ableiten.
 function pedigreeHtml(list) {
-  const body = list.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(p.breed || '')}${p.potential ? ' — Potenzial ' + p.potential : ''}</td></tr>`).join('');
-  return `<div class="group-heading">Stammbaum (unsortierte Liste)</div>
-    <p class="small muted">Die genaue Abstammungs-Hierarchie lässt sich aus dem kopierten Text nicht zuverlässig rekonstruieren – hier alle im Text gefundenen Vorfahren als Liste, in Reihenfolge des Textes.</p>
-    <table class="detail-table">${body}</table>`;
+  const ancestors = list.slice(1);
+  const parents = ancestors.slice(0, 2);
+  const grandparents = ancestors.slice(2, 6);
+  const greatGrandparents = ancestors.slice(6, 14);
+  const rest = ancestors.slice(14);
+
+  const group = (title, entries) => {
+    if (!entries.length) return '';
+    const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(p.breed || '')}</td></tr>`).join('');
+    return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
+  };
+
+  return `<div class="group-heading">Stammbaum</div>
+    <p class="small muted">Einteilung anhand der Reihenfolge im kopierten Text – keine Garantie bei künftigen Layout-Änderungen im Spiel.</p>
+    ${group('Eltern', parents)}
+    ${group('Großeltern', grandparents)}
+    ${group('Urgroßeltern', greatGrandparents)}
+    ${group('Weitere Vorfahren', rest)}`;
 }
 
 function escapeHtml(str) {
