@@ -270,6 +270,65 @@ function parsePedigree(lines) {
   return entries;
 }
 
+// --- Bewertungsskalen für Exterieur (Körperbau) und Interieur (Mentalität) ---
+//
+// Exterieur folgt einer symmetrischen 9-stufigen Skala um "exzellent" (Mitte)
+// herum: exzellent=1, gut=2, passabel=3, "zu X"=4, "viel zu X"=5 (bzw.
+// eigene Begriffe wie Speckhals/Hirschhals). Reihenfolge der Prüfung ist
+// wichtig: spezifischere/extremere Begriffe zuerst, sonst würde z.B.
+// "viel zu klein" schon bei der Prüfung auf "zu klein" (4) hängen bleiben.
+const EXTERIOR_TERM_SCORES = [
+  [/viel zu (klein|groß|tief|hoch|flach|steil|schmal|breit|kurz|lang|weich|hart)/i, 5],
+  [/starker (unterbiss|überbiss|senkrücken|karpfenrücken)/i, 5],
+  [/speckhals|hirschhals|zeheneng|zehenweit/i, 5],
+  [/zu (klein|groß|tief|hoch|flach|steil|schmal|breit|kurz|lang|weich|hart)/i, 4],
+  [/unterbiss|überbiss|senkrücken|karpfenrücken|schwanenhals|dicker hals|bodeneng|bodenweit/i, 4],
+  [/passab/i, 3],
+  [/exzellent/i, 1],
+  [/\bgut/i, 2],
+];
+
+// Interieur: Exzellent=1, Gut=2, In Ordnung=3, Schlecht=4 (vom Nutzer vorgegeben).
+const TEMPERAMENT_TERM_SCORES = [
+  [/exzellent/i, 1],
+  [/ordnung/i, 3],
+  [/schlecht/i, 4],
+  [/\bgut/i, 2],
+];
+
+function scoreTerm(text, table) {
+  if (!text) return null;
+  for (const [re, score] of table) {
+    if (re.test(text)) return score;
+  }
+  return null;
+}
+
+function scoreExteriorTerm(text) {
+  return scoreTerm(text, EXTERIOR_TERM_SCORES);
+}
+
+function scoreTemperamentTerm(text) {
+  return scoreTerm(text, TEMPERAMENT_TERM_SCORES);
+}
+
+// Durchschnitt über eine Liste von {label, value}-Zeilen, anhand einer
+// Bewertungsfunktion, die den Textwert in eine Zahl übersetzt. Zeilen, die
+// sich keinem bekannten Begriff zuordnen lassen, werden ignoriert.
+function averageScore(rows, scoreFn) {
+  if (!rows || !rows.length) return null;
+  const scores = rows.map((r) => scoreFn(r.value)).filter((s) => s !== null && s !== undefined);
+  if (!scores.length) return null;
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+// Wandelt einen Bruch-Score wie "10/16" in einen Prozentwert um.
+function fractionToPercent(scoreStr) {
+  const m = /^(\d+)\s*\/\s*(\d+)$/.exec(scoreStr || '');
+  if (!m) return null;
+  return (parseInt(m[1], 10) / parseInt(m[2], 10)) * 100;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseHorseText };
 }

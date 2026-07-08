@@ -150,8 +150,18 @@ function renderDetailTables(data) {
   if (data.genetic_diseases?.length) parts.push(simpleTableHtml('Erbkrankheiten', data.genetic_diseases));
   if (data.colors?.length) parts.push(simpleTableHtml('Farbgenetik', data.colors));
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
-  if (data.exterior_descriptive?.length) parts.push(simpleTableHtml('Exterieur (Körperbau)', data.exterior_descriptive));
-  if (data.temperament?.length) parts.push(simpleTableHtml('Interieur (Mentalität)', data.temperament));
+  if (data.exterior_descriptive?.length) {
+    parts.push(scoredTableHtml(
+      'Exterieur (Körperbau)', data.exterior_descriptive, scoreExteriorTerm,
+      'Skala 1 = exzellent … 3 = passabel … 5 = stark abweichend',
+    ));
+  }
+  if (data.temperament?.length) {
+    parts.push(scoredTableHtml(
+      'Interieur (Mentalität)', data.temperament, scoreTemperamentTerm,
+      'Skala 1 = exzellent … 4 = schlecht',
+    ));
+  }
   if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
     parts.push(kvTableHtml('Turnierpotenzial', data.tournament_potential));
   }
@@ -168,9 +178,25 @@ function simpleTableHtml(title, rows) {
   return `<div class="group-heading">${escapeHtml(title)}</div><table class="detail-table">${body}</table>`;
 }
 
+// Wie simpleTableHtml, aber zusätzlich mit berechnetem Durchschnitt anhand
+// einer Bewertungsskala (siehe scoreExteriorTerm/scoreTemperamentTerm in
+// parser.js).
+function scoredTableHtml(title, rows, scoreFn, scaleHint) {
+  const base = simpleTableHtml(title, rows);
+  const avg = averageScore(rows, scoreFn);
+  if (avg === null) return base;
+  return `${base}<p class="small muted">Durchschnitt: <strong>${avg.toFixed(2)}</strong> (${escapeHtml(scaleHint)})</p>`;
+}
+
 function exteriorGeneticsHtml(ext) {
-  const body = ext.rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.genotype)} — ${escapeHtml(r.score)}</td></tr>`).join('');
-  const overall = ext.overall ? `<p class="small muted">Gesamt: ${escapeHtml(ext.overall.score)} (${ext.overall.percent}%)</p>` : '';
+  const body = ext.rows.map((r) => {
+    const pct = fractionToPercent(r.score);
+    const pctText = pct !== null ? ` — ${pct.toFixed(1)}%` : '';
+    return `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.genotype)} — ${escapeHtml(r.score)}${pctText}</td></tr>`;
+  }).join('');
+  const overall = ext.overall
+    ? `<p class="small muted">Exterieur-Gesamtwert (genetisch): <strong>${ext.overall.percent}%</strong> (${escapeHtml(ext.overall.score)})</p>`
+    : '';
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
