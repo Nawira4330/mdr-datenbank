@@ -170,7 +170,7 @@ function renderDetailTables(data) {
     parts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
   }
   if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
-  if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits, false));
+  if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
   if (data.pedigree?.length) parts.push(pedigreeHtml(data.pedigree));
 
   container.innerHTML = parts.join('');
@@ -234,10 +234,6 @@ function tournamentSummaryHtml(tp, disciplines) {
   if (gp) rows.push(['GP (Gesamtpotenzial)', gp]);
   if (begabung) rows.push(['Begabung', begabung]);
   if (hauptdisziplin) rows.push(['Hauptdisziplin', hauptdisziplin]);
-  for (const [k, v] of Object.entries(tp)) {
-    if (k === 'Gesamtpotenzial' || k === 'Begabung') continue;
-    rows.push([k, v]);
-  }
 
   const body = rows.map(([k, v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
   return `<div class="group-heading">Turnierpotenzial</div><table class="detail-table">${body}</table>`;
