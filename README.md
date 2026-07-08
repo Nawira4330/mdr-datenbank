@@ -46,7 +46,12 @@ selbst im Supabase-Dashboard unter **Authentication → Users → Add user** an:
   diesem Passwort an.
 
 Die Webseite erkennt am `@`-Zeichen in der Eingabe, ob es sich um eine echte
-E-Mail-Adresse (Admin) oder einen Benutzernamen handelt, und meldet entsprechend an.
+E-Mail-Adresse oder einen Benutzernamen handelt, und meldet entsprechend an. Ob danach
+der "Verwaltung"-Bereich sichtbar ist, hängt aber **nicht** vom `@`-Zeichen ab, sondern
+von einer festen Liste in [`js/auth.js`](js/auth.js) (`ADMIN_EMAILS`) – nur diese
+E-Mail-Adresse(n) gelten als Admin. Legst du versehentlich für eine andere Person ein
+Konto mit einer echten E-Mail statt der Benutzername-Domain an, sieht diese Person die
+Verwaltung trotzdem nicht, solange ihre Adresse nicht in `ADMIN_EMAILS` steht.
 
 ## 2. Zugangsdaten eintragen
 
