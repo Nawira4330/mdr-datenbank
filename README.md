@@ -6,8 +6,10 @@ neue Pferde anlegen, bearbeiten, löschen, filtern und alle bestehenden Einträg
 - **Frontend**: statische Seite (HTML/CSS/JS ohne Build-Schritt) → gehostet über **GitHub Pages**
 - **Datenbank**: [Supabase](https://supabase.com) (kostenlos), da GitHub Pages selbst keine Datenbank
   betreiben kann
-- **Login**: E-Mail/Passwort über Supabase Auth, damit nicht jede*r Besucher*in deiner
-  öffentlichen GitHub-Pages-Seite deine Pferdedaten sehen/ändern kann
+- **Login**: Benutzername/Passwort über Supabase Auth, damit nicht jede*r Besucher*in
+  deiner öffentlichen GitHub-Pages-Seite deine Pferdedaten sehen/ändern kann. Die
+  Admin-Person (Projekteigentümer*in) meldet sich stattdessen mit ihrer echten
+  E-Mail-Adresse an (siehe "Benutzerkonten anlegen" unten)
 - **Text-Import**: Pferdeseite im Spiel markieren (Strg+A), kopieren (Strg+C), in das
   Formular einfügen, "Automatisch auslesen" klicken – die erkannten Werte (Name,
   Geschlecht, Farbe, Stammbaum, Exterieur, Interieur, Disziplin- und Eigenschaftswerte
@@ -21,11 +23,27 @@ neue Pferde anlegen, bearbeiten, löschen, filtern und alle bestehenden Einträg
    [`supabase/schema.sql`](supabase/schema.sql) einfügen und ausführen. Das legt die
    Tabelle `horses` inklusive Zugriffsregeln (Row Level Security) an.
 3. Unter **Authentication → Providers** ist "Email" standardmäßig aktiv – das reicht.
-4. Unter **Authentication → Users → Add user** dein eigenes Login anlegen (E-Mail +
-   Passwort). Es gibt bewusst keine öffentliche Registrierung auf der Webseite, damit
-   sich niemand sonst selbst ein Konto anlegen kann.
+4. Dein eigenes Admin-Login anlegen (siehe "Benutzerkonten anlegen" unten) – mit deiner
+   echten E-Mail-Adresse.
 5. Unter **Project Settings → API** die **Project URL** und den **`anon` `public` Key**
    kopieren.
+
+### Benutzerkonten anlegen
+
+Es gibt bewusst keine öffentliche Registrierung auf der Webseite – neue Konten legst du
+selbst im Supabase-Dashboard unter **Authentication → Users → Add user** an:
+
+- **Admin-Zugang (nur für dich)**: E-Mail = deine echte Adresse (z.B.
+  `deine-adresse@example.com`), dazu ein Passwort. Auf der Login-Seite meldest du dich
+  mit genau dieser E-Mail-Adresse an.
+- **Benutzername-Zugang (für andere)**: E-Mail =
+  `<gewünschter-benutzername>@benutzer.mdr-datenbank.local` (die Domain ist frei
+  erfunden, muss aber genau so geschrieben werden), dazu ein Passwort. Die Person meldet
+  sich auf der Login-Seite mit `<gewünschter-benutzername>` (ohne die `@...`-Domain) und
+  diesem Passwort an.
+
+Die Webseite erkennt am `@`-Zeichen in der Eingabe, ob es sich um eine echte
+E-Mail-Adresse (Admin) oder einen Benutzernamen handelt, und meldet entsprechend an.
 
 ## 2. Zugangsdaten eintragen
 

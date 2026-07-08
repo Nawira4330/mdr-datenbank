@@ -13,8 +13,8 @@
     <p class="muted">Anmeldung mit deinem Datenbank-Konto.</p>
 
     <form id="login-form">
-      <label for="email">E-Mail</label>
-      <input type="email" id="email" required autocomplete="username" />
+      <label for="identifier">Benutzername</label>
+      <input type="text" id="identifier" required autocomplete="username" />
 
       <label for="password">Passwort</label>
       <input type="password" id="password" required autocomplete="current-password" />
@@ -32,6 +32,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/login.js"></script>
 </body>
 </html>

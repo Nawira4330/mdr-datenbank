@@ -46,11 +46,9 @@ function buildQuery() {
 
   const name = document.querySelector('#f-name').value.trim();
   const owner = document.querySelector('#f-owner').value;
-  const color = document.querySelector('#f-color').value.trim();
 
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
-  if (color) q = q.ilike('coat_color', `%${color}%`);
 
   return q.order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
 }
