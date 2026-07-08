@@ -200,21 +200,35 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
-// Name (Fellfarbe) + zusammengefasster Gencode. "0" in einem Locus bedeutet
-// im Spiel "noch nicht getestet" - hier klar als "?" markiert statt eine
-// verdeckte Erbanlage zu erraten, da die genaue Vererbungsregel dafür
-// spielspezifisch ist und nicht zuverlässig genug bekannt, um sie als
-// gesichert auszugeben.
+// Name (Fellfarbe) + zusammengefasster Gencode + daraus abgeleitete
+// Basisfarbe/Aufhellung/Muster (siehe deriveColorGenetics in parser.js,
+// nach der offiziellen MDR-Farbvererbungs-Dokumentation). "0"/"1" in
+// einem Locus sind bei MDR normale Bestandteile fester Allel-Kürzel
+// (z.B. "a0" = rezessives Agouti-Allel) und keine Unsicherheitsmarkierung.
 function colorGeneticsHtml(rows, coatColorName) {
   const body = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
   const fullCode = rows.map((r) => r.value).join(' ');
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
-  let extra = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
-  if (/0/.test(fullCode)) {
-    const safeCode = fullCode.replace(/0/g, '?');
-    extra += `<p class="small muted">Sichere (bestätigte) Anteile: <strong>${escapeHtml(safeCode)}</strong> (? = noch nicht getestetes Allel)</p>`;
+
+  const derived = deriveColorGenetics(rows);
+  let derivedHtml = '';
+  if (derived) {
+    const lines = [];
+    if (derived.baseColor) lines.push(`<tr><th>Basisfarbe</th><td>${escapeHtml(derived.baseColor)}</td></tr>`);
+    if (derived.shadeName) lines.push(`<tr><th>Aufhellung/Verdünnung</th><td>${escapeHtml(derived.shadeName)}</td></tr>`);
+    for (const p of derived.patterns) {
+      lines.push(`<tr><th>Muster</th><td>${escapeHtml(p.name)} — ${escapeHtml(p.zygosity)}</td></tr>`);
+    }
+    if (lines.length) {
+      derivedHtml = `<p class="small muted" style="margin-top:0.6rem;">Abgeleitet aus der Genetik (nach MDR-Farbvererbungsregeln):</p><table class="detail-table">${lines.join('')}</table>`;
+    }
+    if (derived.warnings.length) {
+      derivedHtml += derived.warnings.map((w) => `<p class="small muted">⚠ ${escapeHtml(w)}</p>`).join('');
+    }
   }
-  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${extra}`;
+
+  const codeHtml = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
+  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}${derivedHtml}`;
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
