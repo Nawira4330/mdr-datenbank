@@ -31,46 +31,58 @@
         <input type="text" id="f-color" placeholder="Suche…" />
       </div>
       <div class="field">
-        <label for="f-genetik">Genetik enthält</label>
-        <input type="text" id="f-genetik" placeholder="z.B. Ch, Z (mehrere mit Komma)" />
+        <label>Genetik</label>
+        <div class="checkdrop" id="f-genetik-drop">
+          <button type="button" class="checkdrop-toggle">Alle</button>
+          <div class="checkdrop-panel" hidden></div>
+        </div>
       </div>
       <div class="field">
-        <label for="f-gp-min">GP von</label>
-        <input type="number" id="f-gp-min" />
+        <label>EKH</label>
+        <div class="checkdrop" id="f-ekh-drop">
+          <button type="button" class="checkdrop-toggle">Alle</button>
+          <div class="checkdrop-panel" hidden></div>
+        </div>
       </div>
       <div class="field">
-        <label for="f-gp-max">GP bis</label>
-        <input type="number" id="f-gp-max" />
+        <label for="f-gp-op">GP</label>
+        <div class="compare-field">
+          <select id="f-gp-op">
+            <option value="gt">größer als</option>
+            <option value="lt">kleiner als</option>
+          </select>
+          <input type="number" id="f-gp-val" step="0.01" />
+        </div>
       </div>
       <div class="field">
-        <label for="f-ext-min">Ext von</label>
-        <input type="number" id="f-ext-min" step="0.01" />
+        <label for="f-ext-op">Ext</label>
+        <div class="compare-field">
+          <select id="f-ext-op">
+            <option value="gt">größer als</option>
+            <option value="lt">kleiner als</option>
+          </select>
+          <input type="number" id="f-ext-val" step="0.01" />
+        </div>
       </div>
       <div class="field">
-        <label for="f-ext-max">Ext bis</label>
-        <input type="number" id="f-ext-max" step="0.01" />
+        <label for="f-extpct-op">Ext%</label>
+        <div class="compare-field">
+          <select id="f-extpct-op">
+            <option value="gt">größer als</option>
+            <option value="lt">kleiner als</option>
+          </select>
+          <input type="number" id="f-extpct-val" step="0.01" />
+        </div>
       </div>
       <div class="field">
-        <label for="f-extpct-min">Ext% von</label>
-        <input type="number" id="f-extpct-min" step="0.01" />
-      </div>
-      <div class="field">
-        <label for="f-extpct-max">Ext% bis</label>
-        <input type="number" id="f-extpct-max" step="0.01" />
-      </div>
-      <div class="field">
-        <label for="f-int-min">Int von</label>
-        <input type="number" id="f-int-min" step="0.01" />
-      </div>
-      <div class="field">
-        <label for="f-int-max">Int bis</label>
-        <input type="number" id="f-int-max" step="0.01" />
-      </div>
-      <div class="field" style="grid-column: span 2;">
-        <label for="f-ekh">Erbkrankheiten (Mehrfachauswahl)</label>
-        <select id="f-ekh" multiple size="4">
-          <option value="__none__">Keine</option>
-        </select>
+        <label for="f-int-op">Int</label>
+        <div class="compare-field">
+          <select id="f-int-op">
+            <option value="gt">größer als</option>
+            <option value="lt">kleiner als</option>
+          </select>
+          <input type="number" id="f-int-val" step="0.01" />
+        </div>
       </div>
       <div class="actions">
         <button type="button" id="reset-filters" class="secondary">Zurücksetzen</button>
@@ -100,7 +112,7 @@
             <th>Ext%</th>
             <th>Int</th>
             <th>HLP/SLP</th>
-            <th>Erbkrankheiten</th>
+            <th>EKH</th>
             <th data-sort="owner">Besitzer</th>
             <th>Aktionen</th>
           </tr>

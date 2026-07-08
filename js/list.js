@@ -10,21 +10,25 @@ async function init() {
   wireFilterForm();
   wireSortableHeaders();
   wireSelection();
+  wireCheckDropdowns();
   await populateFilterOptions();
   await loadHorses();
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('owner, genetic_diseases');
+  const { data, error } = await supabaseClient.from('horses').select('owner, genetic_diseases, colors');
   if (error || !data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
 
   const diseaseLabels = new Set();
+  const locusLabels = new Set();
   for (const row of data) {
     for (const d of row.genetic_diseases || []) diseaseLabels.add(d.label);
+    for (const c of row.colors || []) locusLabels.add(c.label);
   }
-  fillSelect('#f-ekh', [...diseaseLabels].sort());
+  populateCheckDropdown('f-ekh-drop', [...diseaseLabels].sort(), { noneOption: 'Keine' });
+  populateCheckDropdown('f-genetik-drop', [...locusLabels].sort());
 }
 
 function fillSelect(selector, values) {
@@ -51,9 +55,6 @@ function buildQuery() {
   return q.order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
 }
 
-// Farbcode wird aus der "colors"-Tabelle jedes Pferds zusammengesetzt.
-// Groß-/Kleinschreibung ist bewusst relevant (z.B. "Z" = Silver dominant
-// vorhanden, "z" nur rezessiv), daher case-sensitiver Substring-Vergleich.
 function colorCodeOf(row) {
   return (row.colors || []).map((c) => c.value).join(' ');
 }
@@ -73,12 +74,30 @@ function computeDerived(h) {
   };
 }
 
-function inRange(value, minStr, maxStr) {
-  if (minStr === '' && maxStr === '') return true;
-  if (value === null || value === undefined || Number.isNaN(value)) return false;
-  if (minStr !== '' && value < Number(minStr)) return false;
-  if (maxStr !== '' && value > Number(maxStr)) return false;
-  return true;
+// Ob ein Locus sein dominantes/sichtbares Allel trägt, nach der vom Nutzer
+// bereitgestellten MDR-Farbvererbungs-Dokumentation. KIT gilt als "trägt
+// das Merkmal", wenn der Wert nicht ausschließlich aus "0" besteht (laut
+// Spiel: getestet, aber kein Tobiano/Sabino/Dominant White/Roan).
+const LOCUS_DOMINANT_CHECK = {
+  Extension: (v) => v.includes('E'),
+  Dun: (v) => v.includes('D'),
+  Champagne: (v) => v.includes('Ch'),
+  Grey: (v) => v.includes('G'),
+  Silver: (v) => v.includes('Z'),
+  Overo: (v) => v.includes('O'),
+  Splashed: (v) => v.includes('SPL'),
+  Appaloosa: (v) => v.includes('Lp'),
+  PATN1: (v) => v.includes('P1'),
+  Agouti: (v) => /Ap|A1|At/.test(v),
+  Cream: (v) => /Cr|pl/.test(v),
+  KIT: (v) => !!v && !/^0+$/.test(v),
+};
+
+function matchesGenetikLocus(row, locusName) {
+  const entry = (row.colors || []).find((c) => c.label === locusName);
+  if (!entry) return false;
+  const check = LOCUS_DOMINANT_CHECK[locusName];
+  return check ? check(entry.value) : false;
 }
 
 // Ein Erbkrankheiten-Locuswert gilt als unauffällig, wenn er ausschließlich
@@ -88,35 +107,46 @@ function isDiseaseClear(value) {
   return !/[a-z]/.test(value || '');
 }
 
+function affectedDiseaseLabels(row) {
+  return (row.genetic_diseases || []).filter((d) => !isDiseaseClear(d.value)).map((d) => d.label);
+}
+
 function matchesEkh(row, selectedCodes) {
   return selectedCodes.some((code) => {
     if (code === '__none__') return row.disease_free === true;
-    return (row.genetic_diseases || []).some((d) => d.label === code && !isDiseaseClear(d.value));
+    return affectedDiseaseLabels(row).includes(code);
   });
 }
 
+function compareValue(value, op, targetStr) {
+  if (targetStr === '') return true;
+  if (value === null || value === undefined || Number.isNaN(value)) return false;
+  const target = Number(targetStr);
+  return op === 'lt' ? value < target : value > target;
+}
+
 function applyClientFilters(rows) {
-  const genetikTerms = document.querySelector('#f-genetik').value
-    .split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
-  const gpMin = document.querySelector('#f-gp-min').value;
-  const gpMax = document.querySelector('#f-gp-max').value;
-  const extMin = document.querySelector('#f-ext-min').value;
-  const extMax = document.querySelector('#f-ext-max').value;
-  const extpctMin = document.querySelector('#f-extpct-min').value;
-  const extpctMax = document.querySelector('#f-extpct-max').value;
-  const intMin = document.querySelector('#f-int-min').value;
-  const intMax = document.querySelector('#f-int-max').value;
-  const ekhSelected = [...document.querySelector('#f-ekh').selectedOptions].map((o) => o.value);
+  const genetikSelected = getCheckDropdownSelected('f-genetik-drop');
+  const ekhSelected = getCheckDropdownSelected('f-ekh-drop');
+
+  const gpOp = document.querySelector('#f-gp-op').value;
+  const gpVal = document.querySelector('#f-gp-val').value;
+  const extOp = document.querySelector('#f-ext-op').value;
+  const extVal = document.querySelector('#f-ext-val').value;
+  const extpctOp = document.querySelector('#f-extpct-op').value;
+  const extpctVal = document.querySelector('#f-extpct-val').value;
+  const intOp = document.querySelector('#f-int-op').value;
+  const intVal = document.querySelector('#f-int-val').value;
 
   return rows.filter((row) => {
     const d = computeDerived(row);
 
-    if (genetikTerms.length && !genetikTerms.every((t) => d.colorCode.includes(t))) return false;
-    if (!inRange(d.gp, gpMin, gpMax)) return false;
-    if (!inRange(d.extAvg, extMin, extMax)) return false;
-    if (!inRange(d.extPercent, extpctMin, extpctMax)) return false;
-    if (!inRange(d.intAvg, intMin, intMax)) return false;
+    if (genetikSelected.length && !genetikSelected.every((locus) => matchesGenetikLocus(row, locus))) return false;
     if (ekhSelected.length && !matchesEkh(row, ekhSelected)) return false;
+    if (!compareValue(d.gp, gpOp, gpVal)) return false;
+    if (!compareValue(d.extAvg, extOp, extVal)) return false;
+    if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
+    if (!compareValue(d.intAvg, intOp, intVal)) return false;
 
     return true;
   });
@@ -158,6 +188,8 @@ async function loadHorses() {
 
 function rowHtml(h) {
   const d = computeDerived(h);
+  const affected = affectedDiseaseLabels(h);
+  const ekhText = affected.length ? affected.join(', ') : '-';
 
   return `<tr>
     <td><input type="checkbox" data-select="${h.id}" /></td>
@@ -170,7 +202,7 @@ function rowHtml(h) {
     <td>${d.extPercent != null ? d.extPercent + '%' : ''}</td>
     <td>${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td>${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
-    <td>${diseaseFreePill(h.disease_free)}</td>
+    <td>${escapeHtml(ekhText)}</td>
     <td>${escapeHtml(h.owner || '')}</td>
     <td class="actions-cell">
       <a class="btn secondary small" href="horse.html?id=${h.id}">Bearbeiten</a>
@@ -185,12 +217,6 @@ function hlpSlpDisplay(text) {
   if (!text) return '-';
   const m = text.match(/\d+([.,]\d+)?/);
   return m ? m[0] : '-';
-}
-
-function diseaseFreePill(v) {
-  if (v === true) return '<span class="pill yes">Frei</span>';
-  if (v === false) return '<span class="pill no">Betroffen</span>';
-  return '';
 }
 
 function escapeHtml(str) {
@@ -216,6 +242,8 @@ function wireFilterForm() {
   });
   document.querySelector('#reset-filters').addEventListener('click', () => {
     document.querySelector('#filter-form').reset();
+    resetCheckDropdown('f-ekh-drop');
+    resetCheckDropdown('f-genetik-drop');
     loadHorses();
   });
 }
@@ -234,7 +262,73 @@ function wireSortableHeaders() {
   });
 }
 
-// --- Mehrfachauswahl ---
+// --- Checkbox-Dropdowns (Genetik, EKH) ---
+
+function wireCheckDropdowns() {
+  document.querySelectorAll('.checkdrop').forEach((root) => {
+    const toggle = root.querySelector('.checkdrop-toggle');
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = root.querySelector('.checkdrop-panel');
+      const wasOpen = !panel.hidden;
+      closeAllCheckDropdowns();
+      panel.hidden = wasOpen;
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.checkdrop')) closeAllCheckDropdowns();
+  });
+}
+
+function closeAllCheckDropdowns() {
+  document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
+}
+
+function populateCheckDropdown(rootId, values, { noneOption } = {}) {
+  const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
+  panel.innerHTML = '';
+
+  if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
+  for (const v of values) panel.appendChild(checkDropdownItem(v, v));
+
+  if (!noneOption && !values.length) {
+    const empty = document.createElement('div');
+    empty.className = 'checkdrop-empty';
+    empty.textContent = 'Keine Werte vorhanden';
+    panel.appendChild(empty);
+  }
+
+  panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
+}
+
+function checkDropdownItem(value, label) {
+  const wrap = document.createElement('label');
+  wrap.className = 'checkdrop-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = value;
+  wrap.appendChild(cb);
+  wrap.appendChild(document.createTextNode(label));
+  return wrap;
+}
+
+function updateCheckDropdownLabel(rootId) {
+  const root = document.getElementById(rootId);
+  const toggle = root.querySelector('.checkdrop-toggle');
+  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked');
+  toggle.textContent = checked.length ? `${checked.length} ausgewählt` : 'Alle';
+}
+
+function getCheckDropdownSelected(rootId) {
+  return [...document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]:checked`)].map((cb) => cb.value);
+}
+
+function resetCheckDropdown(rootId) {
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
+  updateCheckDropdownLabel(rootId);
+}
+
+// --- Mehrfachauswahl (Zeilen) ---
 
 function wireSelection() {
   document.querySelector('#select-all').addEventListener('change', (e) => {
