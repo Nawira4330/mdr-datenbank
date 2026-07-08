@@ -7,6 +7,9 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   wireLogout();
+  if (isAdminSession(session)) {
+    document.querySelector('#verwaltung-link').hidden = false;
+  }
   wireFilterForm();
   wireSortableHeaders();
   wireSelection();

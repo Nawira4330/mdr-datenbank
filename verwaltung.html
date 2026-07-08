@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verwaltung – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>🛠️ Verwaltung</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <fieldset>
+      <legend>Benutzerkonten anlegen</legend>
+      <p class="muted small">
+        Neue Konten gibt es nur über das Supabase-Dashboard – dafür brauchst du deinen
+        eigenen Supabase-Projektzugang (getrennt vom Login hier in der App).
+      </p>
+      <p>
+        <a class="btn secondary" href="https://supabase.com/dashboard/project/spxkqemomrggjdprdfgr/auth/users" target="_blank" rel="noopener">
+          Supabase-Dashboard → Authentication → Users öffnen ↗
+        </a>
+      </p>
+
+      <p class="group-heading">Benutzername-Konto für eine andere Person</p>
+      <ol>
+        <li>Im Dashboard auf <strong>Add user</strong> klicken.</li>
+        <li>Als E-Mail eintragen: <code>&lt;gewünschter-benutzername&gt;@benutzer.mdr-datenbank.local</code>
+          (die Domain muss genau so geschrieben werden).</li>
+        <li>Ein Passwort vergeben und speichern.</li>
+        <li>Der Person nur den Benutzernamen (ohne die <code>@…</code>-Domain) und das
+          Passwort mitteilen – damit meldet sie sich auf der Login-Seite an.</li>
+      </ol>
+
+      <p class="group-heading">Konto löschen / Passwort ändern</p>
+      <p class="small">
+        Im Dashboard bei der jeweiligen Person auf die drei Punkte klicken →
+        <strong>Delete user</strong> bzw. <strong>Reset password</strong>.
+      </p>
+
+      <p class="group-heading">Dein eigener Admin-Zugang</p>
+      <p class="small">
+        Dein Konto ist das einzige mit einer echten E-Mail-Adresse statt der internen
+        Benutzername-Domain – daran erkennt die App, dass du Admin bist und diese Seite
+        sehen darfst.
+      </p>
+    </fieldset>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/verwaltung.js"></script>
+</body>
+</html>
