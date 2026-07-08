@@ -1,4 +1,5 @@
 let currentSort = { field: 'name', dir: 'asc' };
+let selectedIds = new Set();
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -8,6 +9,7 @@ async function init() {
   wireLogout();
   wireFilterForm();
   wireSortableHeaders();
+  wireSelection();
   await populateFilterOptions();
   await loadHorses();
 }
@@ -49,38 +51,72 @@ function buildQuery() {
   return q.order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
 }
 
+// Der Farbcode wird aus der "colors"-Tabelle jedes Pferds zusammengesetzt
+// und (im Gegensatz zu den übrigen Filtern) clientseitig gefiltert, da er
+// nicht als eigene Spalte in der Datenbank existiert. Groß-/Kleinschreibung
+// ist bewusst relevant (z.B. "Z" = Silver dominant vorhanden, "z" nur
+// rezessiv), daher ein case-sensitiver Substring-Vergleich.
+function colorCodeOf(row) {
+  return (row.colors || []).map((c) => c.value).join(' ');
+}
+
+function applyColorCodeFilter(rows) {
+  const term = document.querySelector('#f-colorcode').value.trim();
+  if (!term) return rows;
+  return rows.filter((row) => colorCodeOf(row).includes(term));
+}
+
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="7">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="13">Lade…</td></tr>';
+  selectedIds = new Set();
+  updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="7" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Keine Pferde gefunden.</td></tr>';
+
+  const filtered = applyColorCodeFilter(data);
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="13">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
 
-  countEl.textContent = `${data.length} Pferd${data.length === 1 ? '' : 'e'}`;
-  tbody.innerHTML = data.map(rowHtml).join('');
+  countEl.textContent = `${filtered.length} Pferd${filtered.length === 1 ? '' : 'e'}`;
+  tbody.innerHTML = filtered.map(rowHtml).join('');
   tbody.querySelectorAll('[data-delete]').forEach((btn) => {
     btn.addEventListener('click', () => onDelete(btn.dataset.delete, btn.dataset.name));
   });
+  tbody.querySelectorAll('[data-select]').forEach((cb) => {
+    cb.addEventListener('change', () => onRowSelect(cb.dataset.select, cb.checked));
+  });
+  document.querySelector('#select-all').checked = false;
 }
 
 function rowHtml(h) {
+  const gp = h.tournament_potential?.['Gesamtpotenzial'];
+  const ext = h.exterior_genetics?.overall;
+  const intAvg = averageScore(h.temperament, scoreTemperamentTerm);
+
   return `<tr>
+    <td><input type="checkbox" data-select="${h.id}" /></td>
     <td><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
     <td>${escapeHtml(h.gender || '')}</td>
-    <td>${escapeHtml(h.breed || '')}</td>
     <td>${escapeHtml(h.coat_color || '')}</td>
-    <td>${breedingPill(h.breeding_allowed)}</td>
+    <td class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(colorCodeOf(h))}</td>
+    <td>${gp != null ? escapeHtml(String(gp)) : ''}</td>
+    <td>${ext ? escapeHtml(ext.score) : ''}</td>
+    <td>${ext ? ext.percent + '%' : ''}</td>
+    <td>${intAvg != null ? intAvg.toFixed(2) : ''}</td>
+    <td>${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
+    <td>${diseaseFreePill(h.disease_free)}</td>
     <td>${escapeHtml(h.owner || '')}</td>
     <td class="actions-cell">
       <a class="btn secondary small" href="horse.html?id=${h.id}">Bearbeiten</a>
@@ -89,9 +125,17 @@ function rowHtml(h) {
   </tr>`;
 }
 
-function breedingPill(v) {
-  if (v === true) return '<span class="pill yes">Ja</span>';
-  if (v === false) return '<span class="pill no">Nein</span>';
+// Zeigt die HLP/SLP-Punktzahl, falls im Text eine Zahl steht (bestandene
+// Prüfung), sonst "-" (z.B. bei "nicht bestanden"/"nicht absolviert").
+function hlpSlpDisplay(text) {
+  if (!text) return '-';
+  const m = text.match(/\d+([.,]\d+)?/);
+  return m ? m[0] : '-';
+}
+
+function diseaseFreePill(v) {
+  if (v === true) return '<span class="pill yes">Frei</span>';
+  if (v === false) return '<span class="pill no">Betroffen</span>';
   return '';
 }
 
@@ -134,4 +178,47 @@ function wireSortableHeaders() {
       loadHorses();
     });
   });
+}
+
+// --- Mehrfachauswahl ---
+
+function wireSelection() {
+  document.querySelector('#select-all').addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    document.querySelectorAll('#horse-table tbody [data-select]').forEach((cb) => {
+      cb.checked = checked;
+      onRowSelect(cb.dataset.select, checked, false);
+    });
+    updateBulkBar();
+  });
+  document.querySelector('#bulk-delete-btn').addEventListener('click', onBulkDelete);
+}
+
+function onRowSelect(id, checked, refreshBar = true) {
+  if (checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  if (refreshBar) updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.querySelector('#bulk-actions');
+  const countEl = document.querySelector('#selected-count');
+  if (selectedIds.size > 0) {
+    bar.hidden = false;
+    countEl.textContent = `${selectedIds.size} ausgewählt`;
+  } else {
+    bar.hidden = true;
+  }
+}
+
+async function onBulkDelete() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  if (!confirm(`${ids.length} Pferd(e) wirklich unwiderruflich löschen?`)) return;
+  const { error } = await supabaseClient.from('horses').delete().in('id', ids);
+  if (error) {
+    alert('Löschen fehlgeschlagen: ' + error.message);
+    return;
+  }
+  await loadHorses();
 }

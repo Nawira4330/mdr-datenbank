@@ -147,6 +147,11 @@ label {
   align-items: center;
   margin-bottom: 0.75rem;
 }
+#bulk-actions:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
 
 /* --- Table --- */
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }

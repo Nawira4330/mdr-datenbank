@@ -165,8 +165,8 @@ function renderDetailTables(data) {
   if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
     parts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
   }
-  if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines));
-  if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits));
+  if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
+  if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits, false));
   if (data.pedigree?.length) parts.push(pedigreeHtml(data.pedigree));
 
   container.innerHTML = parts.join('');
@@ -200,36 +200,14 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
-// Name (Fellfarbe) + zusammengefasster Gencode + daraus abgeleitete
-// Basisfarbe/Aufhellung/Muster (siehe deriveColorGenetics in parser.js,
-// nach der offiziellen MDR-Farbvererbungs-Dokumentation). "0"/"1" in
-// einem Locus sind bei MDR normale Bestandteile fester Allel-Kürzel
-// (z.B. "a0" = rezessives Agouti-Allel) und keine Unsicherheitsmarkierung.
+// Name (Fellfarbe) + zusammengefasster Gencode (keine interpretierte
+// Ableitung/Phänotyp-Anzeige, nur der reine Genetikcode).
 function colorGeneticsHtml(rows, coatColorName) {
   const body = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
   const fullCode = rows.map((r) => r.value).join(' ');
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
-
-  const derived = deriveColorGenetics(rows);
-  let derivedHtml = '';
-  if (derived) {
-    const lines = [];
-    if (derived.baseColor) lines.push(`<tr><th>Basisfarbe</th><td>${escapeHtml(derived.baseColor)}</td></tr>`);
-    if (derived.shadeName) lines.push(`<tr><th>Aufhellung/Verdünnung</th><td>${escapeHtml(derived.shadeName)}</td></tr>`);
-    for (const p of derived.patterns) {
-      lines.push(`<tr><th>Muster</th><td>${escapeHtml(p.name)} — ${escapeHtml(p.zygosity)}</td></tr>`);
-    }
-    if (derived.kit) lines.push(`<tr><th>KIT</th><td>${escapeHtml(derived.kit.label)}</td></tr>`);
-    if (lines.length) {
-      derivedHtml = `<p class="small muted" style="margin-top:0.6rem;">Abgeleitet aus der Genetik (nach MDR-Farbvererbungsregeln):</p><table class="detail-table">${lines.join('')}</table>`;
-    }
-    if (derived.warnings.length) {
-      derivedHtml += derived.warnings.map((w) => `<p class="small muted">⚠ ${escapeHtml(w)}</p>`).join('');
-    }
-  }
-
   const codeHtml = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
-  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}${derivedHtml}`;
+  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}`;
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
@@ -261,10 +239,13 @@ function tournamentSummaryHtml(tp, disciplines) {
   return `<div class="group-heading">Turnierpotenzial</div><table class="detail-table">${body}</table>`;
 }
 
-function percentGroupsHtml(title, groups) {
+function percentGroupsHtml(title, groups, potentialOnly) {
   let html = `<div class="group-heading">${escapeHtml(title)}</div>`;
   for (const [group, entries] of Object.entries(groups)) {
-    const body = entries.map((e) => `<tr><th>${escapeHtml(e.name)}</th><td>${e.current}% (Potenzial ${e.potential}%)</td></tr>`).join('');
+    const body = entries.map((e) => {
+      const value = potentialOnly ? `${e.potential}%` : `${e.current}% (Potenzial ${e.potential}%)`;
+      return `<tr><th>${escapeHtml(e.name)}</th><td>${value}</td></tr>`;
+    }).join('');
     html += `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(group)}</p><table class="detail-table">${body}</table>`;
   }
   return html;

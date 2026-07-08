@@ -42,6 +42,10 @@
         <input type="text" id="f-color" placeholder="Suche…" />
       </div>
       <div class="field">
+        <label for="f-colorcode">Farbcode enthält</label>
+        <input type="text" id="f-colorcode" placeholder="z.B. Ch, Z, Dd…" />
+      </div>
+      <div class="field">
         <label for="f-owner">Besitzer</label>
         <input type="text" id="f-owner" placeholder="Suche…" />
       </div>
@@ -61,23 +65,33 @@
 
     <div class="list-header">
       <span id="result-count" class="muted small"></span>
+      <div id="bulk-actions" hidden>
+        <span id="selected-count" class="muted small"></span>
+        <button type="button" id="bulk-delete-btn" class="danger small">Ausgewählte löschen</button>
+      </div>
     </div>
 
     <div class="table-wrap">
       <table id="horse-table">
         <thead>
           <tr>
+            <th><input type="checkbox" id="select-all" /></th>
             <th data-sort="name">Name</th>
             <th data-sort="gender">Geschlecht</th>
-            <th data-sort="breed">Rasse</th>
-            <th data-sort="coat_color">Fellfarbe</th>
-            <th data-sort="breeding_allowed">Zucht</th>
+            <th data-sort="coat_color">Farbe</th>
+            <th>Farbcode</th>
+            <th>GP</th>
+            <th>Ext</th>
+            <th>Ext%</th>
+            <th>Int</th>
+            <th>HLP/SLP</th>
+            <th>Erbkrankheiten</th>
             <th data-sort="owner">Besitzer</th>
             <th>Aktionen</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="7">Lade…</td></tr>
+          <tr><td colspan="13">Lade…</td></tr>
         </tbody>
       </table>
     </div>
@@ -86,6 +100,7 @@
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/parser.js"></script>
   <script src="js/list.js"></script>
 </body>
 </html>
