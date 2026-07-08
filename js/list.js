@@ -7,8 +7,10 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   wireLogout();
-  document.querySelector('#session-email').textContent = `Angemeldet als: ${session.user.email}`;
-  if (isAdminSession(session)) {
+  const admin = isAdminSession(session);
+  const displayIdentity = admin ? session.user.email : session.user.email.split('@')[0];
+  document.querySelector('#session-email').textContent = `Angemeldet als: ${displayIdentity}`;
+  if (admin) {
     document.querySelector('#verwaltung-link').hidden = false;
   }
   wireFilterForm();
