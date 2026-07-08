@@ -457,7 +457,7 @@ function deriveColorGenetics(colorRows) {
   const greyAlleles = splitLocus(byLabel['Grey'], ['G', 'g']);
   const silverAlleles = splitLocus(byLabel['Silver'], ['Z', 'z']);
   const overoAlleles = splitLocus(byLabel['Overo'], ['O', 'o']);
-  const splashedAlleles = splitLocus(byLabel['Splashed'], ['Spl', 'spl'], true);
+  const splashedAlleles = splitLocus(byLabel['Splashed'], ['SPL', 'spl']);
   const leopardAlleles = splitLocus(byLabel['Appaloosa'], ['Lp', 'lp']);
   const patn1Alleles = splitLocus(byLabel['PATN1'], ['P1', 'p1']);
 
@@ -490,23 +490,33 @@ function deriveColorGenetics(colorRows) {
   if (overoAlleles && overoAlleles.includes('O')) {
     patterns.push({ name: 'Overo', zygosity: zygosity(overoAlleles, 'O') });
   }
-  if (splashedAlleles && splashedAlleles.includes('Spl')) {
-    patterns.push({ name: 'Splashed White', zygosity: zygosity(splashedAlleles, 'Spl') });
+  if (splashedAlleles && splashedAlleles.includes('SPL')) {
+    patterns.push({ name: 'Splashed White', zygosity: zygosity(splashedAlleles, 'SPL') });
   }
   if (leopardAlleles && leopardAlleles.includes('Lp')) {
     const patnNote = patn1Alleles && patn1Alleles.includes('P1') ? ', PATN1 vorhanden' : '';
     patterns.push({ name: 'Leopard/Appaloosa-Musterung', zygosity: zygosity(leopardAlleles, 'Lp') + patnNote });
   }
 
-  const warnings = [];
-  if (byLabel['KIT'] !== undefined) {
-    warnings.push('KIT (Tobiano/Sabino/Dominant White/Roan) lässt sich aus der verfügbaren Dokumentation nicht eindeutig dekodieren – Rohwert siehe Tabelle oben.');
-  }
-  if (byLabel['Splashed'] && /^[A-Z]+$/.test(byLabel['Splashed'])) {
-    warnings.push('Splashed steht im kopierten Text komplett in Großbuchstaben – bitte im Spiel gegenprüfen, ob das wirklich reinerbig bedeutet oder ein Kopier-Artefakt ist.');
+  // KIT (cKit: Tobiano/Sabino/Dominant White/Roan) ist getestet, "0000"
+  // bedeutet bestätigt: keines der vier Gene vorhanden. Welches der vier
+  // Gene bei einem positiven Befund wie kodiert wird, ist nicht bekannt,
+  // daher wird ein von "0000" abweichender Wert nur als "enthält ein
+  // KIT-Gen" gemeldet, ohne das konkrete Gen zu benennen.
+  const kitRaw = byLabel['KIT'];
+  let kit = null;
+  if (kitRaw) {
+    kit = /^0+$/.test(kitRaw)
+      ? { present: false, label: 'getestet – kein Tobiano/Sabino/Dominant White/Roan vorhanden' }
+      : { present: true, label: `enthält ein KIT-Gen (genaue Zuordnung nicht dokumentiert): ${kitRaw}` };
   }
 
-  return { baseColor, shadeName, patterns, warnings };
+  const warnings = [];
+  if (kit?.present) {
+    warnings.push('KIT enthält ein Gen ungleich "0" – welches der vier Gene (Tobiano/Sabino/Dominant White/Roan) das genau ist, lässt sich aus der verfügbaren Dokumentation nicht bestimmen.');
+  }
+
+  return { baseColor, shadeName, patterns, kit, warnings };
 }
 
 if (typeof module !== 'undefined' && module.exports) {

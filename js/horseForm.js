@@ -219,6 +219,7 @@ function colorGeneticsHtml(rows, coatColorName) {
     for (const p of derived.patterns) {
       lines.push(`<tr><th>Muster</th><td>${escapeHtml(p.name)} — ${escapeHtml(p.zygosity)}</td></tr>`);
     }
+    if (derived.kit) lines.push(`<tr><th>KIT</th><td>${escapeHtml(derived.kit.label)}</td></tr>`);
     if (lines.length) {
       derivedHtml = `<p class="small muted" style="margin-top:0.6rem;">Abgeleitet aus der Genetik (nach MDR-Farbvererbungsregeln):</p><table class="detail-table">${lines.join('')}</table>`;
     }
