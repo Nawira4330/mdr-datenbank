@@ -23,38 +23,53 @@
         <input type="text" id="f-name" placeholder="Suche…" />
       </div>
       <div class="field">
-        <label for="f-breed">Rasse</label>
-        <select id="f-breed"><option value="">Alle</option></select>
+        <label for="f-owner">Besitzer</label>
+        <select id="f-owner"><option value="">Alle</option></select>
       </div>
       <div class="field">
-        <label for="f-gender">Geschlecht</label>
-        <select id="f-gender">
-          <option value="">Alle</option>
-          <option value="Stute">Stute</option>
-          <option value="Hengst">Hengst</option>
-          <option value="Wallach">Wallach</option>
-          <option value="Hengstfohlen">Hengstfohlen</option>
-          <option value="Stutfohlen">Stutfohlen</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="f-color">Fellfarbe</label>
+        <label for="f-color">Farbe</label>
         <input type="text" id="f-color" placeholder="Suche…" />
       </div>
       <div class="field">
-        <label for="f-colorcode">Farbcode enthält</label>
-        <input type="text" id="f-colorcode" placeholder="z.B. Ch, Z, Dd…" />
+        <label for="f-genetik">Genetik enthält</label>
+        <input type="text" id="f-genetik" placeholder="z.B. Ch, Z (mehrere mit Komma)" />
       </div>
       <div class="field">
-        <label for="f-owner">Besitzer</label>
-        <input type="text" id="f-owner" placeholder="Suche…" />
+        <label for="f-gp-min">GP von</label>
+        <input type="number" id="f-gp-min" />
       </div>
       <div class="field">
-        <label for="f-breeding">Zuchtzulassung</label>
-        <select id="f-breeding">
-          <option value="">Alle</option>
-          <option value="yes">Ja</option>
-          <option value="no">Nein</option>
+        <label for="f-gp-max">GP bis</label>
+        <input type="number" id="f-gp-max" />
+      </div>
+      <div class="field">
+        <label for="f-ext-min">Ext von</label>
+        <input type="number" id="f-ext-min" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="f-ext-max">Ext bis</label>
+        <input type="number" id="f-ext-max" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="f-extpct-min">Ext% von</label>
+        <input type="number" id="f-extpct-min" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="f-extpct-max">Ext% bis</label>
+        <input type="number" id="f-extpct-max" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="f-int-min">Int von</label>
+        <input type="number" id="f-int-min" step="0.01" />
+      </div>
+      <div class="field">
+        <label for="f-int-max">Int bis</label>
+        <input type="number" id="f-int-max" step="0.01" />
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="f-ekh">Erbkrankheiten (Mehrfachauswahl)</label>
+        <select id="f-ekh" multiple size="4">
+          <option value="__none__">Keine</option>
         </select>
       </div>
       <div class="actions">
