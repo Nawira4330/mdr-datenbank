@@ -7,6 +7,7 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   wireLogout();
+  document.querySelector('#session-email').textContent = `Angemeldet als: ${session.user.email}`;
   if (isAdminSession(session)) {
     document.querySelector('#verwaltung-link').hidden = false;
   }
