@@ -207,11 +207,32 @@ function exteriorGeneticsHtml(ext) {
 // Name (Fellfarbe) + zusammengefasster Gencode (keine interpretierte
 // Ableitung/Phänotyp-Anzeige, nur der reine Genetikcode).
 function colorGeneticsHtml(rows, coatColorName) {
-  const body = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
+  const hints = inferGeneticHintsFromPhenotype(coatColorName);
+  const hintsByLocus = {};
+  for (const h of hints) {
+    (hintsByLocus[h.locus] ||= []).push(h);
+  }
+
+  const body = rows.map((r) => {
+    let value = escapeHtml(r.value);
+    if (isUntestedLocusValue(r.value) && hintsByLocus[r.label]) {
+      const alleles = hintsByLocus[r.label].map((h) => h.allele).join(', ');
+      value += ` — mindestens ${escapeHtml(alleles)} (laut Fellfarbe)`;
+    }
+    return `<tr><th>${escapeHtml(r.label)}</th><td>${value}</td></tr>`;
+  }).join('');
+
   const fullCode = rows.map((r) => r.value).join(' ');
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
   const codeHtml = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
-  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}`;
+
+  let hintsHtml = '';
+  if (hints.length) {
+    const summary = hints.map((h) => `${h.allele} (${h.label})`).join(', ');
+    hintsHtml = `<p class="small muted">Aus der Fellfarbe ableitbar: <strong>${escapeHtml(summary)}</strong></p>`;
+  }
+
+  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}${hintsHtml}`;
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die

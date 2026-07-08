@@ -329,6 +329,51 @@ function fractionToPercent(scoreStr) {
   return (parseInt(m[1], 10) / parseInt(m[2], 10)) * 100;
 }
 
+// Wenn ein Locus nicht getestet ist, lässt sich daraus trotzdem manchmal ein
+// Mindestbestand ableiten, wenn die sichtbare Fellfarbe ein eindeutiges
+// Merkmal nennt (z.B. "Gold Champagne" -> mindestens ein Ch-Allel, "Roan"
+// -> mindestens ein Rn-Allel am KIT-Locus). Nur eindeutige Begriffe werden
+// ausgewertet - "Pinto" z.B. bleibt bewusst unberücksichtigt, da es für
+// Overo, Splashed, Tobiano oder Sabino stehen kann und sich nicht sicher
+// einem einzelnen Gen zuordnen lässt. "Varnish Roan" (Leopard-Musterung
+// ohne PATN) wird zuerst geprüft, damit es nicht fälschlich als das
+// cKit-Gen "Roan" erkannt wird.
+const PHENOTYPE_GENE_HINTS = [
+  { pattern: /varnish roan/i, locus: 'Appaloosa', allele: 'Lp', label: 'Varnish Roan' },
+  { pattern: /\bchampagne\b/i, locus: 'Champagne', allele: 'Ch', label: 'Champagne' },
+  { pattern: /\broan\b/i, locus: 'KIT', allele: 'Rn', label: 'Roan' },
+  { pattern: /\btobiano\b/i, locus: 'KIT', allele: 'To', label: 'Tobiano' },
+  { pattern: /\bsabino\b/i, locus: 'KIT', allele: 'Sb', label: 'Sabino' },
+  { pattern: /\bovero\b/i, locus: 'Overo', allele: 'O', label: 'Overo' },
+  { pattern: /\bsplashed\b/i, locus: 'Splashed', allele: 'SPL', label: 'Splashed White' },
+  { pattern: /\bdun\b/i, locus: 'Dun', allele: 'D', label: 'Dun' },
+  { pattern: /\bcream\b/i, locus: 'Cream', allele: 'Cr', label: 'Cream' },
+  { pattern: /\bpearl\b/i, locus: 'Cream', allele: 'pl', label: 'Pearl' },
+  { pattern: /\bgrey\b/i, locus: 'Grey', allele: 'G', label: 'Grey' },
+  { pattern: /\b(leopard|fewspot|blanket|snowcap)\b/i, locus: 'Appaloosa', allele: 'Lp', label: 'Leopard-Musterung' },
+];
+
+// Gibt eine Liste { locus, allele, label } aller aus dem Fellfarbe-Namen
+// eindeutig ableitbaren Merkmale zurück. Bereits erkannte Textstellen
+// werden aus der Arbeitskopie entfernt, damit z.B. "Varnish Roan" nicht
+// zusätzlich das separate "Roan"-Muster auslöst.
+function inferGeneticHintsFromPhenotype(coatColorName) {
+  if (!coatColorName) return [];
+  let working = coatColorName;
+  const hints = [];
+  for (const { pattern, locus, allele, label } of PHENOTYPE_GENE_HINTS) {
+    if (pattern.test(working)) {
+      hints.push({ locus, allele, label });
+      working = working.replace(pattern, ' ');
+    }
+  }
+  return hints;
+}
+
+function isUntestedLocusValue(value) {
+  return /nicht getestet/i.test(value || '');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseHorseText };
 }
