@@ -246,7 +246,13 @@ fieldset {
   padding: 0.8rem 1rem 1rem;
   background: var(--surface);
 }
-legend { padding: 0 0.4rem; font-weight: 600; color: var(--accent-dark); }
+legend {
+  padding: 0.1rem 0.5rem;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background: var(--surface);
+  border-radius: 4px;
+}
 
 .paste-box textarea { min-height: 160px; font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; }
 .paste-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
