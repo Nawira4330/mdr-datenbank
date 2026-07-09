@@ -254,6 +254,12 @@ label {
 }
 .mobile-select-all input { width: auto; }
 
+/* Ersetzt in der mobilen Kartenansicht das Sortieren per Klick auf die
+   (dort ausgeblendete) Tabellenkopfzeile. */
+.mobile-sort { display: none; align-items: center; gap: 0.4rem; }
+.mobile-sort label { margin: 0; }
+.mobile-sort select { width: auto; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html)
    lassen den Browser Inhalte umbrechen statt die Tabelle über die
@@ -355,36 +361,41 @@ legend {
   .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
 
   .mobile-select-all { display: inline-flex; }
+  .mobile-sort { display: inline-flex; }
 
-  /* --- Übersicht: Tabelle -> Karten ---
+  /* --- Übersicht: Tabelle -> Liste ---
      12 Spalten passen auf einem Handybildschirm auch mit Umbruch nicht
      lesbar nebeneinander (siehe table-layout:fixed weiter oben, das ist
-     für Tablet/Desktop gedacht). Stattdessen wird jede Zeile zu einer
-     eigenständigen Karte, jede Zelle zu einer Zeile "Label: Wert" -
-     das Label kommt aus dem data-label-Attribut (siehe rowHtml in
-     list.js), da <thead> hier ausgeblendet wird. */
-  .table-wrap { overflow-x: visible; border: none; border-radius: 0; background: transparent; }
-  #horse-table, #horse-table tbody, #horse-table tr, #horse-table td { display: block; width: 100%; }
+     für Tablet/Desktop gedacht). Stattdessen wird jede Zeile zu einem
+     Listeneintrag "Label: Wert" je Feld - das Label kommt aus dem
+     data-label-Attribut (siehe rowHtml in list.js), da <thead> hier
+     ausgeblendet wird (Sortieren stattdessen über .mobile-sort oben).
+     Alle Einträge bilden zusammen eine durchgehende Liste (ein Rahmen um
+     #horse-table statt einzelner Karten je Zeile), Auswahl-Kästchen und
+     Name stehen dabei ohne eigenes Label in einer Zeile. */
+  .table-wrap { overflow-x: visible; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  #horse-table, #horse-table tbody { display: block; width: 100%; }
   #horse-table thead { display: none; }
   #horse-table tr {
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.6rem 0.8rem;
-    background: var(--surface);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.6rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border);
   }
+  #horse-table tr:last-child { border-bottom: none; }
   #horse-table tr:hover td { background: transparent; }
   #horse-table td {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px dashed var(--border);
+    padding: 0.15rem 0;
+    flex: 1 0 100%;
     font-size: 0.95rem;
     text-align: right;
   }
-  #horse-table td:last-child { border-bottom: none; }
   #horse-table td::before {
     content: attr(data-label);
     font-weight: 600;
@@ -392,19 +403,29 @@ legend {
     text-align: left;
     flex-shrink: 0;
   }
-  #horse-table td[data-label="Name"] {
-    font-size: 1.1rem;
-    font-weight: 600;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
+  /* Auswahl-Kästchen direkt vor dem Namen, beide ohne Label, auf einer
+     gemeinsamen ersten Zeile. */
+  #horse-table td[data-label="Auswählen"] {
+    order: -1;
+    flex: 0 0 auto;
     padding-bottom: 0.5rem;
-    margin-bottom: 0.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Auswählen"]::before { content: none; }
+  #horse-table td[data-label="Name"] {
+    order: -1;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
   }
   #horse-table td[data-label="Name"]::before { content: none; }
-  #horse-table td[data-label="Auswählen"] { justify-content: flex-end; }
-  #horse-table td[data-label="Aktionen"] { display: block; text-align: left; }
+  #horse-table td[data-label="Aktionen"] { display: block; text-align: left; padding-top: 0.5rem; }
   #horse-table td[data-label="Aktionen"]::before { content: none; }
-  #horse-table td[data-label="Aktionen"] button { width: 100%; margin-top: 0.3rem; }
+  #horse-table td[data-label="Aktionen"] button { width: 100%; }
   #horse-table td.small { font-size: 0.85rem; }
 
   /* --- Formular (horse.html) --- */

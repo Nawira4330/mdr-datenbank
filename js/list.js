@@ -402,9 +402,29 @@ function wireSortableHeaders() {
       } else {
         currentSort = { field, dir: 'asc' };
       }
+      syncMobileSortControls();
       loadHorses();
     });
   });
+
+  // Mobile Alternative zum Klick auf die (dort ausgeblendete)
+  // Tabellenkopfzeile - siehe .mobile-sort in style.css.
+  const fieldSel = document.querySelector('#f-sort-field');
+  const dirSel = document.querySelector('#f-sort-dir');
+  [fieldSel, dirSel].forEach((sel) => {
+    sel.addEventListener('change', () => {
+      currentSort = { field: fieldSel.value, dir: dirSel.value };
+      loadHorses();
+    });
+  });
+  syncMobileSortControls();
+}
+
+function syncMobileSortControls() {
+  const fieldSel = document.querySelector('#f-sort-field');
+  const dirSel = document.querySelector('#f-sort-dir');
+  fieldSel.value = currentSort.field;
+  dirSel.value = currentSort.dir;
 }
 
 // --- Checkbox-Dropdowns (Genetik, EKH) ---

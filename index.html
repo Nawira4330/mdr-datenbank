@@ -117,6 +117,26 @@
       <label class="mobile-select-all small muted">
         <input type="checkbox" id="select-all-mobile" /> Alle auswählen
       </label>
+      <!-- Ersetzt in der mobilen Kartenansicht das Sortieren per Klick auf
+           die (dort ausgeblendete) Tabellenkopfzeile. -->
+      <div class="mobile-sort">
+        <label for="f-sort-field" class="small muted">Sortieren</label>
+        <select id="f-sort-field">
+          <option value="name">Name</option>
+          <option value="gender">Geschlecht</option>
+          <option value="coat_color">Farbe</option>
+          <option value="gp">GP</option>
+          <option value="ext">Ext</option>
+          <option value="extpct">Ext%</option>
+          <option value="int">Int</option>
+          <option value="hlpslp">HLP/SLP</option>
+          <option value="owner">Besitzer</option>
+        </select>
+        <select id="f-sort-dir">
+          <option value="asc">aufsteigend</option>
+          <option value="desc">absteigend</option>
+        </select>
+      </div>
       <div id="bulk-actions" hidden>
         <span id="selected-count" class="muted small"></span>
         <button type="button" id="bulk-delete-btn" class="danger small">Ausgewählte löschen</button>
