@@ -2,7 +2,7 @@ const TEXT_FIELDS = [
   'name', 'gender', 'breed', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
 ];
 const DATE_FIELDS = [];
-const NUMBER_FIELDS = ['purebred_pct', 'ico', 'fertility_pct'];
+const NUMBER_FIELDS = ['purebred_pct', 'ico'];
 const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',

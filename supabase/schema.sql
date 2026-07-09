@@ -20,7 +20,6 @@ create table if not exists public.horses (
   breeding_allowed boolean,
   hlp_slp text,
   ico numeric,
-  fertility_pct numeric,
 
   -- Strukturierte Detaildaten (aus dem Text-Parser)
   genetic_diseases jsonb,       -- Erbkrankheiten-Tabelle
