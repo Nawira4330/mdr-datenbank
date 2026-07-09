@@ -75,7 +75,7 @@ function colorCodeOf(row) {
 // exakt dieselben Werte verwenden.
 function computeDerived(h) {
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
-  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes);
+  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name);
   return {
     colorCode: colorCodeOf(h),
     presentGenes: genes.map((g) => g.alleles).join(' '),

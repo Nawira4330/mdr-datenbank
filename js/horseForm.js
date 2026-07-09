@@ -154,7 +154,8 @@ function renderDetailTables(data) {
   if (data.genetic_diseases?.length) parts.push(simpleTableHtml('Erbkrankheiten', data.genetic_diseases));
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
-    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes));
+    const horseName = document.getElementById('name').value;
+    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName));
   }
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
@@ -211,10 +212,11 @@ function exteriorGeneticsHtml(ext) {
 // vorhandenen Gene (großgeschrieben = vorhanden, Ausnahme "pl"). Bei nicht
 // getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen UND Notiz
 // einbezogen.
-function colorGeneticsHtml(rows, coatColorName, notes) {
+function colorGeneticsHtml(rows, coatColorName, notes, horseName) {
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName),
     ...inferGeneticHintsFromPhenotype(notes),
+    ...inferGeneticHintsFromPhenotype(horseName),
   ];
   const hintsByLocus = {};
   for (const h of hints) {
@@ -233,7 +235,7 @@ function colorGeneticsHtml(rows, coatColorName, notes) {
 
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
 
-  const summary = presentGenesSummary(rows, coatColorName, notes);
+  const summary = presentGenesSummary(rows, coatColorName, notes, horseName);
   let summaryHtml = '';
   if (summary.length) {
     const text = summary.map((s) => s.source === 'abgeleitet' ? `${s.alleles} (abgeleitet)` : s.alleles).join(', ');

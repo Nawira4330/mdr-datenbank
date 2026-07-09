@@ -401,40 +401,74 @@ function fractionToPercent(scoreStr) {
 }
 
 // Wenn ein Locus nicht getestet ist, lässt sich daraus trotzdem manchmal ein
-// Mindestbestand ableiten, wenn die sichtbare Fellfarbe ein eindeutiges
-// Merkmal nennt (z.B. "Gold Champagne" -> mindestens ein Ch-Allel, "Roan"
-// -> mindestens ein Rn-Allel am KIT-Locus). Nur eindeutige Begriffe werden
+// Mindestbestand ableiten - aus der sichtbaren Fellfarbe, aus der Notiz
+// oder (nur bei Sooty) aus dem Namen. Nur eindeutige Begriffe werden
 // ausgewertet - "Pinto" z.B. bleibt bewusst unberücksichtigt, da es für
 // Overo, Splashed, Tobiano oder Sabino stehen kann und sich nicht sicher
-// einem einzelnen Gen zuordnen lässt. "Varnish Roan" (Leopard-Musterung
-// ohne PATN) wird zuerst geprüft, damit es nicht fälschlich als das
-// cKit-Gen "Roan" erkannt wird.
+// einem einzelnen Gen zuordnen lässt.
+//
+// Reihenfolge ist wichtig: spezifischere Begriffe zuerst, damit z.B.
+// "Schwarzbraun"/"Wildbraun" nicht fälschlich die generische "Braun"-Regel
+// auslösen, und "Varnish Roan" nicht als das separate cKit-Gen "Roan"
+// erkannt wird. Jeder Treffer entfernt seinen Text aus der Arbeitskopie.
 const PHENOTYPE_GENE_HINTS = [
-  { pattern: /varnish roan/i, locus: 'Appaloosa', allele: 'Lp', label: 'Varnish Roan' },
-  { pattern: /\bchampagne\b/i, locus: 'Champagne', allele: 'Ch', label: 'Champagne' },
-  { pattern: /\broan\b/i, locus: 'KIT', allele: 'Rn', label: 'Roan' },
-  { pattern: /\btobiano\b/i, locus: 'KIT', allele: 'To', label: 'Tobiano' },
-  { pattern: /\bsabino\b/i, locus: 'KIT', allele: 'Sb', label: 'Sabino' },
-  { pattern: /\bovero\b/i, locus: 'Overo', allele: 'O', label: 'Overo' },
-  { pattern: /\bsplashed\b/i, locus: 'Splashed', allele: 'SPL', label: 'Splashed White' },
-  { pattern: /\bdun\b/i, locus: 'Dun', allele: 'D', label: 'Dun' },
-  { pattern: /\bcream\b/i, locus: 'Cream', allele: 'Cr', label: 'Cream' },
-  { pattern: /\bpearl\b/i, locus: 'Cream', allele: 'pl', label: 'Pearl' },
-  { pattern: /\bgrey\b/i, locus: 'Grey', allele: 'G', label: 'Grey' },
-  { pattern: /\b(leopard|fewspot|blanket|snowcap)\b/i, locus: 'Appaloosa', allele: 'Lp', label: 'Leopard-Musterung' },
+  // Basisfarbe + Verdünnung: diese Namen setzen laut MDR-Farbvererbung
+  // zwingend bestimmte Allele voraus.
+  { pattern: /grulla/i, label: 'Grulla', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }] },
+  { pattern: /wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
+  { pattern: /sealbrown|schwarzbraun/i, label: 'Sealbrown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
+  { pattern: /\b(bay|braun)\b/i, label: 'Bay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+  { pattern: /smoky/i, label: 'Smoky', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+
+  // Muster, Scheckungen und sonstige Merkmale (volle Begriffe).
+  { pattern: /varnish roan/i, label: 'Varnish Roan', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  { pattern: /\bchampagne\b/i, label: 'Champagne', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\broan\b/i, label: 'Roan', hints: [{ locus: 'KIT', allele: 'Rn' }] },
+  { pattern: /\btobiano\b/i, label: 'Tobiano', hints: [{ locus: 'KIT', allele: 'To' }] },
+  { pattern: /\bsabino\b/i, label: 'Sabino', hints: [{ locus: 'KIT', allele: 'Sb' }] },
+  { pattern: /\bovero\b/i, label: 'Overo', hints: [{ locus: 'Overo', allele: 'O' }] },
+  { pattern: /\bsplashed\b/i, label: 'Splashed White', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bdun\b/i, label: 'Dun', hints: [{ locus: 'Dun', allele: 'D' }] },
+  { pattern: /\bcream\b/i, label: 'Cream', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  // Pearl zeigt sich sichtbar nur reinerbig (plpl) - wenn der Name also
+  // "Pearl"/"Apricot" lautet, ist das Gen doppelt vorhanden, nicht nur
+  // einfach getragen.
+  { pattern: /\b(pearl|apricot)\b/i, label: 'Pearl', hints: [{ locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /flaxentr[äa]ger/i, label: 'Flaxenträger', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
+  { pattern: /\bflaxen\b/i, label: 'Flaxen', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
+  { pattern: /\bsooty\b/i, label: 'Sooty', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\bgrey\b/i, label: 'Grey', hints: [{ locus: 'Grey', allele: 'G' }] },
+  { pattern: /\b(leopard|fewspot|blanket|snowcap)\b/i, label: 'Leopard-Musterung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+
+  // Kurzkürzel, wie sie z.B. direkt in einer Notiz stehen könnten (z.B.
+  // "SPL" oder "SB" statt der vollen Wörter). Bewusst GROSS-/Kleinschreibung-
+  // sensitiv und nur als eigenständiges Wort, um Zufallstreffer in normalem
+  // Fließtext zu vermeiden.
+  { pattern: /\bSPL\b/, label: 'Splashed White (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bSB\b/, label: 'Sabino (Kürzel)', hints: [{ locus: 'KIT', allele: 'Sb' }] },
+  { pattern: /\bTo\b/, label: 'Tobiano (Kürzel)', hints: [{ locus: 'KIT', allele: 'To' }] },
+  { pattern: /\bRn\b/, label: 'Roan (Kürzel)', hints: [{ locus: 'KIT', allele: 'Rn' }] },
+  { pattern: /\bCh\b/, label: 'Champagne (Kürzel)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bCr\b/, label: 'Cream (Kürzel)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bLp\b/, label: 'Appaloosa (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  { pattern: /\bplpl\b/, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bpl\b/, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'pl' }] },
+  { pattern: /\bflfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
+  { pattern: /\bfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
+  { pattern: /\bsty\b/, label: 'Sooty (Kürzel)', hints: [{ locus: 'Sooty', allele: 'sty' }] },
 ];
 
-// Gibt eine Liste { locus, allele, label } aller aus dem Fellfarbe-Namen
-// eindeutig ableitbaren Merkmale zurück. Bereits erkannte Textstellen
-// werden aus der Arbeitskopie entfernt, damit z.B. "Varnish Roan" nicht
-// zusätzlich das separate "Roan"-Muster auslöst.
-function inferGeneticHintsFromPhenotype(coatColorName) {
-  if (!coatColorName) return [];
-  let working = coatColorName;
+// Gibt eine Liste { locus, allele, label } aller aus dem Text eindeutig
+// ableitbaren Merkmale zurück. Bereits erkannte Textstellen werden aus der
+// Arbeitskopie entfernt, damit z.B. "Schwarzbraun" nicht zusätzlich das
+// separate "Braun"-Muster auslöst.
+function inferGeneticHintsFromPhenotype(text) {
+  if (!text) return [];
+  let working = text;
   const hints = [];
-  for (const { pattern, locus, allele, label } of PHENOTYPE_GENE_HINTS) {
+  for (const { pattern, hints: entryHints, label } of PHENOTYPE_GENE_HINTS) {
     if (pattern.test(working)) {
-      hints.push({ locus, allele, label });
+      for (const h of entryHints) hints.push({ locus: h.locus, allele: h.allele, label });
       working = working.replace(pattern, ' ');
     }
   }
@@ -461,9 +495,10 @@ function extractPresentAlleles(rawValue) {
 
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
-// die nicht getestet wurden - aus Hinweisen im Fellfarbe-Namen und in der
-// Notiz (siehe inferGeneticHintsFromPhenotype).
-function presentGenesSummary(colorRows, coatColorName, notes) {
+// die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
+// Sooty/Flaxen) - aus Hinweisen im Fellfarbe-Namen, in der Notiz und im
+// Pferdenamen (siehe inferGeneticHintsFromPhenotype).
+function presentGenesSummary(colorRows, coatColorName, notes, horseName) {
   const rows = colorRows || [];
   const confirmed = [];
   const testedLoci = new Set();
@@ -478,6 +513,7 @@ function presentGenesSummary(colorRows, coatColorName, notes) {
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName),
     ...inferGeneticHintsFromPhenotype(notes),
+    ...inferGeneticHintsFromPhenotype(horseName),
   ];
   const seen = new Set();
   const inferred = [];
