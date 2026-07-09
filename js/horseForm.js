@@ -113,6 +113,24 @@ async function onSave(e) {
     return;
   }
 
+  // Nur bei neu angelegten Pferden prüfen (beim Bearbeiten eines
+  // bestehenden Pferdes würde es sonst sich selbst als Dopplung erkennen).
+  if (!editingId) {
+    const { data: existing, error: dupError } = await supabaseClient
+      .from('horses')
+      .select('id')
+      .ilike('name', formData.name)
+      .limit(1);
+    if (dupError) {
+      errorEl.textContent = 'Prüfung auf Dopplung fehlgeschlagen: ' + dupError.message;
+      return;
+    }
+    if (existing && existing.length > 0) {
+      errorEl.textContent = `Ein Pferd mit dem Namen "${formData.name}" ist bereits in der Datenbank hinterlegt.`;
+      return;
+    }
+  }
+
   const payload = { ...formData };
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];

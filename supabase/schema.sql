@@ -50,8 +50,12 @@ alter table public.horses
 alter table public.horses
   add constraint horses_breeding_allowed_required check (breeding_allowed = true);
 
+-- Verhindert doppelte Pferdenamen (zusaetzlich zur Pruefung im Formular,
+-- damit es auch bei gleichzeitigen Speicherversuchen keine Dopplung gibt).
+-- Groß-/Kleinschreibung wird dabei ignoriert (lower(name)).
+create unique index if not exists horses_name_unique_idx on public.horses (lower(name));
+
 create index if not exists horses_user_id_idx on public.horses (user_id);
-create index if not exists horses_name_idx on public.horses (lower(name));
 create index if not exists horses_breed_idx on public.horses (breed);
 
 -- updated_at automatisch pflegen
@@ -99,3 +103,15 @@ create policy "horses_update_authenticated" on public.horses
 drop policy if exists "horses_delete_authenticated" on public.horses;
 create policy "horses_delete_authenticated" on public.horses
   for delete to authenticated using (true);
+
+-- Oeffentlicher Lesezugriff (ohne Login) fuer Zuchtplaner und
+-- Turnierplaner (siehe migration_005_public_read_access.sql). Der
+-- "anon"-Key steht ohnehin oeffentlich im Frontend-Code - diese Policy
+-- macht die Pferdedaten damit lesend fuer jede*n mit diesem Key abrufbar.
+-- Schreiben (insert/update/delete) bleibt ausschliesslich authenticated
+-- vorbehalten (siehe oben).
+grant select on public.horses to anon;
+
+drop policy if exists "horses_select_public" on public.horses;
+create policy "horses_select_public" on public.horses
+  for select to anon using (true);

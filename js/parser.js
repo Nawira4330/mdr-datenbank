@@ -44,8 +44,6 @@ function parseHorseText(rawText) {
   // --- Zucht ---
   const icoVal = findValueForLabel(nonEmpty, 'ICO');
   if (icoVal) result.ico = parseFloat(icoVal.replace(',', '.').replace('%', '').trim());
-  const fruchtbarkeit = findValueForLabel(nonEmpty, 'Fruchtbarkeit');
-  if (fruchtbarkeit) result.fertility_pct = parseFloat(fruchtbarkeit.replace(',', '.').replace('%', '').trim());
 
   // --- Tabellen ---
   result.genetic_diseases = extractSimpleTable(lines, 'Erbkrankheiten', ['Farben']);
@@ -68,7 +66,7 @@ function parseHorseText(rawText) {
   result.traits = extractPercentGroups(lines, 'Eigenschaften', 'Papiere');
 
   result.tournament_potential = parseTournamentPotential(lines);
-  result.pedigree = parsePedigree(lines);
+  result.pedigree = parsePedigree(lines, result.breed);
 
   return result;
 }
@@ -270,7 +268,7 @@ const PEDIGREE_SECTION_LABELS = {
 // "ancestors" - unsortierte Liste, keine Baumstruktur). Enthält der Text
 // dagegen die oben genannten mobilen Abschnittsüberschriften, werden die
 // Vorfahren zusätzlich präzise in "sections" nach Elternteil einsortiert.
-function parsePedigree(lines) {
+function parsePedigree(lines, mainBreed) {
   // Anker ist "Besitzhistorie", nicht "Stammbaum": beim Kopieren von der
   // mobilen Ansicht fehlt die Überschrift "Stammbaum" komplett, während
   // "Besitzhistorie" in beiden Varianten unmittelbar davor steht. Steht
@@ -302,11 +300,13 @@ function parsePedigree(lines) {
   let current = null;
   let sawSelf = false;
   let lastEntry = null;
+  let skipNextUnbekannt = false;
 
   for (const line of segment) {
     if (PEDIGREE_SECTION_LABELS[line]) {
       currentLabel = PEDIGREE_SECTION_LABELS[line];
       current = null;
+      skipNextUnbekannt = false;
       continue;
     }
     if (/anzeigen\?$/.test(line)) continue;
@@ -320,6 +320,26 @@ function parsePedigree(lines) {
       continue;
     }
     if (/^Diff\.-GP Eltern:/.test(line)) continue;
+
+    // "Unbekannt" steht immer für EIN einzelnes unbekanntes Pferd mit
+    // derselben Rasse wie das Pferd selbst - auch wenn es im Text (wie bei
+    // der mobilen Ansicht) direkt zweimal hintereinander auftaucht (einmal
+    // als "Name", einmal als "Rasse").
+    if (line === 'Unbekannt' && !current) {
+      if (skipNextUnbekannt) {
+        skipNextUnbekannt = false;
+        continue;
+      }
+      if (sawSelf) {
+        const entry = { name: 'Unbekannt', breed: mainBreed || 'Unbekannt' };
+        ancestors.push(entry);
+        if (sections) (sections[currentLabel] ||= []).push(entry);
+        lastEntry = entry;
+      }
+      skipNextUnbekannt = true;
+      continue;
+    }
+    skipNextUnbekannt = false;
 
     if (!current) {
       current = { name: line };
@@ -437,6 +457,7 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /flaxentr[äa]ger/i, label: 'Flaxenträger', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
   { pattern: /\bflaxen\b/i, label: 'Flaxen', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
   { pattern: /\bsooty\b/i, label: 'Sooty', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\brabicano\b/i, label: 'Rabicano', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
   { pattern: /\bgrey\b/i, label: 'Grey', hints: [{ locus: 'Grey', allele: 'G' }] },
   { pattern: /\b(leopard|fewspot|blanket|snowcap)\b/i, label: 'Leopard-Musterung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
 
@@ -456,6 +477,7 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\bflfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
   { pattern: /\bfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
   { pattern: /\bsty\b/, label: 'Sooty (Kürzel)', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\brc\b/, label: 'Rabicano (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
 ];
 
 // Gibt eine Liste { locus, allele, label } aller aus dem Text eindeutig
