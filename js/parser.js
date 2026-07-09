@@ -424,7 +424,8 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /grulla/i, label: 'Grulla', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }] },
   { pattern: /wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
   { pattern: /sealbrown|schwarzbraun/i, label: 'Sealbrown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
-  { pattern: /\b(bay|braun)\b/i, label: 'Bay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+  { pattern: /\b(bay|braun|brown)\b/i, label: 'Bay/Brown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+  { pattern: /\b(perlino|buckskin)\b/i, label: 'Perlino/Buckskin', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
   { pattern: /smoky/i, label: 'Smoky', hints: [{ locus: 'Cream', allele: 'Cr' }] },
 
   // Muster, Scheckungen und sonstige Merkmale (volle Begriffe).
