@@ -69,8 +69,10 @@ function colorCodeOf(row) {
 // exakt dieselben Werte verwenden.
 function computeDerived(h) {
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
+  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes);
   return {
     colorCode: colorCodeOf(h),
+    presentGenes: genes.map((g) => g.alleles).join(' '),
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
     extAvg: averageScore(h.exterior_descriptive, scoreExteriorTerm),
     extPercent: h.exterior_genetics?.overall?.percent ?? null,
@@ -99,7 +101,7 @@ const LOCUS_DOMINANT_CHECK = {
 
 function matchesGenetikLocus(row, locusName) {
   const entry = (row.colors || []).find((c) => c.label === locusName);
-  if (!entry) return false;
+  if (!entry || isUntestedLocusValue(entry.value)) return false;
   const check = LOCUS_DOMINANT_CHECK[locusName];
   return check ? check(entry.value) : false;
 }
@@ -200,7 +202,7 @@ function rowHtml(h) {
     <td><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
     <td>${escapeHtml(h.gender || '')}</td>
     <td>${escapeHtml(h.coat_color || '')}</td>
-    <td class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.colorCode)}</td>
+    <td class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
     <td>${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
     <td>${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
     <td>${d.extPercent != null ? d.extPercent + '%' : ''}</td>

@@ -374,6 +374,53 @@ function isUntestedLocusValue(value) {
   return /nicht getestet/i.test(value || '');
 }
 
+// Zerlegt einen Locus-Rohwert (zwei gleich lange Allel-Tokens) und behält
+// nur die "vorhandenen" Allele: großgeschrieben = vorhanden, klein = nicht
+// vorhanden. Ausnahme: "pl" (Pearl) gilt immer als vorhanden, obwohl es
+// klein geschrieben ist - es ist kein rezessives Gegenstück zu einem
+// Großbuchstaben, sondern das eigentliche Allel-Kürzel selbst. Nicht zu
+// verwechseln mit "lp" (Appaloosa/Leopard), das weiterhin als "nicht
+// vorhanden" gilt, wenn es klein geschrieben ist.
+function extractPresentAlleles(rawValue) {
+  if (!rawValue || isUntestedLocusValue(rawValue)) return '';
+  const half = rawValue.length / 2;
+  const tokens = Number.isInteger(half) ? [rawValue.slice(0, half), rawValue.slice(half)] : [rawValue];
+  return tokens.filter((t) => t === 'pl' || /[A-Z]/.test(t)).join('');
+}
+
+// Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
+// aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
+// die nicht getestet wurden - aus Hinweisen im Fellfarbe-Namen und in der
+// Notiz (siehe inferGeneticHintsFromPhenotype).
+function presentGenesSummary(colorRows, coatColorName, notes) {
+  const rows = colorRows || [];
+  const confirmed = [];
+  const testedLoci = new Set();
+
+  for (const r of rows) {
+    if (isUntestedLocusValue(r.value)) continue;
+    testedLoci.add(r.label);
+    const alleles = extractPresentAlleles(r.value);
+    if (alleles) confirmed.push({ locus: r.label, alleles, source: 'getestet' });
+  }
+
+  const hints = [
+    ...inferGeneticHintsFromPhenotype(coatColorName),
+    ...inferGeneticHintsFromPhenotype(notes),
+  ];
+  const seen = new Set();
+  const inferred = [];
+  for (const h of hints) {
+    if (testedLoci.has(h.locus)) continue;
+    const key = h.locus + h.allele;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    inferred.push({ locus: h.locus, alleles: h.allele, source: 'abgeleitet' });
+  }
+
+  return [...confirmed, ...inferred];
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseHorseText };
 }

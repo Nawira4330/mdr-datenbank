@@ -152,7 +152,10 @@ function renderDetailTables(data) {
   const parts = [];
 
   if (data.genetic_diseases?.length) parts.push(simpleTableHtml('Erbkrankheiten', data.genetic_diseases));
-  if (data.colors?.length) parts.push(colorGeneticsHtml(data.colors, data.coat_color));
+  if (data.colors?.length) {
+    const notes = document.getElementById('notes').value;
+    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes));
+  }
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
     parts.push(scoredTableHtml(
@@ -204,35 +207,42 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
-// Name (Fellfarbe) + zusammengefasster Gencode (keine interpretierte
-// Ableitung/Phänotyp-Anzeige, nur der reine Genetikcode).
-function colorGeneticsHtml(rows, coatColorName) {
-  const hints = inferGeneticHintsFromPhenotype(coatColorName);
+// Name (Fellfarbe) + Rohwerte je Locus + Zusammenfassung der tatsächlich
+// vorhandenen Gene (großgeschrieben = vorhanden, Ausnahme "pl"). Bei nicht
+// getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen UND Notiz
+// einbezogen.
+function colorGeneticsHtml(rows, coatColorName, notes) {
+  const hints = [
+    ...inferGeneticHintsFromPhenotype(coatColorName),
+    ...inferGeneticHintsFromPhenotype(notes),
+  ];
   const hintsByLocus = {};
   for (const h of hints) {
-    (hintsByLocus[h.locus] ||= []).push(h);
+    const list = (hintsByLocus[h.locus] ||= []);
+    if (!list.some((x) => x.allele === h.allele)) list.push(h);
   }
 
   const body = rows.map((r) => {
     let value = escapeHtml(r.value);
     if (isUntestedLocusValue(r.value) && hintsByLocus[r.label]) {
       const alleles = hintsByLocus[r.label].map((h) => h.allele).join(', ');
-      value += ` — mindestens ${escapeHtml(alleles)} (laut Fellfarbe)`;
+      value += ` — mindestens ${escapeHtml(alleles)} (laut Fellfarbe/Notiz)`;
     }
     return `<tr><th>${escapeHtml(r.label)}</th><td>${value}</td></tr>`;
   }).join('');
 
-  const fullCode = rows.map((r) => r.value).join(' ');
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
-  const codeHtml = `<p class="small muted">Code: <strong>${escapeHtml(fullCode)}</strong></p>`;
 
-  let hintsHtml = '';
-  if (hints.length) {
-    const summary = hints.map((h) => `${h.allele} (${h.label})`).join(', ');
-    hintsHtml = `<p class="small muted">Aus der Fellfarbe ableitbar: <strong>${escapeHtml(summary)}</strong></p>`;
+  const summary = presentGenesSummary(rows, coatColorName, notes);
+  let summaryHtml = '';
+  if (summary.length) {
+    const text = summary.map((s) => s.source === 'abgeleitet' ? `${s.alleles} (abgeleitet)` : s.alleles).join(', ');
+    summaryHtml = `<p class="small muted">Vorhandene Gene: <strong>${escapeHtml(text)}</strong></p>`;
+  } else {
+    summaryHtml = '<p class="small muted">Keine vorhandenen Gene erkannt.</p>';
   }
 
-  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${codeHtml}${hintsHtml}`;
+  return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${summaryHtml}`;
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
