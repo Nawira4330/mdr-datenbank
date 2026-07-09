@@ -38,6 +38,10 @@ async function populateFilterOptions() {
     for (const c of row.colors || []) locusLabels.add(c.label);
   }
   populateCheckDropdown('f-ekh-drop', [...diseaseLabels].sort(), { noneOption: 'Keine' });
+  // "KIT" selbst wird nicht als Option angeboten, da es ein Sammel-Locus
+  // für mehrere unabhängige Merkmale (Tobiano/Sabino/Roan/Dominant White)
+  // ist - stattdessen einzeln als Sabino/Roan/Tobiano weiter unten.
+  locusLabels.delete('KIT');
   // Pearl und Flaxen sind Sonderfälle: Pearl teilt sich den Cream-Locus
   // (ein "pl" im Rohwert zeigt es auch mischerbig/als Träger an, anders
   // als der scharfe Sichtbarkeits-Check in LOCUS_DOMINANT_CHECK), und
@@ -49,6 +53,9 @@ async function populateFilterOptions() {
     extra: [
       { value: '__pearl__', label: 'Pearl (auch Träger)' },
       { value: '__flaxen__', label: 'Flaxen (auch Träger)' },
+      { value: '__kit_sb__', label: 'Sabino' },
+      { value: '__kit_rn__', label: 'Roan' },
+      { value: '__kit_to__', label: 'Tobiano' },
     ],
   });
 }
@@ -142,9 +149,23 @@ function hasFlaxenGene(row) {
   return genes.some((g) => g.locus === 'Flaxen');
 }
 
+// KIT ist ein Sammel-Locus für mehrere unabhängige Merkmale (Tobiano/
+// Sabino/Roan/Dominant White), die im Rohwert als aneinandergereihte
+// Zwei-Buchstaben-Kürzel stehen (z.B. "RnTO" = Roan + Tobiano). Für die
+// Filterung wird daher gezielt nach dem jeweiligen Kürzel gesucht statt
+// nur (wie LOCUS_DOMINANT_CHECK.KIT) pauschal "irgendetwas vorhanden".
+function hasKitTrait(row, code) {
+  const entry = (row.colors || []).find((c) => c.label === 'KIT');
+  if (!entry || isUntestedLocusValue(entry.value)) return false;
+  return new RegExp(code, 'i').test(entry.value);
+}
+
 function matchesGenetikLocus(row, locusName) {
   if (locusName === '__pearl__') return hasPearlGene(row);
   if (locusName === '__flaxen__') return hasFlaxenGene(row);
+  if (locusName === '__kit_sb__') return hasKitTrait(row, 'sb');
+  if (locusName === '__kit_rn__') return hasKitTrait(row, 'rn');
+  if (locusName === '__kit_to__') return hasKitTrait(row, 'to');
   const entry = (row.colors || []).find((c) => c.label === locusName);
   if (!entry || isUntestedLocusValue(entry.value)) return false;
   const check = LOCUS_DOMINANT_CHECK[locusName];
