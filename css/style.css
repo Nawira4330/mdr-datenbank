@@ -17,6 +17,11 @@
   --radius: 8px;
   --font-heading: "Courgette", cursive;
   --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Deckende (nicht-transparente) Entsprechung von "th { background:
+     rgba(107,157,0,0.08) }" über --surface - wird für die fixierte
+     Tabellenkopfzeile gebraucht, damit beim Scrollen keine Zeilen
+     durchscheinen. */
+  --th-bg-solid: #f3f7eb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +36,7 @@
     --accent-dark: #a3ca79;
     --danger: #e0827f;
     --success: #89b957;
+    --th-bg-solid: #2a3b3c;
   }
 }
 
@@ -245,7 +251,7 @@ label {
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; }
-th { background: rgba(107, 157, 0, 0.08); cursor: pointer; user-select: none; }
+th { background: var(--th-bg-solid); cursor: pointer; user-select: none; }
 tr:hover td { background: rgba(107, 157, 0, 0.05); }
 td.actions-cell { display: flex; gap: 0.4rem; }
 .pill {
