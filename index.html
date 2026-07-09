@@ -14,6 +14,7 @@
     <nav>
       <span id="session-email" class="muted small"></span>
       <a class="btn secondary" href="horse.html">+ Neues Pferd</a>
+      <a class="btn secondary" href="https://nawira4330.github.io/mdr-planer/" target="_blank" rel="noopener">Zucht-/Turnierplaner ↗</a>
       <a class="btn secondary" href="verwaltung.html" id="verwaltung-link" hidden>Verwaltung</a>
       <button id="logout-btn" class="secondary">Abmelden</button>
     </nav>
@@ -21,68 +22,86 @@
 
   <main class="container">
     <form id="filter-form" class="filter-bar">
-      <div class="field">
-        <label for="f-name">Name</label>
-        <input type="text" id="f-name" placeholder="Suche…" />
-      </div>
-      <div class="field">
-        <label for="f-owner">Besitzer</label>
-        <select id="f-owner"><option value="">Alle</option></select>
-      </div>
-      <div class="field">
-        <label>Genetik</label>
-        <div class="checkdrop" id="f-genetik-drop">
-          <button type="button" class="checkdrop-toggle">Alle</button>
-          <div class="checkdrop-panel" hidden></div>
+      <div class="filter-group">
+        <div class="filter-group-title">Suche</div>
+        <div class="filter-group-grid">
+          <div class="field">
+            <label for="f-name">Name</label>
+            <input type="text" id="f-name" placeholder="Suche…" />
+          </div>
+          <div class="field">
+            <label for="f-owner">Besitzer</label>
+            <select id="f-owner"><option value="">Alle</option></select>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label>EKH</label>
-        <div class="checkdrop" id="f-ekh-drop">
-          <button type="button" class="checkdrop-toggle">Alle</button>
-          <div class="checkdrop-panel" hidden></div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">Genetik &amp; Gesundheit</div>
+        <div class="filter-group-grid">
+          <div class="field">
+            <label>Genetik</label>
+            <div class="checkdrop" id="f-genetik-drop">
+              <button type="button" class="checkdrop-toggle">Alle</button>
+              <div class="checkdrop-panel" hidden></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>EKH</label>
+            <div class="checkdrop" id="f-ekh-drop">
+              <button type="button" class="checkdrop-toggle">Alle</button>
+              <div class="checkdrop-panel" hidden></div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label for="f-gp-op">GP</label>
-        <div class="compare-field">
-          <select id="f-gp-op">
-            <option value="gt">größer als</option>
-            <option value="lt">kleiner als</option>
-          </select>
-          <input type="number" id="f-gp-val" step="0.01" />
+
+      <div class="filter-group">
+        <div class="filter-group-title">Leistungswerte</div>
+        <div class="filter-group-grid">
+          <div class="field">
+            <label for="f-gp-op">GP</label>
+            <div class="compare-field">
+              <select id="f-gp-op">
+                <option value="gt">größer als</option>
+                <option value="lt">kleiner als</option>
+              </select>
+              <input type="number" id="f-gp-val" step="0.01" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-ext-op">Ext</label>
+            <div class="compare-field">
+              <select id="f-ext-op">
+                <option value="gt">größer als</option>
+                <option value="lt">kleiner als</option>
+              </select>
+              <input type="number" id="f-ext-val" step="0.01" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-extpct-op">Ext%</label>
+            <div class="compare-field">
+              <select id="f-extpct-op">
+                <option value="gt">größer als</option>
+                <option value="lt">kleiner als</option>
+              </select>
+              <input type="number" id="f-extpct-val" step="0.01" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-int-op">Int</label>
+            <div class="compare-field">
+              <select id="f-int-op">
+                <option value="gt">größer als</option>
+                <option value="lt">kleiner als</option>
+              </select>
+              <input type="number" id="f-int-val" step="0.01" />
+            </div>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label for="f-ext-op">Ext</label>
-        <div class="compare-field">
-          <select id="f-ext-op">
-            <option value="gt">größer als</option>
-            <option value="lt">kleiner als</option>
-          </select>
-          <input type="number" id="f-ext-val" step="0.01" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="f-extpct-op">Ext%</label>
-        <div class="compare-field">
-          <select id="f-extpct-op">
-            <option value="gt">größer als</option>
-            <option value="lt">kleiner als</option>
-          </select>
-          <input type="number" id="f-extpct-val" step="0.01" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="f-int-op">Int</label>
-        <div class="compare-field">
-          <select id="f-int-op">
-            <option value="gt">größer als</option>
-            <option value="lt">kleiner als</option>
-          </select>
-          <input type="number" id="f-int-val" step="0.01" />
-        </div>
-      </div>
+
       <div class="actions">
         <button type="button" id="reset-filters" class="secondary">Zurücksetzen</button>
         <button type="submit">Filtern</button>
@@ -99,6 +118,21 @@
 
     <div class="table-wrap">
       <table id="horse-table">
+        <colgroup>
+          <col style="width: 3%" />
+          <col style="width: 12%" />
+          <col style="width: 7%" />
+          <col style="width: 10%" />
+          <col style="width: 14%" />
+          <col style="width: 5%" />
+          <col style="width: 5%" />
+          <col style="width: 6%" />
+          <col style="width: 5%" />
+          <col style="width: 7%" />
+          <col style="width: 8%" />
+          <col style="width: 9%" />
+          <col style="width: 9%" />
+        </colgroup>
         <thead>
           <tr>
             <th><input type="checkbox" id="select-all" /></th>
