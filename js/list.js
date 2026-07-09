@@ -1,5 +1,7 @@
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
+let lastRenderedRows = [];
+let pendingDeleteIds = [];
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -17,6 +19,7 @@ async function init() {
   wireSortableHeaders();
   wireSelection();
   wireCheckDropdowns();
+  wireDeleteModal();
   await populateFilterOptions();
   await loadHorses();
 }
@@ -219,9 +222,10 @@ async function loadHorses() {
   }
 
   countEl.textContent = `${filtered.length} Pferd${filtered.length === 1 ? '' : 'e'}`;
+  lastRenderedRows = filtered;
   tbody.innerHTML = filtered.map(rowHtml).join('');
   tbody.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', () => onDelete(btn.dataset.delete, btn.dataset.name));
+    btn.addEventListener('click', () => onDelete(btn.dataset.delete));
   });
   tbody.querySelectorAll('[data-select]').forEach((cb) => {
     cb.addEventListener('change', () => onRowSelect(cb.dataset.select, cb.checked));
@@ -248,8 +252,7 @@ function rowHtml(h) {
     <td>${escapeHtml(ekhText)}</td>
     <td>${escapeHtml(h.owner || '')}</td>
     <td class="actions-cell">
-      <a class="btn secondary small" href="horse.html?id=${h.id}">Bearbeiten</a>
-      <button class="danger small" data-delete="${h.id}" data-name="${escapeHtml(h.name || '')}">Löschen</button>
+      <button class="danger small" data-delete="${h.id}">Löschen</button>
     </td>
   </tr>`;
 }
@@ -268,9 +271,45 @@ function escapeHtml(str) {
   }[c]));
 }
 
-async function onDelete(id, name) {
-  if (!confirm(`Pferd "${name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) return;
-  const { error } = await supabaseClient.from('horses').delete().eq('id', id);
+function onDelete(id) {
+  const row = lastRenderedRows.find((r) => r.id === id);
+  openDeleteModal(row ? [row] : [{ id, name: '(unbekannt)', owner: '' }]);
+}
+
+// --- Lösch-Bestätigung (Popup statt native confirm()) ---
+
+function wireDeleteModal() {
+  document.querySelector('#delete-modal-cancel').addEventListener('click', closeDeleteModal);
+  document.querySelector('#delete-modal-confirm').addEventListener('click', confirmDelete);
+  document.querySelector('#delete-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'delete-modal') closeDeleteModal();
+  });
+}
+
+function openDeleteModal(rows) {
+  pendingDeleteIds = rows.map((r) => r.id);
+  const list = document.querySelector('#delete-modal-list');
+  list.innerHTML = rows.map((r) => {
+    const owner = r.owner ? ` — Besitzer: ${escapeHtml(r.owner)}` : '';
+    return `<li>${escapeHtml(r.name || '(ohne Name)')}${owner}</li>`;
+  }).join('');
+  document.querySelector('#delete-modal-count').textContent =
+    rows.length === 1 ? '1 Pferd wirklich unwiderruflich löschen?' : `${rows.length} Pferde wirklich unwiderruflich löschen?`;
+  document.querySelector('#delete-modal').hidden = false;
+}
+
+function closeDeleteModal() {
+  document.querySelector('#delete-modal').hidden = true;
+  pendingDeleteIds = [];
+}
+
+async function confirmDelete() {
+  const ids = pendingDeleteIds;
+  closeDeleteModal();
+  if (!ids.length) return;
+  const { error } = ids.length === 1
+    ? await supabaseClient.from('horses').delete().eq('id', ids[0])
+    : await supabaseClient.from('horses').delete().in('id', ids);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);
     return;
@@ -402,14 +441,8 @@ function updateBulkBar() {
   }
 }
 
-async function onBulkDelete() {
-  const ids = [...selectedIds];
-  if (!ids.length) return;
-  if (!confirm(`${ids.length} Pferd(e) wirklich unwiderruflich löschen?`)) return;
-  const { error } = await supabaseClient.from('horses').delete().in('id', ids);
-  if (error) {
-    alert('Löschen fehlgeschlagen: ' + error.message);
-    return;
-  }
-  await loadHorses();
+function onBulkDelete() {
+  const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
+  if (!rows.length) return;
+  openDeleteModal(rows);
 }
