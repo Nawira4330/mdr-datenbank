@@ -25,10 +25,11 @@ async function init() {
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('owner, genetic_diseases, colors');
+  const { data, error } = await supabaseClient.from('horses').select('owner, gender, genetic_diseases, colors');
   if (error || !data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
+  fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -37,7 +38,19 @@ async function populateFilterOptions() {
     for (const c of row.colors || []) locusLabels.add(c.label);
   }
   populateCheckDropdown('f-ekh-drop', [...diseaseLabels].sort(), { noneOption: 'Keine' });
-  populateCheckDropdown('f-genetik-drop', [...locusLabels].sort());
+  // Pearl und Flaxen sind Sonderfälle: Pearl teilt sich den Cream-Locus
+  // (ein "pl" im Rohwert zeigt es auch mischerbig/als Träger an, anders
+  // als der scharfe Sichtbarkeits-Check in LOCUS_DOMINANT_CHECK), und
+  // Flaxen wird vom Spiel gar nicht als eigener Locus getestet, sondern
+  // nur aus Fellfarbe/Notiz/Name abgeleitet (siehe hasPearlGene/
+  // hasFlaxenGene) - daher als feste Zusatzoptionen statt aus den
+  // vorhandenen "colors"-Labels abgeleitet.
+  populateCheckDropdown('f-genetik-drop', [...locusLabels].sort(), {
+    extra: [
+      { value: '__pearl__', label: 'Pearl (auch Träger)' },
+      { value: '__flaxen__', label: 'Flaxen (auch Träger)' },
+    ],
+  });
 }
 
 function fillSelect(selector, values) {
@@ -55,9 +68,11 @@ function buildQuery() {
 
   const name = document.querySelector('#f-name').value.trim();
   const owner = document.querySelector('#f-owner').value;
+  const gender = document.querySelector('#f-gender').value;
 
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
+  if (gender) q = q.eq('gender', gender);
 
   // Die eigentliche Sortierung passiert clientseitig in applySort(), da
   // GP/Ext/Ext%/Int/HLP-SLP berechnete Werte ohne eigene DB-Spalte sind
@@ -105,7 +120,31 @@ const LOCUS_DOMINANT_CHECK = {
   KIT: (v) => !!v && !/^0+$/.test(v),
 };
 
+// Pearl liegt auf demselben Locus wie Cream (siehe parser.js) - ein
+// getesteter Rohwert wie "Crpl" (Cream+Pearl-Trägerin) oder "plpl"
+// (reinerbig Pearl) soll hier also schon bei einem bloßen "pl"-Vorkommen
+// zählen, unabhängig von Groß-/Kleinschreibung und auch mischerbig -
+// anders als LOCUS_DOMINANT_CHECK.Cream, das nur die sichtbare Ausprägung
+// prüft. Ist Cream nicht getestet, zählt zusätzlich eine aus Fellfarbe/
+// Notiz/Name abgeleitete Pearl-Vermutung (presentGenesSummary).
+function hasPearlGene(row) {
+  const entry = (row.colors || []).find((c) => c.label === 'Cream');
+  if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name);
+  return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
+}
+
+// Flaxen wird vom Spiel nicht als eigener Locus getestet (siehe
+// parser.js) - daher ausschließlich aus Fellfarbe/Notiz/Name ableitbar,
+// sowohl als Träger (fl) als auch reinerbig (flfl).
+function hasFlaxenGene(row) {
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name);
+  return genes.some((g) => g.locus === 'Flaxen');
+}
+
 function matchesGenetikLocus(row, locusName) {
+  if (locusName === '__pearl__') return hasPearlGene(row);
+  if (locusName === '__flaxen__') return hasFlaxenGene(row);
   const entry = (row.colors || []).find((c) => c.label === locusName);
   if (!entry || isUntestedLocusValue(entry.value)) return false;
   const check = LOCUS_DOMINANT_CHECK[locusName];
@@ -366,14 +405,15 @@ function closeAllCheckDropdowns() {
   document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
 }
 
-function populateCheckDropdown(rootId, values, { noneOption } = {}) {
+function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
   const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
   panel.innerHTML = '';
 
   if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
   for (const v of values) panel.appendChild(checkDropdownItem(v, v));
+  for (const { value, label } of extra || []) panel.appendChild(checkDropdownItem(value, label));
 
-  if (!noneOption && !values.length) {
+  if (!noneOption && !values.length && !(extra || []).length) {
     const empty = document.createElement('div');
     empty.className = 'checkdrop-empty';
     empty.textContent = 'Keine Werte vorhanden';

@@ -531,22 +531,24 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\b(leopard|fewspot|blanket|snowcap)\b/i, label: 'Leopard-Musterung', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
 
   // Kurzkürzel, wie sie z.B. direkt in einer Notiz stehen könnten (z.B.
-  // "SPL" oder "SB" statt der vollen Wörter). Bewusst GROSS-/Kleinschreibung-
-  // sensitiv und nur als eigenständiges Wort, um Zufallstreffer in normalem
-  // Fließtext zu vermeiden.
-  { pattern: /\bSPL\b/, label: 'Splashed White (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
-  { pattern: /\bSB\b/, label: 'Sabino (Kürzel)', hints: [{ locus: 'KIT', allele: 'Sb' }] },
-  { pattern: /\bTo\b/, label: 'Tobiano (Kürzel)', hints: [{ locus: 'KIT', allele: 'To' }] },
-  { pattern: /\bRn\b/, label: 'Roan (Kürzel)', hints: [{ locus: 'KIT', allele: 'Rn' }] },
-  { pattern: /\bCh\b/, label: 'Champagne (Kürzel)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
-  { pattern: /\bCr\b/, label: 'Cream (Kürzel)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
-  { pattern: /\bLp\b/, label: 'Appaloosa (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
-  { pattern: /\bplpl\b/, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'plpl' }] },
-  { pattern: /\bpl\b/, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'pl' }] },
-  { pattern: /\bflfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
-  { pattern: /\bfl\b/, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
-  { pattern: /\bsty\b/, label: 'Sooty (Kürzel)', hints: [{ locus: 'Sooty', allele: 'sty' }] },
-  { pattern: /\brc\b/, label: 'Rabicano (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
+  // "SPL" oder "SB" statt der vollen Wörter). Groß-/Kleinschreibung wird
+  // ignoriert (Notizen werden oft locker/klein getippt) - nur als
+  // eigenständiges Wort (\b), um Zufallstreffer in normalem Fließtext zu
+  // vermeiden. Die Kürzel selbst sind keine echten deutschen Wörter, daher
+  // ist das Risiko von Fehltreffern auch ohne Groß-/Kleinschreibung gering.
+  { pattern: /\bSPL\b/i, label: 'Splashed White (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bSB\b/i, label: 'Sabino (Kürzel)', hints: [{ locus: 'KIT', allele: 'Sb' }] },
+  { pattern: /\bTo\b/i, label: 'Tobiano (Kürzel)', hints: [{ locus: 'KIT', allele: 'To' }] },
+  { pattern: /\bRn\b/i, label: 'Roan (Kürzel)', hints: [{ locus: 'KIT', allele: 'Rn' }] },
+  { pattern: /\bCh\b/i, label: 'Champagne (Kürzel)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
+  { pattern: /\bCr\b/i, label: 'Cream (Kürzel)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bLp\b/i, label: 'Appaloosa (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  { pattern: /\bplpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'plpl' }] },
+  { pattern: /\bpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'pl' }] },
+  { pattern: /\bflfl\b/i, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
+  { pattern: /\bfl\b/i, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'fl' }] },
+  { pattern: /\bsty\b/i, label: 'Sooty (Kürzel)', hints: [{ locus: 'Sooty', allele: 'sty' }] },
+  { pattern: /\brc\b/i, label: 'Rabicano (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
 ];
 
 // Gibt eine Liste { locus, allele, label } aller aus dem Text eindeutig

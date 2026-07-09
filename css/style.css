@@ -328,3 +328,39 @@ legend {
 @media (max-width: 640px) {
   .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
 }
+
+/* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
+   Nur ab einer gewissen Breite, damit auf sehr kleinen Bildschirmen (wo
+   der Filterbereich selbst schon mehr als die Viewport-Höhe einnehmen
+   kann) weiterhin die ganze Seite normal scrollt statt Inhalte
+   abzuschneiden. */
+@media (min-width: 641px) {
+  body.list-page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body.list-page .topbar { flex: 0 0 auto; }
+  body.list-page main.container {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body.list-page .filter-bar,
+  body.list-page .list-header {
+    flex: 0 0 auto;
+  }
+  body.list-page .table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  body.list-page thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+}
