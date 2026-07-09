@@ -56,7 +56,10 @@ function buildQuery() {
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
 
-  return q.order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
+  // Die eigentliche Sortierung passiert clientseitig in applySort(), da
+  // GP/Ext/Ext%/Int/HLP-SLP berechnete Werte ohne eigene DB-Spalte sind
+  // (siehe computeDerived) und ".order()" damit nicht arbeiten kann.
+  return q.order('name', { ascending: true });
 }
 
 function colorCodeOf(row) {
@@ -158,6 +161,40 @@ function applyClientFilters(rows) {
   });
 }
 
+function sortValue(row, field) {
+  switch (field) {
+    case 'name': return (row.name || '').toLowerCase();
+    case 'gender': return (row.gender || '').toLowerCase();
+    case 'coat_color': return (row.coat_color || '').toLowerCase();
+    case 'owner': return (row.owner || '').toLowerCase();
+    case 'gp': return computeDerived(row).gp;
+    case 'ext': return computeDerived(row).extAvg;
+    case 'extpct': return computeDerived(row).extPercent;
+    case 'int': return computeDerived(row).intAvg;
+    case 'hlpslp': {
+      const n = Number(hlpSlpDisplay(row.hlp_slp));
+      return Number.isNaN(n) ? null : n;
+    }
+    default: return null;
+  }
+}
+
+// Fehlende Werte (null) landen unabhängig von der Richtung immer am Ende,
+// damit A-Z/Z-A bzw. 1-x/x-1 nicht durch Lücken durcheinandergeraten.
+function applySort(rows) {
+  const { field, dir } = currentSort;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = sortValue(a, field);
+    const vb = sortValue(b, field);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return va.localeCompare(vb, 'de') * mult;
+    return (va - vb) * mult;
+  });
+}
+
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
@@ -173,7 +210,7 @@ async function loadHorses() {
     return;
   }
 
-  const filtered = applyClientFilters(data);
+  const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="13">Keine Pferde gefunden.</td></tr>';
