@@ -140,27 +140,52 @@ function extractSimpleTable(lines, startLabel, endLabels) {
   return rows;
 }
 
-// Die genetische Exterieur-Tabelle hat 3 Spalten (Körperteil / Genotyp /
-// Punktzahl) und endet mit einer Gesamtzeile wie "141/224 62.95%".
+// Jedes Körperteil hat einen Genotyp aus 16 Zeichen (2 Gruppen zu je 4
+// zweistelligen Allel-Kürzeln, insgesamt 8+8 Buchstaben, getrennt durch
+// "|"). Im Optimalfall sind die ersten 8 Buchstaben groß (H) und die
+// letzten 8 klein (h) - gezählt wird, wie viele davon tatsächlich passen.
+// Das entspricht genau der Punktzahl, die das Spiel selbst als "X/16"
+// anzeigt (gegen mehrere echte Beispiele geprüft) - wird hier aber immer
+// selbst berechnet, weil die mobile Kopiervariante des Spiels weder die
+// einzelnen "X/16"-Werte noch die Gesamtzeile ("141/224 62.95%") enthält.
+function computeExteriorScore(genotype) {
+  const parts = (genotype || '').split('|').map((s) => s.replace(/\s+/g, ''));
+  if (parts.length !== 2 || parts[0].length !== 8 || parts[1].length !== 8) return null;
+  const front = [...parts[0]].filter((c) => c === 'H').length;
+  const back = [...parts[1]].filter((c) => c === 'h').length;
+  return front + back;
+}
+
+// Die genetische Exterieur-Tabelle hat 2-3 Spalten (Körperteil / Genotyp /
+// ggf. die vom Spiel mitgelieferte Punktzahl - wird ignoriert, siehe oben).
 function parseExteriorGenetics(lines) {
   const startIdx = lines.indexOf('Exterieur');
   if (startIdx === -1) return { rows: [], overall: null };
   const rows = [];
-  let overall = null;
   for (let i = startIdx + 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
-    const totalMatch = line.match(/^(\d+)\/(\d+)\s+([\d.,]+)\s*%$/);
-    if (totalMatch) {
-      overall = { score: `${totalMatch[1]}/${totalMatch[2]}`, percent: parseFloat(totalMatch[3].replace(',', '.')) };
-      break;
-    }
-    if (line === 'Leistung' || line === 'Körperbau') break;
+    if (line === 'Leistung' || line === 'Körperbau' || line === 'Disziplin') break;
+    if (/^\d+\/\d+\s+[\d.,]+\s*%$/.test(line)) continue; // vom Spiel mitgelieferte Gesamtzeile, wird selbst berechnet
     const parts = line.split(/\t+/).map((p) => p.trim()).filter(Boolean);
-    if (parts.length === 3) {
-      rows.push({ label: parts[0], genotype: parts[1], score: parts[2] });
+    if (parts.length >= 2 && parts[1].includes('|')) {
+      rows.push({ label: parts[0], genotype: parts[1] });
     }
   }
+
+  let totalScore = 0;
+  let totalMax = 0;
+  for (const row of rows) {
+    const score = computeExteriorScore(row.genotype);
+    if (score === null) continue;
+    row.score = `${score}/16`;
+    totalScore += score;
+    totalMax += 16;
+  }
+  const overall = totalMax > 0
+    ? { score: `${totalScore}/${totalMax}`, percent: Math.round((totalScore / totalMax) * 10000) / 100 }
+    : null;
+
   return { rows, overall };
 }
 
@@ -227,47 +252,93 @@ function parseTournamentPotential(lines) {
   return result;
 }
 
-// Der Stammbaum wird im Kopiertext ohne Einrückung/Struktur dargestellt,
-// daher lässt sich die genaue Abstammungs-Hierarchie (wer ist Vater/Mutter
-// von wem) nicht zuverlässig rekonstruieren. Es wird stattdessen eine
-// unsortierte Liste aller im Text vorkommenden Vorfahren gespeichert
-// (Name, Rasse, ggf. Potenzial) - in der Reihenfolge, in der sie im Text
+// Beim Kopieren von der mobilen Ansicht liefert das Spiel (anders als am
+// Desktop) benannte Abschnittsüberschriften für die Vorfahren, die erst
+// nach Klick auf "Großeltern/Urgroßeltern anzeigen?" überhaupt im Text
 // auftauchen.
+const PEDIGREE_SECTION_LABELS = {
+  'Eltern des Vaters': 'Großeltern väterlicherseits',
+  'Eltern der Mutter': 'Großeltern mütterlicherseits',
+  'Eltern des Großvaters väterlicherseits': 'Urgroßeltern (Großvater väterlicherseits)',
+  'Eltern der Großmutter väterlicherseits': 'Urgroßeltern (Großmutter väterlicherseits)',
+  'Eltern des Großvaters mütterlicherseits': 'Urgroßeltern (Großvater mütterlicherseits)',
+  'Eltern der Großmutter mütterlicherseits': 'Urgroßeltern (Großmutter mütterlicherseits)',
+};
+
+// Am Desktop steht der Stammbaum als reine Namensliste ohne erkennbare
+// Struktur da, daher lässt sich dort nur die Reihenfolge auswerten (siehe
+// "ancestors" - unsortierte Liste, keine Baumstruktur). Enthält der Text
+// dagegen die oben genannten mobilen Abschnittsüberschriften, werden die
+// Vorfahren zusätzlich präzise in "sections" nach Elternteil einsortiert.
 function parsePedigree(lines) {
-  const startIdx = lines.indexOf('Stammbaum');
-  if (startIdx === -1) return [];
+  // Anker ist "Besitzhistorie", nicht "Stammbaum": beim Kopieren von der
+  // mobilen Ansicht fehlt die Überschrift "Stammbaum" komplett, während
+  // "Besitzhistorie" in beiden Varianten unmittelbar davor steht. Steht
+  // "Stammbaum" (Desktop-Navigationspunkt) kurz danach noch im Text, wird
+  // es zusätzlich übersprungen, damit es nicht fälschlich als Pferdename
+  // interpretiert wird.
+  let startIdx = lines.indexOf('Besitzhistorie');
+  if (startIdx === -1) {
+    startIdx = lines.indexOf('Stammbaum');
+    if (startIdx === -1) return { ancestors: [], sections: null };
+  } else {
+    for (let i = startIdx + 1; i < Math.min(startIdx + 4, lines.length); i++) {
+      if (lines[i] === 'Stammbaum') { startIdx = i; break; }
+    }
+  }
   let endIdx = lines.length;
   for (let i = startIdx + 1; i < lines.length; i++) {
-    if (lines[i] === 'Exterieur') {
+    if (lines[i] === 'Exterieur' || lines[i] === 'Körperbau') {
       endIdx = i;
       break;
     }
   }
   const segment = lines.slice(startIdx + 1, endIdx).filter(Boolean);
+  const hasSections = segment.some((l) => PEDIGREE_SECTION_LABELS[l]);
 
-  const entries = [];
+  const ancestors = [];
+  const sections = hasSections ? {} : null;
+  let currentLabel = 'Eltern';
   let current = null;
+  let sawSelf = false;
+  let lastEntry = null;
+
   for (const line of segment) {
-    const potMatch = line.match(/^Potential:\s*(\d+)$/);
-    const diffMatch = line.match(/^Diff\.-GP Eltern:/);
-    if (potMatch) {
-      // "Potential: N" folgt erst NACH Name+Rasse, current wurde also
-      // bereits gepusht und zurückgesetzt - daher an den zuletzt
-      // hinzugefügten Eintrag hängen, nicht an "current".
-      const target = current || entries[entries.length - 1];
-      if (target) target.potential = parseInt(potMatch[1], 10);
+    if (PEDIGREE_SECTION_LABELS[line]) {
+      currentLabel = PEDIGREE_SECTION_LABELS[line];
+      current = null;
       continue;
     }
-    if (diffMatch) continue;
+    if (/anzeigen\?$/.test(line)) continue;
+
+    const potMatch = line.match(/^Potential:\s*(\d+)$/);
+    if (potMatch) {
+      // "Potential: N" folgt erst NACH Name+Rasse, current wurde also
+      // bereits übernommen - daher an den zuletzt hinzugefügten Eintrag
+      // hängen, nicht an "current".
+      if (lastEntry) lastEntry.potential = parseInt(potMatch[1], 10);
+      continue;
+    }
+    if (/^Diff\.-GP Eltern:/.test(line)) continue;
+
     if (!current) {
       current = { name: line };
     } else if (!current.breed) {
       current.breed = line;
-      entries.push(current);
+      if (!sawSelf) {
+        // Der allererste vollständige Name+Rasse-Eintrag ist das Pferd
+        // selbst, nicht sein Vorfahre.
+        sawSelf = true;
+      } else {
+        ancestors.push(current);
+        if (sections) (sections[currentLabel] ||= []).push(current);
+      }
+      lastEntry = current;
       current = null;
     }
   }
-  return entries;
+
+  return { ancestors, sections };
 }
 
 // --- Bewertungsskalen für Exterieur (Körperbau) und Interieur (Mentalität) ---

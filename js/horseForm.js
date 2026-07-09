@@ -174,7 +174,7 @@ function renderDetailTables(data) {
   }
   if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
   if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
-  if (data.pedigree?.length) parts.push(pedigreeHtml(data.pedigree));
+  if (hasPedigreeData(data.pedigree)) parts.push(pedigreeHtml(data.pedigree));
 
   container.innerHTML = parts.join('');
   fieldset.hidden = parts.length === 0;
@@ -290,25 +290,55 @@ function percentGroupsHtml(title, groups, potentialOnly) {
 // Potenzial-Werten, die nur für die ersten 6 Vorfahren (Eltern+Großeltern)
 // angegeben werden. Eine Baumstruktur (wer ist Vater/Mutter von wem) lässt
 // sich aus dem Text ohne Einrückung trotzdem nicht ableiten.
-function pedigreeHtml(list) {
-  const ancestors = list.slice(1);
-  const parents = ancestors.slice(0, 2);
-  const grandparents = ancestors.slice(2, 6);
-  const greatGrandparents = ancestors.slice(6, 14);
-  const rest = ancestors.slice(14);
+function hasPedigreeData(pedigree) {
+  if (!pedigree) return false;
+  if (Array.isArray(pedigree)) return pedigree.length > 0;
+  return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
+}
 
-  const group = (title, entries) => {
-    if (!entries.length) return '';
-    const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(p.breed || '')}</td></tr>`).join('');
-    return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
-  };
+const PEDIGREE_SECTION_ORDER = [
+  'Eltern',
+  'Großeltern väterlicherseits', 'Großeltern mütterlicherseits',
+  'Urgroßeltern (Großvater väterlicherseits)', 'Urgroßeltern (Großmutter väterlicherseits)',
+  'Urgroßeltern (Großvater mütterlicherseits)', 'Urgroßeltern (Großmutter mütterlicherseits)',
+];
 
-  return `<div class="group-heading">Stammbaum</div>
-    <p class="small muted">Einteilung anhand der Reihenfolge im kopierten Text – keine Garantie bei künftigen Layout-Änderungen im Spiel.</p>
-    ${group('Eltern', parents)}
-    ${group('Großeltern', grandparents)}
-    ${group('Urgroßeltern', greatGrandparents)}
-    ${group('Weitere Vorfahren', rest)}`;
+function pedigreeGroupTableHtml(title, entries) {
+  if (!entries?.length) return '';
+  const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(p.breed || '')}</td></tr>`).join('');
+  return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
+}
+
+// "pedigree" ist entweder das alte, flache Array (bereits gespeicherte
+// Pferde vor dieser Änderung, Selbst-Eintrag an Position 0) oder das neue
+// Format { ancestors, sections }. "sections" ist nur gefüllt, wenn der Text
+// von der mobilen Ansicht kopiert wurde und die dort vorhandenen
+// Abschnittsüberschriften ("Eltern des Vaters" usw.) eine genaue Zuordnung
+// erlauben - sonst wird wie bisher anhand der Reihenfolge geschätzt
+// (2 Eltern, 4 Großeltern, 8 Urgroßeltern).
+function pedigreeHtml(pedigree) {
+  const isLegacyArray = Array.isArray(pedigree);
+  const ancestors = isLegacyArray ? pedigree.slice(1) : (pedigree.ancestors || []);
+  const sections = isLegacyArray ? null : pedigree.sections;
+
+  let body;
+  let note;
+  if (sections) {
+    body = PEDIGREE_SECTION_ORDER.map((label) => pedigreeGroupTableHtml(label, sections[label])).join('');
+    note = 'Einteilung anhand der im Text enthaltenen Abschnittsüberschriften (mobile Ansicht).';
+  } else {
+    const parents = ancestors.slice(0, 2);
+    const grandparents = ancestors.slice(2, 6);
+    const greatGrandparents = ancestors.slice(6, 14);
+    const rest = ancestors.slice(14);
+    body = pedigreeGroupTableHtml('Eltern', parents)
+      + pedigreeGroupTableHtml('Großeltern', grandparents)
+      + pedigreeGroupTableHtml('Urgroßeltern', greatGrandparents)
+      + pedigreeGroupTableHtml('Weitere Vorfahren', rest);
+    note = 'Einteilung anhand der Reihenfolge im kopierten Text – keine Garantie bei künftigen Layout-Änderungen im Spiel.';
+  }
+
+  return `<div class="group-heading">Stammbaum</div><p class="small muted">${escapeHtml(note)}</p>${body}`;
 }
 
 function escapeHtml(str) {
