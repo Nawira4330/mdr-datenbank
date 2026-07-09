@@ -419,17 +419,39 @@ function fractionToPercent(scoreStr) {
 // auslösen, und "Varnish Roan" nicht als das separate cKit-Gen "Roan"
 // erkannt wird. Jeder Treffer entfernt seinen Text aus der Arbeitskopie.
 const PHENOTYPE_GENE_HINTS = [
+  // Mehrwort-Kombinationsnamen IMMER zuerst prüfen, vor allen Basisfarben-/
+  // Verdünnungs-Einzelmustern weiter unten: sonst würde z.B. das "Brown"-
+  // oder "Smoky"-Einzelmuster schon einen Teil des Textes konsumieren,
+  // bevor die spezifischere Kombination ("Sealbrown Cream", "Smoky Brown",
+  // ...) überhaupt geprüft wird, und die Kombination würde nie mehr
+  // zutreffen bzw. nur unvollständige Treffer liefern.
+  { pattern: /\bclassic dun\b/i, label: 'Classic Dun (Bay-Dun)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }] },
+  { pattern: /\bsealbrown cream\b/i, label: 'Sealbrown Cream (Sealbrown-doppel-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Cream', allele: 'CrCr' }] },
+  { pattern: /\bsmoky brown\b/i, label: 'Smoky Brown (Sealbrown-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsmoky black\b/i, label: 'Smoky Black (Black-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bsmoky cream\b/i, label: 'Smoky Cream (Black-doppel-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Cream', allele: 'CrCr' }] },
+
   // Basisfarbe + Verdünnung: diese Namen setzen laut MDR-Farbvererbung
   // zwingend bestimmte Allele voraus.
   { pattern: /grulla/i, label: 'Grulla', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Dun', allele: 'D' }] },
   { pattern: /wildbay|wildbraun/i, label: 'Wildbay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'Ap' }] },
   { pattern: /sealbrown|schwarzbraun|\bbrown\b/i, label: 'Sealbrown/Brown', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }] },
   { pattern: /\b(bay|braun)\b/i, label: 'Bay', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
-  { pattern: /\b(perlino|buckskin)\b/i, label: 'Perlino/Buckskin', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
+
+  // Cream-Kombinationsnamen: einfache (Crcr) und doppelte (CrCr) Aufhellung
+  // sind unterschiedliche Namen, daher je Basisfarbe eigene Einträge statt
+  // sich auf das allgemeine "Cream"-Muster zu verlassen (das nur die
+  // einfache Aufhellung abbildet).
+  { pattern: /\bpalomino\b/i, label: 'Palomino (Chestnut-Cream)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bcremello\b/i, label: 'Cremello (Chestnut-doppel-Cream)', hints: [{ locus: 'Cream', allele: 'CrCr' }] },
+  { pattern: /\bbuckskin\b/i, label: 'Buckskin (Bay-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Cream', allele: 'Cr' }] },
+  { pattern: /\bperlino\b/i, label: 'Perlino (Bay-doppel-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Cream', allele: 'CrCr' }] },
   { pattern: /smoky/i, label: 'Smoky', hints: [{ locus: 'Cream', allele: 'Cr' }] },
 
   // Champagne-Kombinationsnamen: der Name kombiniert Basisfarbe +
-  // Champagne, daher immer beide Loci mit ableiten.
+  // Champagne, daher immer beide Loci mit ableiten. "Classic Dun" wird
+  // oben bereits vorher abgefangen, sonst würde es hier fälschlich als
+  // Champagne statt als Dun erkannt.
   { pattern: /\bsable\b/i, label: 'Sable (Sealbrown-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }] },
   { pattern: /\bgold\b/i, label: 'Gold (Chestnut-Champagne)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
   { pattern: /\bamber\b/i, label: 'Amber (Bay-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }] },
@@ -441,8 +463,10 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\broan\b/i, label: 'Roan', hints: [{ locus: 'KIT', allele: 'Rn' }] },
   { pattern: /\btobiano\b/i, label: 'Tobiano', hints: [{ locus: 'KIT', allele: 'To' }] },
   { pattern: /\bsabino\b/i, label: 'Sabino', hints: [{ locus: 'KIT', allele: 'Sb' }] },
-  { pattern: /\bovero\b/i, label: 'Overo', hints: [{ locus: 'Overo', allele: 'O' }] },
+  { pattern: /\bovero\b/i, label: 'Overo', hints: [{ locus: 'Overo', allele: 'Ov' }] },
   { pattern: /\bsplashed\b/i, label: 'Splashed White', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
+  { pattern: /\bsilver\b/i, label: 'Silver', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Silver', allele: 'Z' }] },
+  { pattern: /\bpangare\b/i, label: 'Pangare', hints: [{ locus: 'Pangare', allele: 'Pa' }] },
   { pattern: /\bdun\b/i, label: 'Dun', hints: [{ locus: 'Dun', allele: 'D' }] },
   { pattern: /\bcream\b/i, label: 'Cream', hints: [{ locus: 'Cream', allele: 'Cr' }] },
   // Pearl zeigt sich sichtbar nur reinerbig (plpl) - wenn der Name also
