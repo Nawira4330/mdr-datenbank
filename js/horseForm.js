@@ -330,12 +330,12 @@ function pedigreeGroupTableHtml(title, entries) {
 }
 
 // "pedigree" ist entweder das alte, flache Array (bereits gespeicherte
-// Pferde vor dieser Änderung, Selbst-Eintrag an Position 0) oder das neue
-// Format { ancestors, sections }. "sections" ist nur gefüllt, wenn der Text
-// von der mobilen Ansicht kopiert wurde und die dort vorhandenen
-// Abschnittsüberschriften ("Eltern des Vaters" usw.) eine genaue Zuordnung
-// erlauben - sonst wird wie bisher anhand der Reihenfolge geschätzt
-// (2 Eltern, 4 Großeltern, 8 Urgroßeltern).
+// Pferde vor dieser Änderung, Selbst-Eintrag an Position 0) oder das
+// Format { ancestors, sections }. Der Parser liefert "sections" nicht mehr
+// (Handy- und Desktop-Kopien werden identisch als reine Reihenfolge in
+// "ancestors" gespeichert) - das Feld bleibt hier nur zur Anzeige bereits
+// vor dieser Änderung gespeicherter Datensätze erhalten, bei denen es noch
+// gefüllt ist.
 function pedigreeHtml(pedigree) {
   const isLegacyArray = Array.isArray(pedigree);
   const ancestors = isLegacyArray ? pedigree.slice(1) : (pedigree.ancestors || []);

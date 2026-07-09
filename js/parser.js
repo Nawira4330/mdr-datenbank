@@ -253,21 +253,21 @@ function parseTournamentPotential(lines) {
 // Beim Kopieren von der mobilen Ansicht liefert das Spiel (anders als am
 // Desktop) benannte Abschnittsüberschriften für die Vorfahren, die erst
 // nach Klick auf "Großeltern/Urgroßeltern anzeigen?" überhaupt im Text
-// auftauchen.
-const PEDIGREE_SECTION_LABELS = {
-  'Eltern des Vaters': 'Großeltern väterlicherseits',
-  'Eltern der Mutter': 'Großeltern mütterlicherseits',
-  'Eltern des Großvaters väterlicherseits': 'Urgroßeltern (Großvater väterlicherseits)',
-  'Eltern der Großmutter väterlicherseits': 'Urgroßeltern (Großmutter väterlicherseits)',
-  'Eltern des Großvaters mütterlicherseits': 'Urgroßeltern (Großvater mütterlicherseits)',
-  'Eltern der Großmutter mütterlicherseits': 'Urgroßeltern (Großmutter mütterlicherseits)',
-};
+// auftauchen. Diese Überschriften werden beim Einlesen übersprungen (siehe
+// unten), damit sie nicht fälschlich als Pferdename interpretiert werden -
+// die Vorfahren selbst werden aber unabhängig von der Kopierquelle
+// (Handy/Desktop) einheitlich als einfache Reihenfolge in "ancestors"
+// gespeichert, damit beide Varianten identisch abgelegt und dargestellt
+// werden.
+const PEDIGREE_SECTION_LABELS = new Set([
+  'Eltern des Vaters',
+  'Eltern der Mutter',
+  'Eltern des Großvaters väterlicherseits',
+  'Eltern der Großmutter väterlicherseits',
+  'Eltern des Großvaters mütterlicherseits',
+  'Eltern der Großmutter mütterlicherseits',
+]);
 
-// Am Desktop steht der Stammbaum als reine Namensliste ohne erkennbare
-// Struktur da, daher lässt sich dort nur die Reihenfolge auswerten (siehe
-// "ancestors" - unsortierte Liste, keine Baumstruktur). Enthält der Text
-// dagegen die oben genannten mobilen Abschnittsüberschriften, werden die
-// Vorfahren zusätzlich präzise in "sections" nach Elternteil einsortiert.
 function parsePedigree(lines, mainBreed) {
   // Anker ist "Besitzhistorie", nicht "Stammbaum": beim Kopieren von der
   // mobilen Ansicht fehlt die Überschrift "Stammbaum" komplett, während
@@ -292,18 +292,14 @@ function parsePedigree(lines, mainBreed) {
     }
   }
   const segment = lines.slice(startIdx + 1, endIdx).filter(Boolean);
-  const hasSections = segment.some((l) => PEDIGREE_SECTION_LABELS[l]);
 
   const ancestors = [];
-  const sections = hasSections ? {} : null;
-  let currentLabel = 'Eltern';
   let current = null;
   let sawSelf = false;
   let lastEntry = null;
 
   for (const line of segment) {
-    if (PEDIGREE_SECTION_LABELS[line]) {
-      currentLabel = PEDIGREE_SECTION_LABELS[line];
+    if (PEDIGREE_SECTION_LABELS.has(line)) {
       current = null;
       continue;
     }
@@ -328,7 +324,6 @@ function parsePedigree(lines, mainBreed) {
       if (sawSelf) {
         const entry = { name: 'Unbekannt', breed: mainBreed || 'Unbekannt' };
         ancestors.push(entry);
-        if (sections) (sections[currentLabel] ||= []).push(entry);
         lastEntry = entry;
       }
       continue;
@@ -344,14 +339,13 @@ function parsePedigree(lines, mainBreed) {
         sawSelf = true;
       } else {
         ancestors.push(current);
-        if (sections) (sections[currentLabel] ||= []).push(current);
       }
       lastEntry = current;
       current = null;
     }
   }
 
-  return { ancestors, sections };
+  return { ancestors, sections: null };
 }
 
 // --- Bewertungsskalen für Exterieur (Körperbau) und Interieur (Mentalität) ---
