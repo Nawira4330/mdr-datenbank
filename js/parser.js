@@ -300,13 +300,11 @@ function parsePedigree(lines, mainBreed) {
   let current = null;
   let sawSelf = false;
   let lastEntry = null;
-  let skipNextUnbekannt = false;
 
   for (const line of segment) {
     if (PEDIGREE_SECTION_LABELS[line]) {
       currentLabel = PEDIGREE_SECTION_LABELS[line];
       current = null;
-      skipNextUnbekannt = false;
       continue;
     }
     if (/anzeigen\?$/.test(line)) continue;
@@ -321,25 +319,20 @@ function parsePedigree(lines, mainBreed) {
     }
     if (/^Diff\.-GP Eltern:/.test(line)) continue;
 
-    // "Unbekannt" steht immer für EIN einzelnes unbekanntes Pferd mit
-    // derselben Rasse wie das Pferd selbst - auch wenn es im Text (wie bei
-    // der mobilen Ansicht) direkt zweimal hintereinander auftaucht (einmal
-    // als "Name", einmal als "Rasse").
+    // "Unbekannt" steht für sich allein für EIN unbekanntes Pferd mit
+    // derselben Rasse wie das Pferd selbst (ohne eigene Rasse-Zeile im
+    // Text, anders als benannte Vorfahren). Taucht "Unbekannt" mehrfach
+    // hintereinander auf, sind das ebenso viele eigenständige unbekannte
+    // Vorfahren (z.B. beide Eltern eines Großelternteils unbekannt).
     if (line === 'Unbekannt' && !current) {
-      if (skipNextUnbekannt) {
-        skipNextUnbekannt = false;
-        continue;
-      }
       if (sawSelf) {
         const entry = { name: 'Unbekannt', breed: mainBreed || 'Unbekannt' };
         ancestors.push(entry);
         if (sections) (sections[currentLabel] ||= []).push(entry);
         lastEntry = entry;
       }
-      skipNextUnbekannt = true;
       continue;
     }
-    skipNextUnbekannt = false;
 
     if (!current) {
       current = { name: line };
