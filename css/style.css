@@ -79,6 +79,7 @@ a:hover { color: var(--accent-dark); }
 
 .topbar nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
 }
@@ -232,8 +233,10 @@ label {
 
 .list-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 #bulk-actions {
@@ -241,6 +244,15 @@ label {
   align-items: center;
   gap: 0.6rem;
 }
+/* Ersetzt in der mobilen Kartenansicht die Checkbox im (dort
+   ausgeblendeten) Tabellenkopf - siehe "table -> Karten" weiter unten. */
+.mobile-select-all {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+.mobile-select-all input { width: auto; }
 
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html)
@@ -290,12 +302,13 @@ legend {
 .paste-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
 
 .detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.detail-table th, .detail-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
+.detail-table th, .detail-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; overflow-wrap: break-word; }
 .detail-table th { color: var(--muted); font-weight: 600; width: 40%; }
 
 .group-heading { font-weight: 600; margin: 0.6rem 0 0.2rem; color: var(--accent-dark); }
 
-.form-actions { display: flex; gap: 0.6rem; margin: 1.2rem 0; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.2rem 0; }
+.form-actions .push-right { margin-left: auto; }
 
 .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 0; }
 
@@ -332,7 +345,73 @@ legend {
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
 
 @media (max-width: 640px) {
-  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+  main.container { padding: 0.75rem; }
+  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
+  .topbar h1 { font-size: 1.3rem; }
+
+  /* Checkbox-Dropdown-Panel darf auf schmalen Bildschirmen nicht über den
+     rechten Rand hinausragen. */
+  .checkdrop-panel { max-width: calc(100vw - 3rem); }
+  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
+
+  .mobile-select-all { display: inline-flex; }
+
+  /* --- Übersicht: Tabelle -> Karten ---
+     12 Spalten passen auf einem Handybildschirm auch mit Umbruch nicht
+     lesbar nebeneinander (siehe table-layout:fixed weiter oben, das ist
+     für Tablet/Desktop gedacht). Stattdessen wird jede Zeile zu einer
+     eigenständigen Karte, jede Zelle zu einer Zeile "Label: Wert" -
+     das Label kommt aus dem data-label-Attribut (siehe rowHtml in
+     list.js), da <thead> hier ausgeblendet wird. */
+  .table-wrap { overflow-x: visible; border: none; border-radius: 0; background: transparent; }
+  #horse-table, #horse-table tbody, #horse-table tr, #horse-table td { display: block; width: 100%; }
+  #horse-table thead { display: none; }
+  #horse-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    background: var(--surface);
+  }
+  #horse-table tr:hover td { background: transparent; }
+  #horse-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.95rem;
+    text-align: right;
+  }
+  #horse-table td:last-child { border-bottom: none; }
+  #horse-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  #horse-table td[data-label="Name"] {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.2rem;
+  }
+  #horse-table td[data-label="Name"]::before { content: none; }
+  #horse-table td[data-label="Auswählen"] { justify-content: flex-end; }
+  #horse-table td[data-label="Aktionen"] { display: block; text-align: left; }
+  #horse-table td[data-label="Aktionen"]::before { content: none; }
+  #horse-table td[data-label="Aktionen"] button { width: 100%; margin-top: 0.3rem; }
+  #horse-table td.small { font-size: 0.85rem; }
+
+  /* --- Formular (horse.html) --- */
+  .form-actions { flex-direction: column; }
+  .form-actions .push-right { margin-left: 0; }
+  .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
+  fieldset { padding: 0.7rem 0.8rem 0.9rem; }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---

@@ -290,28 +290,31 @@ async function loadHorses() {
   tbody.querySelectorAll('[data-select]').forEach((cb) => {
     cb.addEventListener('change', () => onRowSelect(cb.dataset.select, cb.checked));
   });
-  document.querySelector('#select-all').checked = false;
+  document.querySelectorAll('#select-all, #select-all-mobile').forEach((box) => { box.checked = false; });
 }
 
+// "data-label" wird nur für die mobile Kartenansicht gebraucht (siehe
+// style.css) - dort ersetzt CSS-generierter Inhalt (attr(data-label)) die
+// sonst fehlenden Spaltenüberschriften, da <thead> dort ausgeblendet ist.
 function rowHtml(h) {
   const d = computeDerived(h);
   const affected = affectedDiseaseLabels(h);
   const ekhText = affected.length ? affected.join(', ') : '-';
 
   return `<tr>
-    <td><input type="checkbox" data-select="${h.id}" /></td>
-    <td><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
-    <td>${escapeHtml(h.gender || '')}</td>
-    <td>${escapeHtml(h.coat_color || '')}</td>
-    <td class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
-    <td>${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td>${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td>${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td>${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
-    <td>${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
-    <td>${escapeHtml(ekhText)}</td>
-    <td>${escapeHtml(h.owner || '')}</td>
-    <td class="actions-cell">
+    <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
+    <td data-label="Name" class="name-cell"><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
+    <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
+    <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
+    <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
+    <td data-label="GP">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
+    <td data-label="Ext">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
+    <td data-label="Ext%">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
+    <td data-label="Int">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
+    <td data-label="EKH">${escapeHtml(ekhText)}</td>
+    <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
+    <td data-label="Aktionen" class="actions-cell">
       <button class="danger small" data-delete="${h.id}">Löschen</button>
     </td>
   </tr>`;
@@ -473,14 +476,21 @@ function resetCheckDropdown(rootId) {
 
 // --- Mehrfachauswahl (Zeilen) ---
 
+// "#select-all" (Tabellenkopf) und "#select-all-mobile" (Listenkopf, nur
+// in der mobilen Kartenansicht sichtbar, da <thead> dort ausgeblendet
+// ist) steuern dieselbe Auswahl und werden dabei synchron gehalten.
 function wireSelection() {
-  document.querySelector('#select-all').addEventListener('change', (e) => {
-    const checked = e.target.checked;
-    document.querySelectorAll('#horse-table tbody [data-select]').forEach((cb) => {
-      cb.checked = checked;
-      onRowSelect(cb.dataset.select, checked, false);
+  const selectAllBoxes = document.querySelectorAll('#select-all, #select-all-mobile');
+  selectAllBoxes.forEach((box) => {
+    box.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      selectAllBoxes.forEach((other) => { other.checked = checked; });
+      document.querySelectorAll('#horse-table tbody [data-select]').forEach((cb) => {
+        cb.checked = checked;
+        onRowSelect(cb.dataset.select, checked, false);
+      });
+      updateBulkBar();
     });
-    updateBulkBar();
   });
   document.querySelector('#bulk-delete-btn').addEventListener('click', onBulkDelete);
 }
