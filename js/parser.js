@@ -62,8 +62,8 @@ function parseHorseText(rawText) {
   // die übrigen Kategorien folgen erst danach hinter "Alle Disziplinen
   // anzeigen?". Diese Zwischenzeilen enthalten keine Prozent-Paare und
   // werden vom Gruppen-Erkenner automatisch übersprungen.
-  result.disciplines = extractPercentGroups(lines, 'Disziplin', 'Eigenschaften');
-  result.traits = extractPercentGroups(lines, 'Eigenschaften', 'Papiere');
+  result.disciplines = extractDisciplineGroups(lines);
+  result.traits = extractPercentGroupsByLabel(lines, 'Eigenschaften', 'Papiere');
 
   result.tournament_potential = parseTournamentPotential(lines);
   result.pedigree = parsePedigree(lines, result.breed);
@@ -187,41 +187,85 @@ function parseExteriorGenetics(lines) {
   return { rows, overall };
 }
 
+// Sucht die erste Zeile mit exaktem Wert ab einem Startindex, oder -1.
+function findLineIndex(lines, label, fromIdx = 0) {
+  for (let i = fromIdx; i < lines.length; i++) {
+    if (lines[i] === label) return i;
+  }
+  return -1;
+}
+
 // Disziplinen und Eigenschaften bestehen aus Gruppen (z.B. "Western",
 // "Grundlagen"): eine Zeile ohne folgende Prozentwerte ist eine Gruppen-
 // überschrift, eine Zeile gefolgt von zwei "NN %" Zeilen ist ein Eintrag
-// (aktueller Wert / Potenzial).
-function extractPercentGroups(lines, startLabel, endLabel) {
-  const startIdx = lines.indexOf(startLabel);
-  if (startIdx === -1) return {};
-  let endIdx = lines.length;
-  for (let i = startIdx + 1; i < lines.length; i++) {
-    if (lines[i] === endLabel) {
-      endIdx = i;
-      break;
-    }
-  }
-
+// mit aktuellem Wert und Potenzial. Manche Einträge (z.B. Gangarten, die
+// das Pferd noch nicht "kann", oder die über "Alle Disziplinen anzeigen?"
+// nachgeladenen Kategorien) zeigt das Spiel dagegen nur mit einem
+// einzigen Prozentwert (Potenzial) an - auch das wird hier erkannt, statt
+// diese Einträge komplett zu verlieren.
+function extractPercentGroups(lines, startIdx, endIdx) {
   const percentRe = /^\d+(\.\d+)?\s*%$/;
   const result = {};
   let currentGroup = null;
 
-  for (let i = startIdx + 1; i < endIdx; i++) {
+  for (let i = startIdx; i < endIdx; i++) {
     const line = lines[i];
     if (!line) continue;
     const p1 = lines[i + 1];
     const p2 = lines[i + 2];
-    if (p1 && p2 && percentRe.test(p1) && percentRe.test(p2)) {
+    if (p1 && percentRe.test(p1) && p2 && percentRe.test(p2)) {
       if (!currentGroup) currentGroup = 'Allgemein';
-      if (!result[currentGroup]) result[currentGroup] = [];
-      result[currentGroup].push({
-        name: line,
-        current: parseFloat(p1),
-        potential: parseFloat(p2),
-      });
+      (result[currentGroup] ||= []).push({ name: line, current: parseFloat(p1), potential: parseFloat(p2) });
       i += 2;
+    } else if (p1 && percentRe.test(p1)) {
+      if (!currentGroup) currentGroup = 'Allgemein';
+      (result[currentGroup] ||= []).push({ name: line, current: null, potential: parseFloat(p1) });
+      i += 1;
     } else {
       currentGroup = line;
+    }
+  }
+  return result;
+}
+
+// Einfacher Fall (Eigenschaften): ein zusammenhängender Bereich zwischen
+// zwei Überschriften, ohne Lücken dazwischen.
+function extractPercentGroupsByLabel(lines, startLabel, endLabel) {
+  const startIdx = lines.indexOf(startLabel);
+  if (startIdx === -1) return {};
+  const endIdxFound = findLineIndex(lines, endLabel, startIdx + 1);
+  const endIdx = endIdxFound === -1 ? lines.length : endIdxFound;
+  return extractPercentGroups(lines, startIdx + 1, endIdx);
+}
+
+// Disziplinen sind ein Sonderfall: das Spiel zeigt zunächst nur eine
+// Kategorie (z.B. "Western") offen an, gefolgt von "Trainingszustand" und
+// "Turnierpotenzial" (die einen eigenen Parser haben, s.u.
+// parseTournamentPotential); die übrigen Kategorien folgen danach hinter
+// "Alle Disziplinen anzeigen?". Der Trainingszustand/Turnierpotenzial-
+// Block dazwischen wird hier bewusst übersprungen statt am Stück
+// durchgescannt, da er selbst einzelne Prozentwerte enthält (z.B.
+// "Fitness: 99 %"), die sonst fälschlich als Disziplinen-Einträge
+// landen würden.
+function extractDisciplineGroups(lines) {
+  const startIdx = lines.indexOf('Disziplin');
+  if (startIdx === -1) return {};
+  const eigenschaftenIdx = findLineIndex(lines, 'Eigenschaften', startIdx + 1);
+  const finalEndIdx = eigenschaftenIdx === -1 ? lines.length : eigenschaftenIdx;
+
+  const trainingszustandIdx = findLineIndex(lines, 'Trainingszustand', startIdx + 1);
+  const turnierpotenzialIdx = findLineIndex(lines, 'Turnierpotenzial', startIdx + 1);
+  const junkCandidates = [trainingszustandIdx, turnierpotenzialIdx].filter((i) => i !== -1 && i < finalEndIdx);
+  const junkStart = junkCandidates.length ? Math.min(...junkCandidates) : finalEndIdx;
+
+  const showAllIdx = findLineIndex(lines, 'Alle Disziplinen anzeigen?', junkStart);
+  const resumeIdx = showAllIdx !== -1 && showAllIdx < finalEndIdx ? showAllIdx + 1 : null;
+
+  const result = extractPercentGroups(lines, startIdx + 1, junkStart);
+  if (resumeIdx !== null) {
+    const rest = extractPercentGroups(lines, resumeIdx, finalEndIdx);
+    for (const [group, entries] of Object.entries(rest)) {
+      result[group] = result[group] ? [...result[group], ...entries] : entries;
     }
   }
   return result;
