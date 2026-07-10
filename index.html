@@ -37,6 +37,14 @@
             <label for="f-gender">Geschlecht</label>
             <select id="f-gender"><option value="">Alle</option></select>
           </div>
+          <div class="field">
+            <label for="f-zzl">ZZL</label>
+            <select id="f-zzl">
+              <option value="">Alle</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -130,6 +138,7 @@
           <option value="extpct">Ext%</option>
           <option value="int">Int</option>
           <option value="hlpslp">HLP/SLP</option>
+          <option value="zzl">ZZL</option>
           <option value="owner">Besitzer</option>
         </select>
         <select id="f-sort-dir">
@@ -150,12 +159,13 @@
           <col style="width: 12%" />
           <col style="width: 7%" />
           <col style="width: 10%" />
-          <col style="width: 14%" />
+          <col style="width: 11%" />
           <col style="width: 5%" />
           <col style="width: 5%" />
           <col style="width: 6%" />
           <col style="width: 5%" />
           <col style="width: 7%" />
+          <col style="width: 3%" />
           <col style="width: 8%" />
           <col style="width: 9%" />
           <col style="width: 9%" />
@@ -172,13 +182,14 @@
             <th data-sort="extpct">Ext%</th>
             <th data-sort="int">Int</th>
             <th data-sort="hlpslp">HLP/SLP</th>
+            <th data-sort="zzl">ZZL</th>
             <th>EKH</th>
             <th data-sort="owner">Besitzer</th>
             <th>Aktionen</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="13">Lade…</td></tr>
+          <tr><td colspan="14">Lade…</td></tr>
         </tbody>
       </table>
     </div>

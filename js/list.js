@@ -76,10 +76,12 @@ function buildQuery() {
   const name = document.querySelector('#f-name').value.trim();
   const owner = document.querySelector('#f-owner').value;
   const gender = document.querySelector('#f-gender').value;
+  const zzl = document.querySelector('#f-zzl').value;
 
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
+  if (zzl) q = q.eq('breeding_allowed', zzl === 'true');
 
   // Die eigentliche Sortierung passiert clientseitig in applySort(), da
   // GP/Ext/Ext%/Int/HLP-SLP berechnete Werte ohne eigene DB-Spalte sind
@@ -238,6 +240,7 @@ function sortValue(row, field) {
       const n = Number(hlpSlpDisplay(row.hlp_slp));
       return Number.isNaN(n) ? null : n;
     }
+    case 'zzl': return row.breeding_allowed == null ? null : (row.breeding_allowed ? 1 : 0);
     default: return null;
   }
 }
@@ -261,14 +264,14 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="13">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="14">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="13" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
@@ -276,7 +279,7 @@ async function loadHorses() {
   const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="13">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -312,6 +315,7 @@ function rowHtml(h) {
     <td data-label="Ext%">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
     <td data-label="Int">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
+    <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
     <td data-label="Aktionen" class="actions-cell">
@@ -326,6 +330,12 @@ function hlpSlpDisplay(text) {
   if (!text) return '-';
   const m = text.match(/\d+([.,]\d+)?/);
   return m ? m[0] : '-';
+}
+
+function zzlDisplay(breedingAllowed) {
+  if (breedingAllowed === true) return 'Ja';
+  if (breedingAllowed === false) return 'Nein';
+  return '-';
 }
 
 function escapeHtml(str) {

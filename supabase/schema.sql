@@ -41,17 +41,11 @@ create table if not exists public.horses (
   updated_at timestamptz not null default now()
 );
 
--- Nur Pferde mit Zuchtzulassung duerfen gespeichert werden (zusaetzlich
--- zur Pruefung im Formular, damit die Regel auch bei direkten
--- API-Aufrufen greift).
-alter table public.horses
-  drop constraint if exists horses_breeding_allowed_required;
-alter table public.horses
-  add constraint horses_breeding_allowed_required check (breeding_allowed = true);
-
--- Verhindert doppelte Pferdenamen (zusaetzlich zur Pruefung im Formular,
--- damit es auch bei gleichzeitigen Speicherversuchen keine Dopplung gibt).
--- Groß-/Kleinschreibung wird dabei ignoriert (lower(name)).
+-- Verhindert doppelte Pferdenamen auf DB-Ebene (zusaetzlich zur Pruefung
+-- im Formular, damit es auch bei gleichzeitigen Speicherversuchen keine
+-- Dopplung gibt - das Formular aktualisiert bei einem bereits
+-- vorhandenen Namen stattdessen den bestehenden Datensatz). Groß-/
+-- Kleinschreibung wird dabei ignoriert (lower(name)).
 create unique index if not exists horses_name_unique_idx on public.horses (lower(name));
 
 create index if not exists horses_user_id_idx on public.horses (user_id);

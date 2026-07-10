@@ -108,37 +108,35 @@ async function onSave(e) {
     errorEl.textContent = 'Name ist ein Pflichtfeld.';
     return;
   }
-  if (formData.breeding_allowed !== true) {
-    errorEl.textContent = 'Nur Pferde mit Zuchtzulassung können gespeichert werden. Bitte bei "Zuchtzulassung" "Ja" auswählen.';
-    return;
-  }
-
-  // Nur bei neu angelegten Pferden prüfen (beim Bearbeiten eines
-  // bestehenden Pferdes würde es sonst sich selbst als Dopplung erkennen).
-  if (!editingId) {
-    const { data: existing, error: dupError } = await supabaseClient
-      .from('horses')
-      .select('id')
-      .ilike('name', formData.name)
-      .limit(1);
-    if (dupError) {
-      errorEl.textContent = 'Prüfung auf Dopplung fehlgeschlagen: ' + dupError.message;
-      return;
-    }
-    if (existing && existing.length > 0) {
-      errorEl.textContent = `Ein Pferd mit dem Namen "${formData.name}" ist bereits in der Datenbank hinterlegt.`;
-      return;
-    }
-  }
 
   const payload = { ...formData };
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
 
+  // Wird ein neues Pferd mit einem Namen gespeichert, der bereits existiert
+  // (Groß-/Kleinschreibung egal), wird statt einer neuen Dopplung einfach
+  // der bestehende Datensatz aktualisiert. Beim Bearbeiten eines bereits
+  // geladenen Pferds (editingId gesetzt) entfällt diese Prüfung, da es
+  // sich sonst selbst als "Dopplung" erkennen würde.
+  let targetId = editingId;
+  if (!targetId) {
+    const { data: existing, error: lookupError } = await supabaseClient
+      .from('horses')
+      .select('id')
+      .ilike('name', formData.name)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) {
+      errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + lookupError.message;
+      return;
+    }
+    if (existing) targetId = existing.id;
+  }
+
   let error;
-  if (editingId) {
-    ({ error } = await supabaseClient.from('horses').update(payload).eq('id', editingId));
+  if (targetId) {
+    ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));
   } else {
     payload.user_id = session.user.id;
     ({ error } = await supabaseClient.from('horses').insert(payload));
