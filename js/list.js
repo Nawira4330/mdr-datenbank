@@ -20,8 +20,37 @@ async function init() {
   wireSelection();
   wireCheckDropdowns();
   wireDeleteModal();
+  showFlashBanner();
   await populateFilterOptions();
   await loadHorses();
+}
+
+// Zeigt nach dem Anlegen/Aktualisieren eines Pferds (siehe horseForm.js)
+// einmalig einen Banner mit dessen Namen. "Einmalig" heißt: sofort nach
+// dem Anzeigen aus dem sessionStorage entfernt (ein erneutes Laden der
+// Seite zeigt ihn also nicht nochmal), und zusätzlich bei der nächsten
+// Interaktion (Filtern, Sortieren, Auswählen, Klick irgendwo) sofort
+// ausgeblendet.
+function showFlashBanner() {
+  const raw = sessionStorage.getItem('mdr_flash');
+  if (!raw) return;
+  sessionStorage.removeItem('mdr_flash');
+
+  let flash;
+  try {
+    flash = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  const banner = document.querySelector('#flash-banner');
+  const verb = flash.action === 'updated' ? 'aktualisiert' : 'neu angelegt';
+  banner.textContent = `„${flash.name}" wurde ${verb}.`;
+  banner.hidden = false;
+
+  const dismiss = () => { banner.hidden = true; };
+  document.addEventListener('click', dismiss, { once: true });
+  document.addEventListener('change', dismiss, { once: true });
+  document.addEventListener('submit', dismiss, { once: true });
 }
 
 async function populateFilterOptions() {

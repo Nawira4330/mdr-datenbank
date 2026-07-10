@@ -146,6 +146,14 @@ async function onSave(e) {
     errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
     return;
   }
+
+  // Wird in der Übersicht nach der Weiterleitung als Banner angezeigt und
+  // dort direkt wieder aus dem sessionStorage entfernt (siehe list.js) -
+  // erscheint also nur einmalig nach diesem Speichervorgang.
+  sessionStorage.setItem('mdr_flash', JSON.stringify({
+    action: targetId ? 'updated' : 'created',
+    name: formData.name,
+  }));
   window.location.href = 'index.html';
 }
 

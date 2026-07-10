@@ -149,6 +149,17 @@ label {
 .auth-box form { display: flex; flex-direction: column; }
 .auth-box button { margin-top: 1rem; }
 
+/* --- Erfolgs-Banner (Pferd angelegt/aktualisiert) --- */
+.flash-banner {
+  background: rgba(107, 157, 0, 0.12);
+  border: 1px solid var(--success);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
 /* --- Filter bar --- */
 .filter-bar {
   display: flex;
@@ -455,6 +466,7 @@ legend {
     flex-direction: column;
     overflow: hidden;
   }
+  body.list-page .flash-banner,
   body.list-page .filter-bar,
   body.list-page .list-header {
     flex: 0 0 auto;
