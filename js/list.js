@@ -110,7 +110,12 @@ function buildQuery() {
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
-  if (zzl) q = q.eq('breeding_allowed', zzl === 'true');
+  // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
+  // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,
+  // zeigt sich in der Tabelle als "-") mit ein, da beides in der Praxis
+  // "noch keine ZZL" heißt. "Ja" bleibt dagegen strikt auf true begrenzt.
+  if (zzl === 'true') q = q.eq('breeding_allowed', true);
+  else if (zzl === 'false') q = q.or('breeding_allowed.eq.false,breeding_allowed.is.null');
 
   // Die eigentliche Sortierung passiert clientseitig in applySort(), da
   // GP/Ext/Ext%/Int/HLP-SLP berechnete Werte ohne eigene DB-Spalte sind
