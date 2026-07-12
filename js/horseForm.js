@@ -103,7 +103,7 @@ function missingDataWarnings(payload) {
     warnings.push('Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.');
   }
   if (!hasPedigreeData(payload.pedigree)) {
-    warnings.push('Der Stammbaum wurde nicht aus dem eingefügten Text ausgelesen.');
+    warnings.push('Der Stammbaum konnte nicht vollständig erfasst werden.');
   }
   return warnings;
 }
