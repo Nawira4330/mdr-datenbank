@@ -35,7 +35,7 @@ async function showMissingDataNotice(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('name, exterior_genetics, pedigree, tournament_potential')
+    .select('name, exterior_genetics, pedigree, tournament_potential, disciplines')
     .ilike('owner', identity);
   if (error || !data) return;
 

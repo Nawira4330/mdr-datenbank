@@ -720,6 +720,22 @@ function hasPedigreeData(pedigree) {
   return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
 }
 
+// Ein vollständig ausgelesenes Pferd hat 7 Disziplin-Kategorien mit je 4
+// Einzeldisziplinen (Western wird zuerst offen angezeigt, die übrigen 6
+// erst hinter "Alle Disziplinen anzeigen?" - siehe extractDisciplineGroups).
+// Fehlt eine Kategorie ganz oder hat sie weniger als 4 Einträge, war das
+// Auslesen unvollständig (z.B. weil "Alle Disziplinen anzeigen?" im Spiel
+// nicht angeklickt und der zusätzliche Text daher nicht mitkopiert wurde).
+const EXPECTED_DISCIPLINE_COUNTS = {
+  Western: 4, Englisch: 4, Rennen: 4, Rodeo: 4, Fahren: 4, Barock: 4, Mehrgang: 4,
+};
+
+function hasAllDisciplines(disciplines) {
+  if (!disciplines) return false;
+  return Object.entries(EXPECTED_DISCIPLINE_COUNTS)
+    .every(([category, count]) => (disciplines[category]?.length || 0) >= count);
+}
+
 // Kurz-Labels für Daten, die typischerweise fehlen, wenn beim Kopieren aus
 // dem Spiel etwas nicht mit erfasst wurde (z.B. weil nicht die ganze Seite
 // markiert wurde) - wird sowohl beim Speichern (horseForm.js, ausführliche
@@ -729,7 +745,11 @@ function missingDataLabels(horse) {
   const missing = [];
   if (horse.exterior_genetics?.overall?.percent == null) missing.push('Ext%');
   if (!hasPedigreeData(horse.pedigree)) missing.push('Stammbaum');
-  if (!horse.tournament_potential?.Gesamtpotenzial || !horse.tournament_potential?.Begabung) {
+  if (
+    !horse.tournament_potential?.Gesamtpotenzial
+    || !horse.tournament_potential?.Begabung
+    || !hasAllDisciplines(horse.disciplines)
+  ) {
     missing.push('Turnierwerte');
   }
   return missing;
