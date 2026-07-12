@@ -25,6 +25,7 @@ async function init() {
   document.getElementById('parse-btn').addEventListener('click', onParse);
   document.getElementById('horse-form').addEventListener('submit', onSave);
   document.getElementById('delete-btn').addEventListener('click', onDelete);
+  wireSaveWarningModal();
 
   if (editingId) {
     document.getElementById('page-title').textContent = '🐴 Pferd bearbeiten';
@@ -92,6 +93,23 @@ function collectForm() {
   return out;
 }
 
+// Prüft auf Daten, die typischerweise fehlen, wenn beim Kopieren aus dem
+// Spiel etwas nicht mit erfasst wurde (z.B. weil nicht die ganze Seite
+// markiert wurde) - kein Pflichtfeld-Fehler, sondern nur ein Hinweis vor
+// dem Speichern, siehe showSaveWarningModal.
+function missingDataWarnings(payload) {
+  const warnings = [];
+  if (payload.exterior_genetics?.overall?.percent == null) {
+    warnings.push('Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.');
+  }
+  if (!hasPedigreeData(payload.pedigree)) {
+    warnings.push('Der Stammbaum wurde nicht aus dem eingefügten Text ausgelesen.');
+  }
+  return warnings;
+}
+
+let pendingSave = null;
+
 async function onSave(e) {
   e.preventDefault();
   const errorEl = document.getElementById('form-error');
@@ -113,6 +131,35 @@ async function onSave(e) {
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
+
+  const warnings = missingDataWarnings(payload);
+  if (warnings.length) {
+    pendingSave = { formData, payload, session };
+    const list = document.getElementById('save-warning-list');
+    list.innerHTML = warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('');
+    document.getElementById('save-warning-modal').hidden = false;
+    return;
+  }
+
+  await performSave(formData, payload, session);
+}
+
+function wireSaveWarningModal() {
+  document.getElementById('save-warning-cancel').addEventListener('click', () => {
+    document.getElementById('save-warning-modal').hidden = true;
+    pendingSave = null;
+  });
+  document.getElementById('save-warning-confirm').addEventListener('click', async () => {
+    document.getElementById('save-warning-modal').hidden = true;
+    if (!pendingSave) return;
+    const { formData, payload, session } = pendingSave;
+    pendingSave = null;
+    await performSave(formData, payload, session);
+  });
+}
+
+async function performSave(formData, payload, session) {
+  const errorEl = document.getElementById('form-error');
 
   // Wird ein neues Pferd mit einem Namen gespeichert, der bereits existiert
   // (Groß-/Kleinschreibung egal), wird statt einer neuen Dopplung einfach

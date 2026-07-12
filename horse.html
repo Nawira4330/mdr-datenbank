@@ -106,6 +106,19 @@
         <button type="button" id="delete-btn" class="danger push-right" hidden>Pferd löschen</button>
       </div>
     </form>
+
+    <div id="save-warning-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2>Unvollständige Daten</h2>
+        <p>Beim Speichern fehlt Folgendes:</p>
+        <ul id="save-warning-list"></ul>
+        <p class="small muted">Das kann daran liegen, dass diese Angaben im kopierten Text nicht enthalten waren. Trotzdem speichern?</p>
+        <div class="modal-actions">
+          <button type="button" id="save-warning-cancel" class="secondary">Zurück zur Bearbeitung</button>
+          <button type="button" id="save-warning-confirm">Trotzdem speichern</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="js/config.js"></script>
