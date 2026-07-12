@@ -685,6 +685,35 @@ function homozygousPresentHints(colorRows) {
     .map((r) => ({ locus: r.label, alleles: extractPresentAlleles(r.value) }));
 }
 
+// "Pinto" heißt laut MDR-Farbvererbung, dass mindestens 2 der 4
+// Scheckungs-Muster (SB/Sabino, SPL/Splashed, O/Overo, To/Tobiano)
+// gleichzeitig vorhanden sind - welche genau, lässt sich aus dem Namen
+// allein nicht sicher sagen. Sind aber bei den Eltern (zusammen) genau 2
+// dieser 4 Muster getestet vorhanden, muss ein als "Pinto" bezeichnetes
+// Fohlen (das die Scheckung ja sichtbar zeigt) genau diese 2 geerbt
+// haben, da im Genpool der Eltern keine anderen zur Auswahl stehen.
+function pintoPatternsFromColors(colorRows) {
+  const found = new Set();
+  for (const r of colorRows || []) {
+    if (isUntestedLocusValue(r.value)) continue;
+    const present = extractPresentAlleles(r.value);
+    if (!present) continue;
+    if (r.label === 'Splashed') found.add('SPL');
+    else if (r.label === 'Overo') found.add('O');
+    else if (r.label === 'KIT') {
+      // Anders als bei den übrigen Loci steht Tobiano/Sabino im
+      // Rohwert tatsächlich in Großbuchstaben ("TO"/"SB"), nicht in der
+      // gemischt geschriebenen Kürzel-Konvention ("To"/"Sb"), die nur für
+      // die abgeleiteten Namens-Hinweise verwendet wird.
+      if (present.includes('TO')) found.add('TO');
+      if (present.includes('SB')) found.add('SB');
+    }
+  }
+  return found;
+}
+
+const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' };
+
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
 // die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie

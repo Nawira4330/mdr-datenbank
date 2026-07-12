@@ -179,7 +179,7 @@ async function renderDetailTables(data) {
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
-    const parentHints = await fetchParentColorHints(data.pedigree);
+    const parentHints = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
     parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints));
   }
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
@@ -285,10 +285,9 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints) {
 // Liest Vater/Mutter aus dem Stammbaum (erste zwei Einträge, siehe
 // parser.js/parsePedigree - "Eltern des Vaters" kommt im Text immer vor
 // "Eltern der Mutter", die direkten Eltern folgen derselben Reihenfolge)
-// und sucht sie per Namen in der Datenbank. Sind sie dort vorhanden,
-// werden ihre reinerbig-getesteten Loci als Rückschluss für noch nicht
-// vollständig getestete Loci des aktuellen Pferds genutzt.
-async function fetchParentColorHints(pedigree) {
+// und lädt ihre Farbgenetik, falls sie unter diesem Namen bereits in der
+// Datenbank stehen.
+async function fetchParentColorRows(pedigree) {
   const ancestors = Array.isArray(pedigree) ? pedigree.slice(1) : (pedigree?.ancestors || []);
   const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
   if (!parentNames.length) return [];
@@ -298,11 +297,17 @@ async function fetchParentColorHints(pedigree) {
     .select('colors')
     .in('name', parentNames);
   if (error || !data) return [];
+  return data.map((p) => p.colors);
+}
 
+// Reinerbig-getestete Loci der Eltern als Rückschluss für noch nicht
+// vollständig getestete Loci des aktuellen Pferds (siehe
+// homozygousPresentHints in parser.js).
+function parentColorHints(parentColorRows) {
   const seen = new Set();
   const hints = [];
-  for (const parent of data) {
-    for (const h of homozygousPresentHints(parent.colors)) {
+  for (const colors of parentColorRows) {
+    for (const h of homozygousPresentHints(colors)) {
       const key = h.locus + h.alleles;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -310,6 +315,32 @@ async function fetchParentColorHints(pedigree) {
     }
   }
   return hints;
+}
+
+// Sonderfall "Pinto" (siehe pintoPatternsFromColors in parser.js): allein
+// aus dem Namen lässt sich nicht sagen, welche 2 der 4 Scheckungs-Muster
+// gemeint sind - stehen bei den Eltern zusammen aber genau 2 dieser 4
+// Muster getestet vorhanden, muss ein sichtbar "Pinto" bezeichnetes Fohlen
+// genau diese geerbt haben.
+function pintoParentHints(parentColorRows, coatColorName, notes, horseName) {
+  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''} ${horseName || ''}`);
+  if (!isPinto) return [];
+
+  const combined = new Set();
+  for (const colors of parentColorRows) {
+    for (const p of pintoPatternsFromColors(colors)) combined.add(p);
+  }
+  if (combined.size !== 2) return [];
+
+  return [...combined].map((allele) => ({ locus: PINTO_ALLELE_LOCUS[allele], alleles: allele }));
+}
+
+async function fetchParentColorHints(pedigree, coatColorName, notes, horseName) {
+  const parentColorRows = await fetchParentColorRows(pedigree);
+  return [
+    ...parentColorHints(parentColorRows),
+    ...pintoParentHints(parentColorRows, coatColorName, notes, horseName),
+  ];
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
