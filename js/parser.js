@@ -101,7 +101,10 @@ function extractHeaderBlock(lines) {
   while (nameIdx >= 0 && !lines[nameIdx]) nameIdx--;
 
   const out = {};
-  if (nameIdx >= 0) out.name = lines[nameIdx];
+  // Bei eigenen Pferden hängt das Spiel direkt (ohne Leerzeichen) einen
+  // "Ändern?"-Link an den Namen an, z.B. "4Leafs Prisma Secret
+  // RoyaltyÄndern?" - wird beim Auslesen des Namens entfernt.
+  if (nameIdx >= 0) out.name = lines[nameIdx].replace(/Ändern\?\s*$/, '').trim();
 
   const genderLine = lines[ageIdx + 1];
   if (genderLine && /^(Stute|Hengst|Wallach|Hengstfohlen|Stutfohlen|Fohlen)$/i.test(genderLine)) {
