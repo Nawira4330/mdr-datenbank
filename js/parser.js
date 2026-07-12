@@ -598,6 +598,20 @@ const PHENOTYPE_GENE_HINTS = [
   // eigenständiges Wort (\b), um Zufallstreffer in normalem Fließtext zu
   // vermeiden. Die Kürzel selbst sind keine echten deutschen Wörter, daher
   // ist das Risiko von Fehltreffern auch ohne Groß-/Kleinschreibung gering.
+  // Doppelt geschriebene Kürzel (z.B. "SPLSPL" statt "SPL") bedeuten
+  // reinerbig/homozygot - werden vor dem jeweiligen Einzel-Kürzel geprüft
+  // und mit dem doppelten Wert selbst als Allel-Anzeige abgelegt (analog
+  // zum bereits bestehenden "plpl"/"flfl").
+  { pattern: /\bSPLSPL\b/i, label: 'Splashed White homozygot (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPLSPL' }] },
+  { pattern: /\bSBSB\b/i, label: 'Sabino homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'SbSb' }] },
+  { pattern: /\bTOTO\b/i, label: 'Tobiano homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'ToTo' }] },
+  { pattern: /\bRNRN\b/i, label: 'Roan homozygot (Kürzel)', hints: [{ locus: 'KIT', allele: 'RnRn' }] },
+  { pattern: /\bCHCH\b/i, label: 'Champagne homozygot (Kürzel)', hints: [{ locus: 'Champagne', allele: 'ChCh' }] },
+  { pattern: /\bCRCR\b/i, label: 'Cream homozygot (Kürzel)', hints: [{ locus: 'Cream', allele: 'CrCr' }] },
+  { pattern: /\bLPLP\b/i, label: 'Appaloosa homozygot (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'LpLp' }] },
+  { pattern: /\bSTYSTY\b/i, label: 'Sooty homozygot (Kürzel)', hints: [{ locus: 'Sooty', allele: 'stysty' }] },
+  { pattern: /\bRCRC\b/i, label: 'Rabicano homozygot (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rcrc' }] },
+
   { pattern: /\bSPL\b/i, label: 'Splashed White (Kürzel)', hints: [{ locus: 'Splashed', allele: 'SPL' }] },
   { pattern: /\bSB\b/i, label: 'Sabino (Kürzel)', hints: [{ locus: 'KIT', allele: 'Sb' }] },
   { pattern: /\bTo\b/i, label: 'Tobiano (Kürzel)', hints: [{ locus: 'KIT', allele: 'To' }] },
@@ -648,12 +662,38 @@ function extractPresentAlleles(rawValue) {
   return tokens.filter((t) => t === 'pl' || /[A-Z]/.test(t)).join('');
 }
 
+// Ein getesteter Locus ist reinerbig für das vorhandene Allel, wenn BEIDE
+// Hälften "vorhanden" sind (z.B. "EE", "ChCh", "SPLSPL") - so ein Locus
+// wird garantiert an jedes Nachkommen weitervererbt (mind. eine Kopie),
+// unabhängig vom zweiten Elternteil. Wird genutzt, um vom Elternteil auf
+// ein noch nicht vollständig getestetes Fohlen zu schließen (siehe
+// homozygousPresentHints/presentGenesSummary).
+function isHomozygousPresent(rawValue) {
+  if (!rawValue || isUntestedLocusValue(rawValue)) return false;
+  const half = rawValue.length / 2;
+  if (!Number.isInteger(half)) return false;
+  const tokens = [rawValue.slice(0, half), rawValue.slice(half)];
+  return tokens.every((t) => t === 'pl' || /[A-Z]/.test(t));
+}
+
+// Liefert für jeden getesteten, reinerbig-vorhandenen Locus eines Pferdes
+// {locus, alleles} - z.B. für ein Elternteil mit getesteter Farbgenetik,
+// um daraus auf ein Fohlen zu schließen.
+function homozygousPresentHints(colorRows) {
+  return (colorRows || [])
+    .filter((r) => isHomozygousPresent(r.value))
+    .map((r) => ({ locus: r.label, alleles: extractPresentAlleles(r.value) }));
+}
+
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
 // die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
-// Sooty/Flaxen) - aus Hinweisen im Fellfarbe-Namen, in der Notiz und im
-// Pferdenamen (siehe inferGeneticHintsFromPhenotype).
-function presentGenesSummary(colorRows, coatColorName, notes, horseName) {
+// Sooty/Flaxen) - aus Hinweisen im Fellfarbe-Namen, in der Notiz, im
+// Pferdenamen (siehe inferGeneticHintsFromPhenotype) und optional aus
+// reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
+// homozygousPresentHints - wird von horseForm.js anhand des Stammbaums
+// befüllt, falls Vater/Mutter in der Datenbank stehen).
+function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints) {
   const rows = colorRows || [];
   const confirmed = [];
   const testedLoci = new Set();
@@ -666,9 +706,10 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName) {
   }
 
   const hints = [
-    ...inferGeneticHintsFromPhenotype(coatColorName),
-    ...inferGeneticHintsFromPhenotype(notes),
-    ...inferGeneticHintsFromPhenotype(horseName),
+    ...inferGeneticHintsFromPhenotype(coatColorName).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...inferGeneticHintsFromPhenotype(notes).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...inferGeneticHintsFromPhenotype(horseName).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, source: 'elternteil' })),
   ];
   const seen = new Set();
   const inferred = [];
@@ -677,7 +718,7 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName) {
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
     seen.add(key);
-    inferred.push({ locus: h.locus, alleles: h.allele, source: 'abgeleitet' });
+    inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
   }
 
   return [...confirmed, ...inferred];

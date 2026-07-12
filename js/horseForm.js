@@ -42,10 +42,10 @@ async function loadHorse(id) {
   fillForm(data);
   extraData = data;
   document.getElementById('raw-text').value = data.raw_text || '';
-  renderDetailTables(data);
+  await renderDetailTables(data);
 }
 
-function onParse() {
+async function onParse() {
   const text = document.getElementById('raw-text').value;
   const statusEl = document.getElementById('parse-status');
   if (!text.trim()) {
@@ -55,7 +55,7 @@ function onParse() {
   const parsed = parseHorseText(text);
   fillForm(parsed);
   extraData = { ...extraData, ...parsed };
-  renderDetailTables(parsed);
+  await renderDetailTables(parsed);
   statusEl.textContent = 'Erkannt: ' + (parsed.name || 'kein Name gefunden') + ' — bitte Felder unten prüfen, bevor du speicherst.';
 }
 
@@ -170,7 +170,7 @@ async function onDelete() {
 
 // --- Detail-Tabellen (nur Anzeige) ---
 
-function renderDetailTables(data) {
+async function renderDetailTables(data) {
   const container = document.getElementById('detail-tables');
   const fieldset = document.getElementById('detail-fieldset');
   const parts = [];
@@ -179,7 +179,8 @@ function renderDetailTables(data) {
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
-    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName));
+    const parentHints = await fetchParentColorHints(data.pedigree);
+    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints));
   }
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
@@ -234,13 +235,15 @@ function exteriorGeneticsHtml(ext) {
 
 // Name (Fellfarbe) + Rohwerte je Locus + Zusammenfassung der tatsächlich
 // vorhandenen Gene (großgeschrieben = vorhanden, Ausnahme "pl"). Bei nicht
-// getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen UND Notiz
-// einbezogen.
-function colorGeneticsHtml(rows, coatColorName, notes, horseName) {
+// getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen, Notiz
+// UND (falls Vater/Mutter in der Datenbank stehen und dort reinerbig
+// getestet sind) den Eltern einbezogen (siehe fetchParentColorHints).
+function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints) {
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName),
     ...inferGeneticHintsFromPhenotype(notes),
     ...inferGeneticHintsFromPhenotype(horseName),
+    ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, fromParent: true })),
   ];
   const hintsByLocus = {};
   for (const h of hints) {
@@ -251,24 +254,62 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName) {
   const body = rows.map((r) => {
     let value = escapeHtml(r.value);
     if (isUntestedLocusValue(r.value) && hintsByLocus[r.label]) {
-      const alleles = hintsByLocus[r.label].map((h) => h.allele).join(', ');
-      value += ` — mindestens ${escapeHtml(alleles)} (laut Fellfarbe/Notiz)`;
+      const fromPhenotype = hintsByLocus[r.label].filter((h) => !h.fromParent).map((h) => h.allele);
+      const fromParent = hintsByLocus[r.label].filter((h) => h.fromParent).map((h) => h.allele);
+      const parts = [];
+      if (fromPhenotype.length) parts.push(`mindestens ${escapeHtml(fromPhenotype.join(', '))} (laut Fellfarbe/Notiz)`);
+      if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
+      value += ' — ' + parts.join(', ');
     }
     return `<tr><th>${escapeHtml(r.label)}</th><td>${value}</td></tr>`;
   }).join('');
 
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
 
-  const summary = presentGenesSummary(rows, coatColorName, notes, horseName);
+  const summary = presentGenesSummary(rows, coatColorName, notes, horseName, parentHints);
   let summaryHtml = '';
   if (summary.length) {
-    const text = summary.map((s) => s.source === 'abgeleitet' ? `${s.alleles} (abgeleitet)` : s.alleles).join(', ');
+    const text = summary.map((s) => {
+      if (s.source === 'abgeleitet') return `${s.alleles} (abgeleitet)`;
+      if (s.source === 'elternteil') return `${s.alleles} (von Elternteil)`;
+      return s.alleles;
+    }).join(', ');
     summaryHtml = `<p class="small muted">Vorhandene Gene: <strong>${escapeHtml(text)}</strong></p>`;
   } else {
     summaryHtml = '<p class="small muted">Keine vorhandenen Gene erkannt.</p>';
   }
 
   return `<div class="group-heading">Farbgenetik</div>${nameLine}<table class="detail-table">${body}</table>${summaryHtml}`;
+}
+
+// Liest Vater/Mutter aus dem Stammbaum (erste zwei Einträge, siehe
+// parser.js/parsePedigree - "Eltern des Vaters" kommt im Text immer vor
+// "Eltern der Mutter", die direkten Eltern folgen derselben Reihenfolge)
+// und sucht sie per Namen in der Datenbank. Sind sie dort vorhanden,
+// werden ihre reinerbig-getesteten Loci als Rückschluss für noch nicht
+// vollständig getestete Loci des aktuellen Pferds genutzt.
+async function fetchParentColorHints(pedigree) {
+  const ancestors = Array.isArray(pedigree) ? pedigree.slice(1) : (pedigree?.ancestors || []);
+  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  if (!parentNames.length) return [];
+
+  const { data, error } = await supabaseClient
+    .from('horses')
+    .select('colors')
+    .in('name', parentNames);
+  if (error || !data) return [];
+
+  const seen = new Set();
+  const hints = [];
+  for (const parent of data) {
+    for (const h of homozygousPresentHints(parent.colors)) {
+      const key = h.locus + h.alleles;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hints.push(h);
+    }
+  }
+  return hints;
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
