@@ -685,6 +685,27 @@ function homozygousPresentHints(colorRows) {
     .map((r) => ({ locus: r.label, alleles: extractPresentAlleles(r.value) }));
 }
 
+// Erkennt, ob ein Allel-Anzeigewert (egal ob getestet oder abgeleitet,
+// z.B. "DD", "plpl", "SPLSPL") reinerbig/doppelt ist, also aus zwei
+// identischen Hälften besteht. Wird genutzt, um aus presentGenesSummary
+// eines Elternteils (bestätigte UND abgeleitete Gene) die Loci
+// herauszufiltern, die garantiert an ein Fohlen weitervererbt werden.
+function isDoubledAllele(alleleStr) {
+  if (!alleleStr) return false;
+  const half = alleleStr.length / 2;
+  if (!Number.isInteger(half) || half < 1) return false;
+  return alleleStr.slice(0, half) === alleleStr.slice(half);
+}
+
+// Halbiert ein reinerbiges Allel (z.B. "DD" -> "D", "plpl" -> "pl") - ein
+// einzelnes Allel eines reinerbigen Elternteils, das garantiert (zu 100%)
+// weitervererbt wird, aber beim Fohlen für sich allein nur eine einzelne
+// Kopie (mischerbig) bedeutet, solange nicht auch der zweite Elternteil
+// dasselbe Allel reinerbig trägt (siehe parentColorHints in horseForm.js).
+function halveDoubledAllele(alleleStr) {
+  return alleleStr.slice(0, alleleStr.length / 2);
+}
+
 // "Pinto" heißt laut MDR-Farbvererbung, dass mindestens 2 der 4
 // Scheckungs-Muster (SB/Sabino, SPL/Splashed, O/Overo, To/Tobiano)
 // gleichzeitig vorhanden sind - welche genau, lässt sich aus dem Namen

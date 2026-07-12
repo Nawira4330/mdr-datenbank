@@ -285,33 +285,56 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints) {
 // Liest Vater/Mutter aus dem Stammbaum (erste zwei Einträge, siehe
 // parser.js/parsePedigree - "Eltern des Vaters" kommt im Text immer vor
 // "Eltern der Mutter", die direkten Eltern folgen derselben Reihenfolge)
-// und lädt ihre Farbgenetik, falls sie unter diesem Namen bereits in der
+// und lädt ihre Daten, falls sie unter diesem Namen bereits in der
 // Datenbank stehen.
-async function fetchParentColorRows(pedigree) {
+async function fetchParentRecords(pedigree) {
   const ancestors = Array.isArray(pedigree) ? pedigree.slice(1) : (pedigree?.ancestors || []);
   const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
   if (!parentNames.length) return [];
 
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('colors')
+    .select('name, coat_color, notes, colors')
     .in('name', parentNames);
   if (error || !data) return [];
-  return data.map((p) => p.colors);
+  return data;
 }
 
-// Reinerbig-getestete Loci der Eltern als Rückschluss für noch nicht
-// vollständig getestete Loci des aktuellen Pferds (siehe
-// homozygousPresentHints in parser.js).
-function parentColorHints(parentColorRows) {
-  const seen = new Set();
+// Reinerbig vorhandene Loci eines Elternteils - sowohl bestätigt
+// (getestet) als auch abgeleitet (z.B. aus dem Namen "Cremello" oder
+// einem doppelten Kürzel "SPLSPL" in der Notiz), siehe
+// presentGenesSummary/isDoubledAllele in parser.js. Ein reinerbiger
+// Elternteil vererbt sein Allel garantiert (100%) - beim Fohlen selbst
+// bedeutet das aber erstmal nur EINE garantierte Kopie (mischerbig),
+// nicht zwangsläufig reinerbig (siehe parentColorHints).
+function parentHomozygousLoci(parent) {
+  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name);
+  const map = {};
+  for (const g of genes) {
+    if (isDoubledAllele(g.alleles)) map[g.locus] = halveDoubledAllele(g.alleles);
+  }
+  return map;
+}
+
+// Ist ein Locus bei GENAU EINEM Elternteil reinerbig vorhanden, weiß man
+// beim Fohlen (falls dort selbst nicht vollständig getestet) nur, dass
+// mindestens eine Kopie davon vorhanden ist (mischerbig) - welches Allel
+// der zweite Elternteil weitergibt, ist Zufall. Sind dagegen BEIDE
+// Elternteile für denselben Locus reinerbig mit demselben Allel, ist auch
+// das Fohlen zwingend reinerbig dafür.
+function parentColorHints(parents) {
+  const perParent = parents.map(parentHomozygousLoci);
+  const loci = new Set();
+  perParent.forEach((m) => Object.keys(m).forEach((l) => loci.add(l)));
+
   const hints = [];
-  for (const colors of parentColorRows) {
-    for (const h of homozygousPresentHints(colors)) {
-      const key = h.locus + h.alleles;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      hints.push(h);
+  for (const locus of loci) {
+    const values = perParent.map((m) => m[locus]).filter(Boolean);
+    const uniqueValues = [...new Set(values)];
+    if (uniqueValues.length === 1 && values.length >= 2) {
+      hints.push({ locus, alleles: uniqueValues[0] + uniqueValues[0] });
+    } else {
+      for (const v of uniqueValues) hints.push({ locus, alleles: v });
     }
   }
   return hints;
@@ -322,13 +345,13 @@ function parentColorHints(parentColorRows) {
 // gemeint sind - stehen bei den Eltern zusammen aber genau 2 dieser 4
 // Muster getestet vorhanden, muss ein sichtbar "Pinto" bezeichnetes Fohlen
 // genau diese geerbt haben.
-function pintoParentHints(parentColorRows, coatColorName, notes, horseName) {
+function pintoParentHints(parents, coatColorName, notes, horseName) {
   const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''} ${horseName || ''}`);
   if (!isPinto) return [];
 
   const combined = new Set();
-  for (const colors of parentColorRows) {
-    for (const p of pintoPatternsFromColors(colors)) combined.add(p);
+  for (const parent of parents) {
+    for (const p of pintoPatternsFromColors(parent.colors)) combined.add(p);
   }
   if (combined.size !== 2) return [];
 
@@ -336,10 +359,10 @@ function pintoParentHints(parentColorRows, coatColorName, notes, horseName) {
 }
 
 async function fetchParentColorHints(pedigree, coatColorName, notes, horseName) {
-  const parentColorRows = await fetchParentColorRows(pedigree);
+  const parents = await fetchParentRecords(pedigree);
   return [
-    ...parentColorHints(parentColorRows),
-    ...pintoParentHints(parentColorRows, coatColorName, notes, horseName),
+    ...parentColorHints(parents),
+    ...pintoParentHints(parents, coatColorName, notes, horseName),
   ];
 }
 
