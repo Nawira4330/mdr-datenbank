@@ -21,8 +21,35 @@ async function init() {
   wireCheckDropdowns();
   wireDeleteModal();
   showFlashBanner();
+  await showMissingDataNotice(session);
   await populateFilterOptions();
   await loadHorses();
+}
+
+// Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
+// (Besitzer-Feld entspricht dem eingeloggten Benutzernamen) noch Daten
+// fehlen (siehe missingDataLabels in parser.js) - z.B. weil beim Kopieren
+// aus dem Spiel nicht die ganze Seite markiert wurde. Andere Nutzer*innen
+// sehen diesen Hinweis nur für ihre eigenen Pferde, nicht für die anderer.
+async function showMissingDataNotice(session) {
+  const identity = session.user.email.split('@')[0];
+  const { data, error } = await supabaseClient
+    .from('horses')
+    .select('name, exterior_genetics, pedigree')
+    .ilike('owner', identity);
+  if (error || !data) return;
+
+  const incomplete = data
+    .map((h) => ({ name: h.name, missing: missingDataLabels(h) }))
+    .filter((h) => h.missing.length);
+  if (!incomplete.length) return;
+
+  const list = incomplete
+    .map((h) => `<li>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</li>`)
+    .join('');
+  const notice = document.querySelector('#missing-data-notice');
+  notice.innerHTML = `<strong>Hinweis:</strong> Es fehlen noch folgende Daten:<ul>${list}</ul>`;
+  notice.hidden = false;
 }
 
 // Zeigt nach dem Anlegen/Aktualisieren eines Pferds (siehe horseForm.js)

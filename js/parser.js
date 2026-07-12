@@ -706,6 +706,32 @@ function halveDoubledAllele(alleleStr) {
   return alleleStr.slice(0, alleleStr.length / 2);
 }
 
+// Der erste Eintrag im Stammbaum ist immer das Pferd selbst. Die restlichen
+// Vorfahren stehen in der Reihenfolge des kopierten Texts; bei einem
+// vollständigen 3-Generationen-Stammbaum sind das 2 Eltern, 4 Großeltern
+// und 8 Urgroßeltern (2+4+8=14) - diese Reihenfolge (statt z.B. Sire-Linie
+// zuerst komplett durch) passt auch zu den im Text mitgelieferten
+// Potenzial-Werten, die nur für die ersten 6 Vorfahren (Eltern+Großeltern)
+// angegeben werden. Eine Baumstruktur (wer ist Vater/Mutter von wem) lässt
+// sich aus dem Text ohne Einrückung trotzdem nicht ableiten.
+function hasPedigreeData(pedigree) {
+  if (!pedigree) return false;
+  if (Array.isArray(pedigree)) return pedigree.length > 0;
+  return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
+}
+
+// Kurz-Labels für Daten, die typischerweise fehlen, wenn beim Kopieren aus
+// dem Spiel etwas nicht mit erfasst wurde (z.B. weil nicht die ganze Seite
+// markiert wurde) - wird sowohl beim Speichern (horseForm.js, ausführliche
+// Hinweistexte) als auch in der Übersicht (list.js, Hinweis-Banner über
+// den Filtern) genutzt.
+function missingDataLabels(horse) {
+  const missing = [];
+  if (horse.exterior_genetics?.overall?.percent == null) missing.push('Ext%');
+  if (!hasPedigreeData(horse.pedigree)) missing.push('Stammbaum');
+  return missing;
+}
+
 // "Pinto" heißt laut MDR-Farbvererbung, dass mindestens 2 der 4
 // Scheckungs-Muster (SB/Sabino, SPL/Splashed, O/Overo, To/Tobiano)
 // gleichzeitig vorhanden sind - welche genau, lässt sich aus dem Namen

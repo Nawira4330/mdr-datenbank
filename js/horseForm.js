@@ -93,19 +93,15 @@ function collectForm() {
   return out;
 }
 
-// Prüft auf Daten, die typischerweise fehlen, wenn beim Kopieren aus dem
-// Spiel etwas nicht mit erfasst wurde (z.B. weil nicht die ganze Seite
-// markiert wurde) - kein Pflichtfeld-Fehler, sondern nur ein Hinweis vor
-// dem Speichern, siehe showSaveWarningModal.
+// Ausführliche Hinweistexte zu missingDataLabels (siehe parser.js) - kein
+// Pflichtfeld-Fehler, sondern nur ein Hinweis vor dem Speichern, siehe
+// showSaveWarningModal.
+const MISSING_DATA_SENTENCES = {
+  'Ext%': 'Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.',
+  'Stammbaum': 'Der Stammbaum konnte nicht vollständig erfasst werden.',
+};
 function missingDataWarnings(payload) {
-  const warnings = [];
-  if (payload.exterior_genetics?.overall?.percent == null) {
-    warnings.push('Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.');
-  }
-  if (!hasPedigreeData(payload.pedigree)) {
-    warnings.push('Der Stammbaum konnte nicht vollständig erfasst werden.');
-  }
-  return warnings;
+  return missingDataLabels(payload).map((label) => MISSING_DATA_SENTENCES[label]);
 }
 
 let pendingSave = null;
@@ -450,19 +446,7 @@ function percentGroupsHtml(title, groups, potentialOnly) {
   return html;
 }
 
-// Der erste Eintrag im Stammbaum ist immer das Pferd selbst. Die restlichen
-// Vorfahren stehen in der Reihenfolge des kopierten Texts; bei einem
-// vollständigen 3-Generationen-Stammbaum sind das 2 Eltern, 4 Großeltern
-// und 8 Urgroßeltern (2+4+8=14) - diese Reihenfolge (statt z.B. Sire-Linie
-// zuerst komplett durch) passt auch zu den im Text mitgelieferten
-// Potenzial-Werten, die nur für die ersten 6 Vorfahren (Eltern+Großeltern)
-// angegeben werden. Eine Baumstruktur (wer ist Vater/Mutter von wem) lässt
-// sich aus dem Text ohne Einrückung trotzdem nicht ableiten.
-function hasPedigreeData(pedigree) {
-  if (!pedigree) return false;
-  if (Array.isArray(pedigree)) return pedigree.length > 0;
-  return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
-}
+// hasPedigreeData siehe parser.js (dort geteilt mit list.js).
 
 const PEDIGREE_SECTION_ORDER = [
   'Eltern',

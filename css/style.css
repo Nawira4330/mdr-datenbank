@@ -14,6 +14,7 @@
   --accent-dark: #649200;
   --danger: #c84149;
   --success: #6b9d00;
+  --warning: #b5860a;
   --radius: 8px;
   --font-heading: "Courgette", cursive;
   --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -36,6 +37,7 @@
     --accent-dark: #a3ca79;
     --danger: #e0827f;
     --success: #89b957;
+    --warning: #d9a441;
     --th-bg-solid: #2a3b3c;
   }
 }
@@ -159,6 +161,19 @@ label {
   margin-bottom: 1rem;
   font-weight: 600;
 }
+
+/* --- Hinweis: fehlende Daten bei eigenen Pferden --- */
+.missing-data-notice {
+  background: rgba(181, 134, 10, 0.12);
+  border: 1px solid var(--warning);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+}
+.missing-data-notice strong { color: var(--warning); }
+.missing-data-notice ul { margin: 0.4rem 0 0; padding-left: 1.3rem; }
+.missing-data-notice li { margin: 0.15rem 0; }
 
 /* --- Filter bar --- */
 .filter-bar {
@@ -467,6 +482,7 @@ legend {
     overflow: hidden;
   }
   body.list-page .flash-banner,
+  body.list-page .missing-data-notice,
   body.list-page .filter-bar,
   body.list-page .list-header {
     flex: 0 0 auto;
