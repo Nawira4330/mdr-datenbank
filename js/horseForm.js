@@ -99,6 +99,7 @@ function collectForm() {
 const MISSING_DATA_SENTENCES = {
   'Ext%': 'Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.',
   'Stammbaum': 'Der Stammbaum konnte nicht vollständig erfasst werden.',
+  'Turnierwerte': 'Die Turnierwerte (GP/Begabung) konnten nicht vollständig erfasst werden.',
 };
 function missingDataWarnings(payload) {
   return missingDataLabels(payload).map((label) => MISSING_DATA_SENTENCES[label]);

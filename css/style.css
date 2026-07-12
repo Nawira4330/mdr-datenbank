@@ -172,7 +172,9 @@ label {
   margin-bottom: 1rem;
 }
 .missing-data-notice strong { color: var(--warning); }
-.missing-data-notice ul { margin: 0.4rem 0 0; padding-left: 1.3rem; }
+.missing-data-notice p { margin: 0 0 0.4rem; }
+.missing-data-notice p:first-child { margin-top: 0; }
+.missing-data-notice ul { margin: 0; padding-left: 1.3rem; }
 .missing-data-notice li { margin: 0.15rem 0; }
 
 /* --- Filter bar --- */

@@ -35,7 +35,7 @@ async function showMissingDataNotice(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('name, exterior_genetics, pedigree')
+    .select('name, exterior_genetics, pedigree, tournament_potential')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -48,7 +48,7 @@ async function showMissingDataNotice(session) {
     .map((h) => `<li>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</li>`)
     .join('');
   const notice = document.querySelector('#missing-data-notice');
-  notice.innerHTML = `<strong>Hinweis:</strong> Es fehlen noch folgende Daten:<ul>${list}</ul>`;
+  notice.innerHTML = `<p><strong>Hinweis:</strong></p><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
   notice.hidden = false;
 }
 

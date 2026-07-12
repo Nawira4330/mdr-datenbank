@@ -729,6 +729,9 @@ function missingDataLabels(horse) {
   const missing = [];
   if (horse.exterior_genetics?.overall?.percent == null) missing.push('Ext%');
   if (!hasPedigreeData(horse.pedigree)) missing.push('Stammbaum');
+  if (!horse.tournament_potential?.Gesamtpotenzial || !horse.tournament_potential?.Begabung) {
+    missing.push('Turnierwerte');
+  }
   return missing;
 }
 
