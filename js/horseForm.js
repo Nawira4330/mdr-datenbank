@@ -15,6 +15,13 @@ let editingId = null;
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  // Wird dieses Skript auf einer anderen Seite geladen, um einzelne
+  // Funktionen wiederzuverwenden (z.B. das Fohlen-Popup in
+  // verpaarung.html, das dieselben Feld-IDs nutzt, aber sein eigenes
+  // Speichern/Wiring hat), soll das eigene init() hier nicht laufen -
+  // "page-title" gibt es nur auf horse.html selbst.
+  if (!document.getElementById('page-title')) return;
+
   const session = await requireSession();
   if (!session) return;
   wireLogout();

@@ -1,4 +1,5 @@
 let currentIdentity = '';
+let currentPairing = null; // die Verpaarung, fuer die gerade das Fohlen-Popup offen ist
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -18,6 +19,9 @@ async function init() {
 
   document.querySelector('#pairing-form').addEventListener('submit', onAddPairing);
   document.querySelector('#f-owner').addEventListener('change', loadPairings);
+  document.querySelector('#foal-modal-skip').addEventListener('click', closeFoalModal);
+  document.querySelector('#foal-modal-save').addEventListener('click', onSaveFoal);
+  wireDuplicateModal();
 
   await loadPairings();
 }
@@ -86,7 +90,7 @@ async function onAddPairing(e) {
     notes: document.querySelector('#p-notes').value.trim() || null,
   };
 
-  const { error } = await supabaseClient.from('pairings').insert(payload);
+  const { data: inserted, error } = await supabaseClient.from('pairings').insert(payload).select().single();
   if (error) {
     errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
     return;
@@ -96,6 +100,12 @@ async function onAddPairing(e) {
   document.querySelector('#p-owner').value = currentIdentity;
   await populateOwnerFilter();
   await loadPairings();
+
+  // "Fohlen behalten" gesetzt (Ja ODER Nein, nicht "unbekannt") -> Popup
+  // zum Eintragen des Fohlens anbieten (siehe openFoalModal).
+  if (payload.keep_foal !== null) {
+    openFoalModal(inserted);
+  }
 }
 
 async function loadPairings() {
@@ -119,10 +129,19 @@ async function loadPairings() {
   tbody.querySelectorAll('[data-delete]').forEach((btn) => {
     btn.addEventListener('click', () => onDeletePairing(btn.dataset.delete));
   });
+  tbody.querySelectorAll('[data-foal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pairing = data.find((p) => p.id === btn.dataset.foal);
+      if (pairing) openFoalModal(pairing);
+    });
+  });
 }
 
 function rowHtml(p) {
   const keepFoalText = p.keep_foal === true ? 'Ja' : p.keep_foal === false ? 'Nein' : '-';
+  const foalBtn = p.keep_foal !== null
+    ? `<button type="button" class="secondary small" data-foal="${p.id}">Fohlen eintragen</button>`
+    : '';
   return `<tr>
     <td>${escapeHtml(p.stallion || '')}</td>
     <td>${escapeHtml(p.mare || '')}</td>
@@ -130,7 +149,7 @@ function rowHtml(p) {
     <td>${escapeHtml(keepFoalText)}</td>
     <td>${escapeHtml(p.notes || '')}</td>
     <td>${escapeHtml(p.owner || '')}</td>
-    <td><button class="danger small" data-delete="${p.id}">Löschen</button></td>
+    <td class="actions-cell">${foalBtn}<button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>`;
 }
 
@@ -141,6 +160,163 @@ async function onDeletePairing(id) {
     alert('Löschen fehlgeschlagen: ' + error.message);
     return;
   }
+  await loadPairings();
+}
+
+// --- Fohlen-Popup ---
+// Nutzt dieselben Feld-IDs wie horse.html und damit dessen (in
+// horseForm.js definierte) Funktionen collectForm/fillForm/onParse/
+// renderDetailTables wieder, statt sie zu duplizieren. horseForm.js'
+// eigenes init() greift hier nicht (siehe Guard dort) - das Wiring der
+// Buttons und das eigentliche Speichern übernimmt ausschließlich diese
+// Datei.
+
+function resetFoalForm() {
+  ['name', 'gender', 'breed', 'coat_color', 'hlp_slp', 'notes', 'image_url',
+    'purebred_pct', 'ico', 'disease_free', 'breeding_allowed'].forEach((id) => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('raw-text').value = '';
+  document.getElementById('parse-status').textContent = '';
+  document.getElementById('form-error').textContent = '';
+  document.getElementById('detail-tables').innerHTML = '';
+  document.getElementById('detail-fieldset').hidden = true;
+  extraData = {};
+}
+
+function openFoalModal(pairing) {
+  currentPairing = pairing;
+  resetFoalForm();
+  document.getElementById('owner').value = pairing.owner || currentIdentity;
+
+  const title = document.getElementById('foal-modal-title');
+  const hint = document.getElementById('foal-modal-hint');
+  if (pairing.keep_foal) {
+    title.textContent = 'Fohlen behalten – als neues Pferd eintragen';
+    hint.textContent = `Deckhengst: ${pairing.stallion} × Stute: ${pairing.mare}. Wird als neues Pferd gespeichert.`;
+  } else {
+    title.textContent = 'Fohlen (nicht behalten) – Werte für die Statistik erfassen';
+    hint.textContent = `Deckhengst: ${pairing.stallion} × Stute: ${pairing.mare}. Wird NICHT als Pferd gespeichert, nur als Referenzdaten für die Fohlenwert-Schätzung im mdr-Planer - kann übersprungen werden.`;
+  }
+
+  document.getElementById('foal-modal').hidden = false;
+}
+
+function closeFoalModal() {
+  document.getElementById('foal-modal').hidden = true;
+  currentPairing = null;
+}
+
+// Sucht (ohne Namensabgleich) ein Pferd, dessen Stammbaum zu Deckhengst
+// und Stute der aktuellen Verpaarung passt - Vater/Mutter sind laut
+// parser.js/parsePedigree immer die ersten beiden Stammbaum-Einträge.
+// Damit lassen sich z.B. Fohlen wiedererkennen, die zuerst automatisch
+// als "Fohlen_Besitzer_MutterxVater" angelegt und später unter ihrem
+// echten Namen erneut eingetragen wurden.
+async function findPedigreeCandidate(stallion, mare, excludeName) {
+  const { data, error } = await supabaseClient.from('horses').select('id, name, pedigree');
+  if (error || !data) return null;
+  const norm = (s) => (s || '').trim().toLowerCase();
+  return data.find((h) => {
+    if (norm(h.name) === norm(excludeName)) return false;
+    const ancestors = Array.isArray(h.pedigree) ? h.pedigree.slice(1) : (h.pedigree?.ancestors || []);
+    return norm(ancestors[0]?.name) === norm(stallion) && norm(ancestors[1]?.name) === norm(mare)
+      && norm(stallion) && norm(mare);
+  }) || null;
+}
+
+function wireDuplicateModal() {
+  document.getElementById('foal-duplicate-cancel').addEventListener('click', () => {
+    document.getElementById('foal-duplicate-modal').hidden = true;
+    duplicateResolve?.(false);
+  });
+  document.getElementById('foal-duplicate-confirm').addEventListener('click', () => {
+    document.getElementById('foal-duplicate-modal').hidden = true;
+    duplicateResolve?.(true);
+  });
+}
+
+let duplicateResolve = null;
+
+// Zeigt die Ja/Nein-Nachfrage und liefert true (ist dasselbe Pferd ->
+// bestehenden Datensatz aktualisieren) oder false (ist ein anderes Pferd
+// -> normal neu anlegen).
+function askIsSameHorse(candidateName) {
+  document.getElementById('foal-duplicate-text').textContent =
+    `Es gibt bereits ein Pferd mit demselben Vater/Mutter: "${candidateName}". Handelt es sich um dasselbe Pferd?`;
+  document.getElementById('foal-duplicate-modal').hidden = false;
+  return new Promise((resolve) => { duplicateResolve = resolve; });
+}
+
+async function onSaveFoal() {
+  const errorEl = document.getElementById('form-error');
+  errorEl.textContent = '';
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const formData = collectForm();
+  if (!formData.name) {
+    errorEl.textContent = 'Name ist ein Pflichtfeld.';
+    return;
+  }
+
+  const payload = { ...formData };
+  for (const k of JSONB_KEYS) {
+    if (extraData[k] !== undefined) payload[k] = extraData[k];
+  }
+
+  let error;
+  if (currentPairing.keep_foal) {
+    // Wie horseForm.js performSave: exakter Namenstreffer -> bestehenden
+    // Datensatz aktualisieren statt doppelt anzulegen.
+    const { data: existingByName, error: lookupError } = await supabaseClient
+      .from('horses')
+      .select('id')
+      .ilike('name', formData.name)
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) {
+      errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + lookupError.message;
+      return;
+    }
+
+    let targetId = existingByName?.id || null;
+
+    // Kein exakter Namenstreffer -> zusätzlich per Stammbaum prüfen (z.B.
+    // vorher automatisch als "Fohlen_..." angelegtes Fohlen, jetzt unter
+    // echtem Namen erneut eingetragen).
+    if (!targetId) {
+      const candidate = await findPedigreeCandidate(currentPairing.stallion, currentPairing.mare, formData.name);
+      if (candidate) {
+        const isSame = await askIsSameHorse(candidate.name);
+        if (isSame) targetId = candidate.id;
+      }
+    }
+
+    if (targetId) {
+      ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));
+    } else {
+      payload.user_id = session.user.id;
+      ({ error } = await supabaseClient.from('horses').insert(payload));
+    }
+  } else {
+    payload.user_id = session.user.id;
+    payload.kept = false;
+    payload.pairing_id = currentPairing.id;
+    ({ error } = await supabaseClient.from('foal_reference_data').insert(payload));
+  }
+
+  if (error) {
+    errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
+    return;
+  }
+
+  closeFoalModal();
+  await populateHorseNames();
   await loadPairings();
 }
 
