@@ -1,6 +1,6 @@
 let currentIdentity = '';
 let currentPairing = null; // die Verpaarung, fuer die gerade das Fohlen-Popup offen ist
-let dateSortAscending = false; // Klick auf "Abfohldatum" schaltet um, siehe wireSortableHeaders
+let currentSort = { field: 'pairing_date', dir: 'desc' }; // siehe wireSortableHeaders
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -110,14 +110,22 @@ async function onAddPairing(e) {
   }
 }
 
-// Klick auf "Abfohldatum" schaltet zwischen auf-/absteigend um (erneuter
-// Klick = umdrehen), analog zum Sortieren in der Pferde-Uebersicht
-// (list.js). Fehlende Daten landen dabei unabhaengig von der Richtung
+// Klick auf eine sortierbare Spaltenkopfzeile (Deckhengst/Stute/
+// Abfohldatum) sortiert danach; erneuter Klick auf dieselbe Spalte dreht
+// die Richtung um - analog zum Sortieren in der Pferde-Uebersicht
+// (list.js). Fehlende Werte landen dabei unabhaengig von der Richtung
 // immer am Ende, nicht ganz vorn.
 function wireSortableHeaders() {
-  document.querySelector('#pairing-date-header').addEventListener('click', () => {
-    dateSortAscending = !dateSortAscending;
-    loadPairings();
+  document.querySelectorAll('#pairing-table th[data-sort]').forEach((th) => {
+    th.addEventListener('click', () => {
+      const field = th.dataset.sort;
+      if (currentSort.field === field) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort = { field, dir: 'asc' };
+      }
+      loadPairings();
+    });
   });
 }
 
@@ -127,7 +135,7 @@ async function loadPairings() {
 
   const owner = document.querySelector('#f-owner').value;
   let q = supabaseClient.from('pairings').select('*')
-    .order('pairing_date', { ascending: dateSortAscending, nullsFirst: false });
+    .order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
   if (owner) q = q.ilike('owner', owner);
 
   const { data, error } = await q;
