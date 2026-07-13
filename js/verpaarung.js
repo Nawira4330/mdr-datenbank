@@ -135,10 +135,23 @@ async function loadPairings() {
       if (pairing) openFoalModal(pairing);
     });
   });
+  tbody.querySelectorAll('[data-keepfoal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pairing = data.find((p) => p.id === btn.dataset.keepfoal);
+      if (pairing) onSetKeepFoal(pairing, btn.dataset.value === 'true');
+    });
+  });
 }
 
+// "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle
+// gesetzt statt nur als Text angezeigt - wichtig fuer per Decksprung-
+// Button (mdr-Planer) angelegte Verpaarungen, die ohne Wert (unbekannt)
+// ankommen und hier erst nachtraeglich entschieden werden.
 function rowHtml(p) {
-  const keepFoalText = p.keep_foal === true ? 'Ja' : p.keep_foal === false ? 'Nein' : '-';
+  const keepFoalCell = `
+    <button type="button" class="keep-foal-btn keep-foal-yes${p.keep_foal === true ? ' active' : ''}" data-keepfoal="${p.id}" data-value="true" title="Fohlen behalten: Ja">✓</button>
+    <button type="button" class="keep-foal-btn keep-foal-no${p.keep_foal === false ? ' active' : ''}" data-keepfoal="${p.id}" data-value="false" title="Fohlen behalten: Nein">✗</button>
+  `;
   const foalBtn = p.keep_foal !== null
     ? `<button type="button" class="secondary small" data-foal="${p.id}">Fohlen eintragen</button>`
     : '';
@@ -146,11 +159,29 @@ function rowHtml(p) {
     <td>${escapeHtml(p.stallion || '')}</td>
     <td>${escapeHtml(p.mare || '')}</td>
     <td>${escapeHtml(p.pairing_date || '-')}</td>
-    <td>${escapeHtml(keepFoalText)}</td>
+    <td class="keep-foal-cell">${keepFoalCell}</td>
     <td>${escapeHtml(p.notes || '')}</td>
     <td>${escapeHtml(p.owner || '')}</td>
     <td class="actions-cell">${foalBtn}<button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>`;
+}
+
+// Aendert "Fohlen behalten" nachtraeglich. War der Wert vorher unbekannt
+// (null - typischerweise ein per Decksprung-Button automatisch
+// angelegter Eintrag), oeffnet sich direkt danach das Fohlen-Popup
+// (gleiches Verhalten wie beim erstmaligen Setzen in onAddPairing) -
+// war bereits ein Wert gesetzt, nur der Wert aendern, ohne das Popup
+// erneut aufzudraengen (dafuer gibt es den separaten "Fohlen eintragen"-
+// Button).
+async function onSetKeepFoal(pairing, value) {
+  const wasUnset = pairing.keep_foal === null;
+  const { data: updated, error } = await supabaseClient.from('pairings').update({ keep_foal: value }).eq('id', pairing.id).select().single();
+  if (error) {
+    alert('Speichern fehlgeschlagen: ' + error.message);
+    return;
+  }
+  await loadPairings();
+  if (wasUnset) openFoalModal(updated);
 }
 
 async function onDeletePairing(id) {

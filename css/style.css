@@ -300,6 +300,19 @@ th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-al
 th { background: var(--th-bg-solid); cursor: pointer; user-select: none; }
 tr:hover td { background: rgba(107, 157, 0, 0.05); }
 td.actions-cell { display: flex; gap: 0.4rem; }
+
+td.keep-foal-cell { display: flex; gap: 0.3rem; }
+.keep-foal-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.keep-foal-btn:hover { background: var(--border); }
+.keep-foal-yes.active { background: var(--success); border-color: var(--success); color: #fff; }
+.keep-foal-no.active { background: var(--danger); border-color: var(--danger); color: #fff; }
 .pill {
   display: inline-block;
   padding: 0.1rem 0.5rem;
