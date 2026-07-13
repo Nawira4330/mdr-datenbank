@@ -498,6 +498,13 @@ const PHENOTYPE_GENE_HINTS = [
   // kommen. Die eindeutigen 3-Wort-Varianten "Classic Dun Cream"/"Classic
   // Dun Pearl" (nur bei Basis Black dokumentiert) sind davon nicht
   // betroffen und werden vollständig aufgelöst.
+  // "Gold" ist doppeldeutig: allein bzw. als "Gold Champagne" bedeutet es
+  // Chestnut+Champagne (siehe unten), als "Gold Chestnut"/"Gold Bay" ist
+  // es dagegen nur eine Schattierung (Helligkeitsstufe) OHNE Champagne -
+  // diese beiden Faelle muessen daher zuerst abgefangen werden, sonst
+  // wuerde faelschlich Champagne abgeleitet.
+  { pattern: /\bgold chestnut\b/i, label: 'Gold Chestnut (Schattierung, keine Champagne)', hints: [] },
+  { pattern: /\bgold bay\b/i, label: 'Gold Bay (Schattierung, keine Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }] },
   { pattern: /\bgold dun cream\b/i, label: 'Gold Dun Cream (Chestnut-Dun-Champagne-Cream)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
   { pattern: /\bgold dun pearl\b/i, label: 'Gold Dun Pearl (Chestnut-Dun-Champagne-Pearl)', hints: [{ locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
   { pattern: /\bamber dun cream\b/i, label: 'Amber Dun Cream (Bay-Dun-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
