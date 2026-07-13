@@ -619,6 +619,9 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\bCh\b/i, label: 'Champagne (Kürzel)', hints: [{ locus: 'Champagne', allele: 'Ch' }] },
   { pattern: /\bCr\b/i, label: 'Cream (Kürzel)', hints: [{ locus: 'Cream', allele: 'Cr' }] },
   { pattern: /\bLp\b/i, label: 'Appaloosa (Kürzel)', hints: [{ locus: 'Appaloosa', allele: 'Lp' }] },
+  // Kein doppeltes "OO"-Kürzel: Overo ist reinerbig dominant letal (siehe
+  // MDR-Doku), ein lebendes Pferd kann also nie OO sein.
+  { pattern: /\bO\b/i, label: 'Overo (Kürzel)', hints: [{ locus: 'Overo', allele: 'O' }] },
   { pattern: /\bplpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'plpl' }] },
   { pattern: /\bpl\b/i, label: 'Pearl (Kürzel)', hints: [{ locus: 'Cream', allele: 'pl' }] },
   { pattern: /\bflfl\b/i, label: 'Flaxen (Kürzel)', hints: [{ locus: 'Flaxen', allele: 'flfl' }] },
