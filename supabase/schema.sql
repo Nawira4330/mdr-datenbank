@@ -118,7 +118,13 @@ create policy "horses_select_public" on public.horses
 -- die Verpaarungen anderer einsehen kann (siehe UI).
 create table if not exists public.pairings (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Anders als bei horses bewusst NICHT "not null": ein kuenftiger
+  -- "Decksprung"-Button im Zucht-/Turnierplaner (mdr-planer, anderes
+  -- Repo) soll Verpaarungen automatisch eintragen koennen, ohne dort in
+  -- dieser App eingeloggt zu sein (anonymer Insert, siehe
+  -- "pairings_insert_public" weiter unten) - dabei gibt es kein
+  -- auth.uid().
+  user_id uuid default auth.uid() references auth.users(id) on delete cascade,
 
   owner text,
   stallion text,
@@ -156,3 +162,16 @@ create policy "pairings_update_authenticated" on public.pairings
 drop policy if exists "pairings_delete_authenticated" on public.pairings;
 create policy "pairings_delete_authenticated" on public.pairings
   for delete to authenticated using (true);
+
+-- Vorbereitet fuer eine kuenftige Automatik im Zucht-/Turnierplaner
+-- (mdr-planer, anderes Repo): ein dortiger "Decksprung"-Button soll
+-- Verpaarungen hier automatisch eintragen koennen, ohne dass diese App
+-- dort eingeloggt ist - analog zum anonymen Lesezugriff auf horses
+-- (migration_005). Nur INSERT, kein SELECT/UPDATE/DELETE fuer anon -
+-- Lesen/Aendern/Loeschen bleibt exklusiv eingeloggten Nutzer*innen
+-- vorbehalten.
+grant insert on public.pairings to anon;
+
+drop policy if exists "pairings_insert_public" on public.pairings;
+create policy "pairings_insert_public" on public.pairings
+  for insert to anon with check (true);
