@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Verpaarungs-Log – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>💞 Verpaarungs-Log</h1>
+    <nav>
+      <span id="session-email" class="muted small"></span>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <fieldset>
+      <legend>Neue Verpaarung eintragen</legend>
+      <form id="pairing-form">
+        <div class="form-grid">
+          <div><label for="p-stallion">Deckhengst *</label><input id="p-stallion" list="horse-names" required /></div>
+          <div><label for="p-mare">Stute *</label><input id="p-mare" list="horse-names" required /></div>
+          <div><label for="p-date">Datum</label><input id="p-date" type="date" /></div>
+          <div><label for="p-keep-foal">Fohlen behalten?</label>
+            <select id="p-keep-foal">
+              <option value="">unbekannt</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
+          <div><label for="p-owner">Besitzer</label><input id="p-owner" /></div>
+          <div style="grid-column: 1 / -1;"><label for="p-notes">Notizen</label><input id="p-notes" /></div>
+        </div>
+        <datalist id="horse-names"></datalist>
+        <p id="pairing-form-error" class="error"></p>
+        <div class="form-actions">
+          <button type="submit">Eintragen</button>
+        </div>
+      </form>
+    </fieldset>
+
+    <form id="pairing-filter-form" class="filter-bar">
+      <div class="field">
+        <label for="f-owner">Besitzer</label>
+        <select id="f-owner"></select>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table id="pairing-table">
+        <thead>
+          <tr>
+            <th>Deckhengst</th>
+            <th>Stute</th>
+            <th>Datum</th>
+            <th>Fohlen behalten?</th>
+            <th>Notizen</th>
+            <th>Besitzer</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="7">Lade…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/verpaarung.js"></script>
+</body>
+</html>
