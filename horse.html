@@ -39,7 +39,15 @@
       <fieldset>
         <legend>Stammdaten</legend>
         <div class="form-grid">
-          <div><label for="name">Name *</label><input id="name" required /></div>
+          <div>
+            <label for="name">Name *</label>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button type="button" id="prev-horse-btn" class="secondary" hidden title="Speichern &amp; vorheriges Pferd (alphabetisch)">←</button>
+              <input id="name" required style="flex: 1;" />
+              <button type="button" id="next-horse-btn" class="secondary" hidden title="Speichern &amp; nächstes Pferd (alphabetisch)">→</button>
+            </div>
+          </div>
+          <div><label for="external_id">ID</label><input id="external_id" /></div>
           <div><label for="gender">Geschlecht</label>
             <select id="gender">
               <option value=""></option>

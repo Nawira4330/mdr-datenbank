@@ -1,5 +1,5 @@
 const TEXT_FIELDS = [
-  'name', 'gender', 'breed', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
+  'name', 'external_id', 'gender', 'breed', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
 ];
 const DATE_FIELDS = [];
 const NUMBER_FIELDS = ['purebred_pct', 'ico'];
@@ -37,6 +37,13 @@ async function init() {
   if (editingId) {
     document.getElementById('page-title').textContent = '🐴 Pferd bearbeiten';
     document.getElementById('delete-btn').hidden = false;
+    // Pfeile zum Speichern + direkt zum naechsten/vorherigen Pferd
+    // (alphabetisch) springen - nur beim Bearbeiten eines bestehenden
+    // Pferds sinnvoll, nicht bei der Neuanlage.
+    document.getElementById('prev-horse-btn').hidden = false;
+    document.getElementById('next-horse-btn').hidden = false;
+    document.getElementById('prev-horse-btn').addEventListener('click', () => onSaveAndNavigate('prev'));
+    document.getElementById('next-horse-btn').addEventListener('click', () => onSaveAndNavigate('next'));
     await loadHorse(editingId);
   }
 }
@@ -113,9 +120,51 @@ function missingDataWarnings(payload) {
 }
 
 let pendingSave = null;
+// Wohin performSave nach erfolgreichem Speichern weiterleitet - normal
+// zurueck zur Uebersicht, bei den Pfeil-Buttons (siehe onSaveAndNavigate)
+// stattdessen direkt zum naechsten/vorherigen Pferd.
+let saveRedirect = 'index.html';
 
 async function onSave(e) {
   e.preventDefault();
+  saveRedirect = 'index.html';
+  await runSaveFlow();
+}
+
+// Speichert das aktuelle Pferd wie ein normaler Save, leitet danach aber
+// nicht zur Uebersicht, sondern direkt zum alphabetisch naechsten/
+// vorherigen Pferd weiter - damit laesst sich eine ganze Liste ohne
+// Umweg ueber die Uebersicht durcharbeiten.
+async function onSaveAndNavigate(direction) {
+  const errorEl = document.getElementById('form-error');
+  errorEl.textContent = '';
+
+  const adjacentId = await findAdjacentHorseId(direction);
+  if (!adjacentId) {
+    errorEl.textContent = direction === 'next'
+      ? 'Kein weiteres Pferd (Ende der alphabetischen Liste).'
+      : 'Kein vorheriges Pferd (Anfang der alphabetischen Liste).';
+    return;
+  }
+
+  saveRedirect = `horse.html?id=${adjacentId}`;
+  await runSaveFlow();
+}
+
+// Gleiche Sortierung wie in der Uebersicht (list.js sortValue "name"),
+// damit "naechstes/vorheriges Pferd" hier zur selben Reihenfolge passt,
+// die man auch in der Liste sieht.
+async function findAdjacentHorseId(direction) {
+  const { data, error } = await supabaseClient.from('horses').select('id, name');
+  if (error || !data) return null;
+  data.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase(), 'de'));
+  const idx = data.findIndex((h) => h.id === editingId);
+  if (idx === -1) return null;
+  const adjacentIdx = direction === 'next' ? idx + 1 : idx - 1;
+  return data[adjacentIdx]?.id || null;
+}
+
+async function runSaveFlow() {
   const errorEl = document.getElementById('form-error');
   errorEl.textContent = '';
 
@@ -200,12 +249,18 @@ async function performSave(formData, payload, session) {
 
   // Wird in der Übersicht nach der Weiterleitung als Banner angezeigt und
   // dort direkt wieder aus dem sessionStorage entfernt (siehe list.js) -
-  // erscheint also nur einmalig nach diesem Speichervorgang.
-  sessionStorage.setItem('mdr_flash', JSON.stringify({
-    action: targetId ? 'updated' : 'created',
-    name: formData.name,
-  }));
-  window.location.href = 'index.html';
+  // nur setzen, wenn es auch wirklich dorthin geht (bei den Pfeil-Buttons
+  // geht es stattdessen zum naechsten/vorherigen Pferd, siehe
+  // onSaveAndNavigate - sonst wuerde der Banner erst beim naechsten
+  // zufaelligen Besuch der Uebersicht faelschlich fuer dieses Pferd
+  // erscheinen).
+  if (saveRedirect === 'index.html') {
+    sessionStorage.setItem('mdr_flash', JSON.stringify({
+      action: targetId ? 'updated' : 'created',
+      name: formData.name,
+    }));
+  }
+  window.location.href = saveRedirect;
 }
 
 async function onDelete() {

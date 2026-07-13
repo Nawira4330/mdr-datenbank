@@ -141,6 +141,12 @@ async function loadPairings() {
       if (pairing) onSetKeepFoal(pairing, btn.dataset.value === 'true');
     });
   });
+  tbody.querySelectorAll('[data-editdate]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pairing = data.find((p) => p.id === btn.dataset.editdate);
+      if (pairing) onEditDate(pairing);
+    });
+  });
 }
 
 // "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle
@@ -162,8 +168,28 @@ function rowHtml(p) {
     <td class="keep-foal-cell">${keepFoalCell}</td>
     <td>${escapeHtml(p.notes || '')}</td>
     <td>${escapeHtml(p.owner || '')}</td>
-    <td class="actions-cell">${foalBtn}<button class="danger small" data-delete="${p.id}">Löschen</button></td>
+    <td class="actions-cell">${foalBtn}<button type="button" class="secondary small" data-editdate="${p.id}">Bearbeiten</button><button class="danger small" data-delete="${p.id}">Löschen</button></td>
   </tr>`;
+}
+
+// Abfohldatum nachtraeglich aendern (z.B. per Decksprung-Button aus dem
+// mdr-Planer automatisch auf Verpaarungsdatum + 30 Tage gesetzt, aber
+// spaeter bekannt/korrigiert). Einfaches prompt() statt eigenem Modal,
+// analog zum bestehenden confirm() bei onDeletePairing.
+async function onEditDate(pairing) {
+  const input = prompt('Abfohldatum (JJJJ-MM-TT), leer lassen zum Entfernen:', pairing.pairing_date || '');
+  if (input === null) return; // abgebrochen
+  const trimmed = input.trim();
+  if (trimmed && !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    alert('Bitte das Datum im Format JJJJ-MM-TT eingeben (z.B. 2026-08-12).');
+    return;
+  }
+  const { error } = await supabaseClient.from('pairings').update({ pairing_date: trimmed || null }).eq('id', pairing.id);
+  if (error) {
+    alert('Speichern fehlgeschlagen: ' + error.message);
+    return;
+  }
+  await loadPairings();
 }
 
 // Aendert "Fohlen behalten" nachtraeglich. War der Wert vorher unbekannt

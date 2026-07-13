@@ -299,9 +299,16 @@ table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; }
 th { background: var(--th-bg-solid); cursor: pointer; user-select: none; }
 tr:hover td { background: rgba(107, 157, 0, 0.05); }
-td.actions-cell { display: flex; gap: 0.4rem; }
+/* Bewusst KEIN "display: flex" auf <td> selbst - das entzieht die
+   Zelle dem normalen Tabellenzeilen-Layout (border-collapse berechnet
+   Zeilenhoehe/Randlinie dann pro Zelle statt pro Zeile, was zu einer
+   schiefen/versetzten unteren Trennlinie fuehrt). Die Buttons bleiben
+   inline-block (Standard) und bekommen stattdessen einen rechten
+   Abstand fuers Layout. */
+td.actions-cell .btn, td.actions-cell button { margin-right: 0.4rem; }
+td.actions-cell .btn:last-child, td.actions-cell button:last-child { margin-right: 0; }
 
-td.keep-foal-cell { display: flex; gap: 0.3rem; }
+td.keep-foal-cell { white-space: nowrap; }
 .keep-foal-btn {
   padding: 0.25rem 0.55rem;
   font-size: 0.95rem;
@@ -309,6 +316,7 @@ td.keep-foal-cell { display: flex; gap: 0.3rem; }
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--border);
+  margin-right: 0.3rem;
 }
 .keep-foal-btn:hover { background: var(--border); }
 .keep-foal-yes.active { background: var(--success); border-color: var(--success); color: #fff; }
