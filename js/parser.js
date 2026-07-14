@@ -426,12 +426,24 @@ function parsePedigree(lines, mainBreed) {
     // Text, anders als benannte Vorfahren). Taucht "Unbekannt" mehrfach
     // hintereinander auf, sind das ebenso viele eigenständige unbekannte
     // Vorfahren (z.B. beide Eltern eines Großelternteils unbekannt).
+    //
+    // Ausnahme: ist das Pferd SELBST noch unbenannt (ein Fohlen ohne
+    // eigenen Namen, "sawSelf" also noch false), steht "Unbekannt" NICHT
+    // für sich allein, sondern hat - anders als ein unbekannter Vorfahre -
+    // trotzdem eine eigene Rasse-Zeile danach (z.B. "Unbekannt" gefolgt
+    // von "American Paint Horse"). Würde man diese Zeile hier wie einen
+    // unbekannten Vorfahren einfach überspringen, würde die nachfolgende
+    // Rasse-Zeile fälschlich als NAME des ersten echten Vorfahren gelesen
+    // und dadurch die Name/Rasse-Zuordnung alle nachfolgenden Vorfahren um
+    // eine Zeile verschieben (Name und Rasse erscheinen dann vertauscht).
     if (line === 'Unbekannt' && !current) {
-      if (sawSelf) {
-        const entry = { name: 'Unbekannt', breed: mainBreed || 'Unbekannt' };
-        ancestors.push(entry);
-        lastEntry = entry;
+      if (!sawSelf) {
+        current = { name: line };
+        continue;
       }
+      const entry = { name: 'Unbekannt', breed: mainBreed || 'Unbekannt' };
+      ancestors.push(entry);
+      lastEntry = entry;
       continue;
     }
 
