@@ -383,13 +383,17 @@ function rowHtml(h) {
   const affected = affectedDiseaseLabels(h);
   const ekhText = affected.length ? affected.join(', ') : '-';
 
-  const nameCell = h.external_id
-    ? `<a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener">${escapeHtml(h.name || '(ohne Name)')}</a>`
-    : escapeHtml(h.name || '(ohne Name)');
+  // Name öffnet die reine Ansichtsseite (view.html) - Bearbeiten passiert
+  // über den eigenen Stift-Button in der Aktionen-Spalte, der externe
+  // Spiel-Link über den eigenen 🔗-Button (nur falls external_id gesetzt).
+  const nameCell = `<a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>`;
+  const linkCell = h.external_id
+    ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
+    : '';
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
-    <td data-label="Bearbeiten"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
+    <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
@@ -404,6 +408,7 @@ function rowHtml(h) {
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
     <td data-label="Aktionen" class="actions-cell">
+      <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
       <button class="danger small" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
   </tr>`;

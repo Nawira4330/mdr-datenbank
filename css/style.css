@@ -133,6 +133,23 @@ input, select, textarea {
 }
 input::placeholder, textarea::placeholder { opacity: 0.5; }
 
+/* --- Reine Ansichtsseite (view.html) - dieselben Felder wie beim
+   Bearbeiten, aber readonly/disabled und optisch wie reiner Text statt
+   Formularfelder. --- */
+.view-mode input[readonly],
+.view-mode textarea[readonly],
+.view-mode select:disabled {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0;
+  color: var(--text);
+  opacity: 1;
+  -webkit-text-fill-color: var(--text);
+  cursor: default;
+}
+.view-mode select:disabled { appearance: none; -webkit-appearance: none; -moz-appearance: none; }
+.view-mode textarea[readonly] { resize: none; }
+
 label {
   display: block;
   font-size: 0.85rem;

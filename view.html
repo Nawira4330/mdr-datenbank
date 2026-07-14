@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Pferd ansehen – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="page-heading">🐴 Pferd ansehen</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      <a class="btn secondary" id="edit-link" href="horse.html">✏️ Bearbeiten</a>
+      <a class="btn secondary" id="mdr-link-btn" href="#" target="_blank" rel="noopener" hidden>🔗 Zum Pferd</a>
+      <button type="button" id="delete-btn" class="danger">🗑️ Löschen</button>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container view-mode">
+    <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <button type="button" id="prev-horse-btn" class="secondary" title="Vorheriges Pferd (alphabetisch)">←</button>
+      <fieldset style="flex: 1; min-width: 0;">
+        <legend>Stammdaten</legend>
+        <div class="form-grid">
+          <div><label for="name">Name</label><input id="name" readonly /></div>
+          <div><label for="external_id">ID</label><input id="external_id" readonly /></div>
+          <div><label for="gender">Geschlecht</label>
+            <select id="gender" disabled>
+              <option value=""></option>
+              <option>Stute</option>
+              <option>Hengst</option>
+              <option>Wallach</option>
+              <option>Hengstfohlen</option>
+              <option>Stutfohlen</option>
+            </select>
+          </div>
+          <div><label for="breed">Rasse</label><input id="breed" readonly /></div>
+          <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" readonly /></div>
+          <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" readonly /></div>
+          <div><label for="coat_color">Fellfarbe</label><input id="coat_color" readonly /></div>
+          <div><label for="disease_free">Erbkrankheiten</label>
+            <select id="disease_free" disabled>
+              <option value="">unbekannt</option>
+              <option value="true">frei von Erbkrankheiten</option>
+              <option value="false">Erbkrankheit vorhanden</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+      <button type="button" id="next-horse-btn" class="secondary" title="Nächstes Pferd (alphabetisch)">→</button>
+    </div>
+
+    <fieldset>
+      <legend>Verwaltung</legend>
+      <div class="form-grid">
+        <div><label for="owner">Besitzer</label><input id="owner" readonly /></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Papiere &amp; Zucht</legend>
+      <div class="form-grid">
+        <div><label for="breeding_allowed">Zuchtzulassung</label>
+          <select id="breeding_allowed" disabled>
+            <option value="">unbekannt</option>
+            <option value="true">Ja</option>
+            <option value="false">Nein</option>
+          </select>
+        </div>
+        <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" readonly /></div>
+        <div><label for="ico">ICO (%)</label><input id="ico" type="number" readonly /></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sonstiges</legend>
+      <div class="form-grid">
+        <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3" readonly></textarea></div>
+        <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" readonly /></div>
+      </div>
+    </fieldset>
+
+    <fieldset id="detail-fieldset" hidden>
+      <legend>Erkannte Detaildaten</legend>
+      <div id="detail-tables"></div>
+    </fieldset>
+
+    <p id="form-error" class="error"></p>
+    <input type="hidden" id="raw-text" />
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/horseForm.js"></script>
+  <script src="js/horseView.js"></script>
+</body>
+</html>
