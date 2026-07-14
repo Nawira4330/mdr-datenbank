@@ -325,14 +325,14 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="14">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="15">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="14" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
@@ -340,7 +340,7 @@ async function loadHorses() {
   const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="14">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -365,9 +365,14 @@ function rowHtml(h) {
   const affected = affectedDiseaseLabels(h);
   const ekhText = affected.length ? affected.join(', ') : '-';
 
+  const nameCell = h.external_id
+    ? `<a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener">${escapeHtml(h.name || '(ohne Name)')}</a>`
+    : escapeHtml(h.name || '(ohne Name)');
+
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
-    <td data-label="Name" class="name-cell"><a href="horse.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
+    <td data-label="Bearbeiten"><a class="btn secondary small" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
+    <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
@@ -380,7 +385,7 @@ function rowHtml(h) {
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
     <td data-label="Aktionen" class="actions-cell">
-      <button class="danger small" data-delete="${h.id}">Löschen</button>
+      <button class="danger small" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
   </tr>`;
 }

@@ -11,6 +11,10 @@ const JSONB_KEYS = [
 
 let extraData = {};
 let editingId = null;
+// Benutzername (vor dem @) des eingeloggten Kontos - wird fuer die
+// Pfeil-Navigation (findAdjacentHorseId) gebraucht, damit dort nur durch
+// die eigenen Pferde geblaettert wird.
+let currentIdentity = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -25,6 +29,7 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   wireLogout();
+  currentIdentity = session.user.email.split('@')[0];
 
   const params = new URLSearchParams(window.location.search);
   editingId = params.get('id');
@@ -153,9 +158,11 @@ async function onSaveAndNavigate(direction) {
 
 // Gleiche Sortierung wie in der Uebersicht (list.js sortValue "name"),
 // damit "naechstes/vorheriges Pferd" hier zur selben Reihenfolge passt,
-// die man auch in der Liste sieht.
+// die man auch in der Liste sieht. Auf die eigenen Pferde (Besitzer =
+// eingeloggter Benutzername) eingeschraenkt, damit man beim Durchklicken
+// nicht auch fremde Pferde anderer Nutzer*innen zu sehen bekommt.
 async function findAdjacentHorseId(direction) {
-  const { data, error } = await supabaseClient.from('horses').select('id, name');
+  const { data, error } = await supabaseClient.from('horses').select('id, name').ilike('owner', currentIdentity);
   if (error || !data) return null;
   data.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase(), 'de'));
   const idx = data.findIndex((h) => h.id === editingId);
