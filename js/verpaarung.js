@@ -347,6 +347,9 @@ async function onSaveFoal() {
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
+  // Siehe horseForm.js runSaveFlow: der Rohtext wird nur zum Auslesen
+  // gebraucht, nicht dauerhaft gespeichert.
+  payload.raw_text = null;
 
   let error;
   if (currentPairing.keep_foal) {

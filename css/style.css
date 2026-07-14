@@ -364,6 +364,24 @@ legend {
 .paste-box textarea { min-height: 160px; font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; }
 .paste-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
 
+/* Einklappbare Variante des Paste-Kastens (horse.html beim Bearbeiten
+   bestehender Pferde, siehe horseForm.js init) - <details>/<summary>
+   statt <fieldset>/<legend>, optisch gleich gehalten. */
+details.paste-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem 1rem;
+  background: var(--surface);
+}
+details.paste-box > summary {
+  font-weight: 600;
+  color: var(--accent-dark);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+details.paste-box:not([open]) > summary { margin-bottom: 0; }
+
 .detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .detail-table th, .detail-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; overflow-wrap: break-word; }
 .detail-table th { color: var(--muted); font-weight: 600; width: 40%; }
@@ -490,6 +508,7 @@ legend {
   .form-actions .push-right { margin-left: 0; }
   .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
   fieldset { padding: 0.7rem 0.8rem 0.9rem; }
+  details.paste-box { padding: 0.7rem 0.8rem 0.9rem; }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---

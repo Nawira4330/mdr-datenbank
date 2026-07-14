@@ -6,7 +6,7 @@ const NUMBER_FIELDS = ['purebred_pct', 'ico'];
 const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
-  'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree', 'raw_text',
+  'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
 ];
 
 let extraData = {};
@@ -49,6 +49,10 @@ async function init() {
     document.getElementById('next-horse-btn').hidden = false;
     document.getElementById('prev-horse-btn').addEventListener('click', () => onSaveAndNavigate('prev'));
     document.getElementById('next-horse-btn').addEventListener('click', () => onSaveAndNavigate('next'));
+    // Der Text-Einfuegen-Kasten ist beim Bearbeiten eines bereits
+    // angelegten Pferds meist nicht mehr gebraucht - eingeklappt starten,
+    // laesst sich bei Bedarf (z.B. erneutes Auslesen) einfach aufklappen.
+    document.getElementById('paste-details').open = false;
     await loadHorse(editingId);
   }
 }
@@ -191,6 +195,10 @@ async function runSaveFlow() {
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
+  // Der reinkopierte Rohtext wird nur zum Auslesen gebraucht - nach dem
+  // Speichern soll ausschließlich das daraus extrahierte Ergebnis in der
+  // Datenbank stehen, nicht der Rohtext selbst.
+  payload.raw_text = null;
 
   const warnings = missingDataWarnings(payload);
   if (warnings.length) {

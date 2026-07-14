@@ -19,8 +19,8 @@
   </header>
 
   <main class="container">
-    <fieldset class="paste-box">
-      <legend>Text von der Pferdeseite einfügen</legend>
+    <details class="paste-box" id="paste-details" open>
+      <summary>Text von der Pferdeseite einfügen</summary>
       <p class="muted small">
         Öffne die Pferdeseite im Spiel, markiere die komplette Seite (Strg+A) und
         kopiere sie (Strg+C). Text hier einfügen und auf "Automatisch auslesen"
@@ -33,7 +33,7 @@
         <button type="button" id="parse-btn">Automatisch auslesen</button>
         <span id="parse-status" class="muted small"></span>
       </div>
-    </fieldset>
+    </details>
 
     <form id="horse-form">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
