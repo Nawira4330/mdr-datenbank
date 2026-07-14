@@ -681,13 +681,23 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\brc\b/i, label: 'Rabicano (Kürzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
 ];
 
+// Verneinungen wie "Kein Ch", "keine Overo", "nicht Champagne" sollen NICHT
+// als vorhandenes Gen gewertet werden - das direkt folgende Wort wird
+// deshalb vorab aus dem Arbeitstext entfernt, bevor die eigentlichen
+// Muster unten geprüft werden (sonst würde z.B. "Kein Ch" trotzdem das
+// Champagne-Kürzel "Ch" auslösen, da \bCh\b auch innerhalb der Notiz
+// zuschlägt).
+function stripNegatedPhrases(text) {
+  return text.replace(/\b(kein|keine|keinen|nicht|ohne)\b\s+[\wäöüßÄÖÜ-]+/gi, ' ');
+}
+
 // Gibt eine Liste { locus, allele, label } aller aus dem Text eindeutig
 // ableitbaren Merkmale zurück. Bereits erkannte Textstellen werden aus der
 // Arbeitskopie entfernt, damit z.B. "Schwarzbraun" nicht zusätzlich das
 // separate "Braun"-Muster auslöst.
 function inferGeneticHintsFromPhenotype(text) {
   if (!text) return [];
-  let working = text;
+  let working = stripNegatedPhrases(text);
   const hints = [];
   for (const { pattern, hints: entryHints, label } of PHENOTYPE_GENE_HINTS) {
     if (pattern.test(working)) {
