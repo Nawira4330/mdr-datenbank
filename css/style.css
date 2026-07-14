@@ -116,6 +116,12 @@ button.secondary:hover, .btn.secondary:hover { background: var(--border); }
 button.danger { background: var(--danger); border-color: var(--danger); }
 button.danger:hover { filter: brightness(0.9); }
 
+/* Kompakter Icon-Button (z.B. Bearbeiten-Stift in der Uebersicht) - die
+   normale Button-Polsterung (0.9rem seitlich) ist fuer eine schmale
+   Tabellenspalte zu breit und laesst den Button in die Nachbarspalte
+   hineinragen (ueberlappt dann deren Text). */
+.icon-btn { padding: 0.2rem 0.3rem; line-height: 1; }
+
 input, select, textarea {
   font: inherit;
   padding: 0.45rem 0.6rem;

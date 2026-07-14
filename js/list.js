@@ -371,7 +371,7 @@ function rowHtml(h) {
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
-    <td data-label="Bearbeiten"><a class="btn secondary small" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
+    <td data-label="Bearbeiten"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
     <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
