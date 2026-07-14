@@ -11,6 +11,7 @@ create table if not exists public.horses (
   gender text,
   breed text,
   purebred_pct numeric,
+  breed_composition text,       -- Rasseanteile (Zusammensetzung), falls rasselos und nicht 100% reinrassig
   coat_color text,
   disease_free boolean,
 
@@ -200,6 +201,7 @@ create table if not exists public.foal_reference_data (
   gender text,
   breed text,
   purebred_pct numeric,
+  breed_composition text,
   coat_color text,
   disease_free boolean,
   owner text,
@@ -247,12 +249,12 @@ language plpgsql
 as $$
 begin
   insert into public.foal_reference_data (
-    horse_id, kept, user_id, name, external_id, gender, breed, purebred_pct, coat_color,
+    horse_id, kept, user_id, name, external_id, gender, breed, purebred_pct, breed_composition, coat_color,
     disease_free, owner, breeding_allowed, hlp_slp, ico, genetic_diseases, colors,
     exterior_genetics, exterior_descriptive, temperament, disciplines, traits,
     tournament_potential, pedigree, raw_text, notes, image_url
   ) values (
-    new.id, true, new.user_id, new.name, new.external_id, new.gender, new.breed, new.purebred_pct, new.coat_color,
+    new.id, true, new.user_id, new.name, new.external_id, new.gender, new.breed, new.purebred_pct, new.breed_composition, new.coat_color,
     new.disease_free, new.owner, new.breeding_allowed, new.hlp_slp, new.ico, new.genetic_diseases, new.colors,
     new.exterior_genetics, new.exterior_descriptive, new.temperament, new.disciplines, new.traits,
     new.tournament_potential, new.pedigree, new.raw_text, new.notes, new.image_url
@@ -261,7 +263,7 @@ begin
   do update set
     kept = true,
     name = excluded.name, external_id = excluded.external_id, gender = excluded.gender, breed = excluded.breed,
-    purebred_pct = excluded.purebred_pct, coat_color = excluded.coat_color,
+    purebred_pct = excluded.purebred_pct, breed_composition = excluded.breed_composition, coat_color = excluded.coat_color,
     disease_free = excluded.disease_free, owner = excluded.owner, breeding_allowed = excluded.breeding_allowed,
     hlp_slp = excluded.hlp_slp, ico = excluded.ico, genetic_diseases = excluded.genetic_diseases,
     colors = excluded.colors, exterior_genetics = excluded.exterior_genetics,

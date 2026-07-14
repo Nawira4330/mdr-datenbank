@@ -1,5 +1,5 @@
 const TEXT_FIELDS = [
-  'name', 'external_id', 'gender', 'breed', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
+  'name', 'external_id', 'gender', 'breed', 'breed_composition', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
 ];
 const DATE_FIELDS = [];
 const NUMBER_FIELDS = ['purebred_pct', 'ico'];
@@ -123,6 +123,7 @@ const MISSING_DATA_SENTENCES = {
   'Ext%': 'Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.',
   'Stammbaum': 'Der Stammbaum konnte nicht vollständig erfasst werden.',
   'Turnierwerte': 'Die Turnierwerte (GP/Begabung) konnten nicht vollständig erfasst werden.',
+  'Rasseanteile': 'Das Pferd ist nicht 100% reinrassig und hat keine Rasse eingetragen - bitte die Rasseanteile ergänzen.',
 };
 function missingDataWarnings(payload) {
   return missingDataLabels(payload).map((label) => MISSING_DATA_SENTENCES[label]);

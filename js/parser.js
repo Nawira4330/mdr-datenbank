@@ -762,6 +762,14 @@ function missingDataLabels(horse) {
   ) {
     missing.push('Turnierwerte');
   }
+  // Ist keine Rasse eingetragen UND das Pferd laut Reinrassigkeit-Wert
+  // nicht zu 100% reinrassig, hätte das Spiel eigentlich eine
+  // Rasseanteile-Aufschlüsselung anzubieten gehabt ("Rasseanteile
+  // anzeigen?", siehe parser.js extractHeaderBlock) - die aber beim
+  // Kopieren nur mitkommt, wenn sie vorher im Spiel aufgeklappt wurde.
+  if (!horse.breed && horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
+    missing.push('Rasseanteile');
+  }
   return missing;
 }
 

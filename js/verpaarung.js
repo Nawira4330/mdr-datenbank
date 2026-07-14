@@ -1,6 +1,10 @@
 let currentIdentity = '';
 let currentPairing = null; // die Verpaarung, fuer die gerade das Fohlen-Popup offen ist
 let currentSort = { field: 'pairing_date', dir: 'desc' }; // siehe wireSortableHeaders
+// Name (klein, getrimmt) -> Rasse, fuer die Rasse-Spalte/-Filter in der
+// Verpaarungs-Tabelle - Deckhengst/Stute sind dort nur Freitext, keine
+// Verknuepfung zu horses.id, daher der Umweg ueber den Namen.
+let nameToBreed = new Map();
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -17,9 +21,11 @@ async function init() {
 
   await populateHorseNames();
   await populateOwnerFilter();
+  await populateBreedFilter();
 
   document.querySelector('#pairing-form').addEventListener('submit', onAddPairing);
   document.querySelector('#f-owner').addEventListener('change', loadPairings);
+  document.querySelector('#f-breed').addEventListener('change', loadPairings);
   document.querySelector('#foal-modal-skip').addEventListener('click', closeFoalModal);
   document.querySelector('#foal-modal-save').addEventListener('click', onSaveFoal);
   wireDuplicateModal();
@@ -32,13 +38,36 @@ async function init() {
 // angelegten Pferden (keine feste Verknüpfung, damit auch Pferde
 // außerhalb dieser Datenbank eingetragen werden können).
 async function populateHorseNames() {
-  const { data } = await supabaseClient.from('horses').select('name').order('name');
+  const { data } = await supabaseClient.from('horses').select('name, breed').order('name');
   const datalist = document.querySelector('#horse-names');
+  nameToBreed = new Map();
   (data || []).forEach((h) => {
     const opt = document.createElement('option');
     opt.value = h.name;
     datalist.appendChild(opt);
+    nameToBreed.set((h.name || '').trim().toLowerCase(), h.breed || '');
   });
+}
+
+// "APH" steht bereits fest im HTML (Standardauswahl, siehe f-owner-
+// Analogie in list.js) - hier nur um weitere tatsaechlich vorkommende
+// Rassen ergaenzt.
+async function populateBreedFilter() {
+  const { data } = await supabaseClient.from('horses').select('breed');
+  const breeds = new Set((data || []).map((h) => h.breed).filter(Boolean));
+  breeds.delete('APH');
+
+  const sel = document.querySelector('#f-breed');
+  const previous = sel.value;
+  sel.querySelectorAll('option[data-dynamic]').forEach((o) => o.remove());
+  [...breeds].sort((a, b) => a.localeCompare(b, 'de')).forEach((b) => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = b;
+    opt.dataset.dynamic = 'true';
+    sel.appendChild(opt);
+  });
+  sel.value = previous || 'APH';
 }
 
 // Besitzer-Filter ist standardmäßig auf den eigenen Benutzernamen gesetzt,
@@ -131,20 +160,30 @@ function wireSortableHeaders() {
 
 async function loadPairings() {
   const tbody = document.querySelector('#pairing-table tbody');
-  tbody.innerHTML = '<tr><td colspan="7">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8">Lade…</td></tr>';
 
   const owner = document.querySelector('#f-owner').value;
   let q = supabaseClient.from('pairings').select('*')
     .order(currentSort.field, { ascending: currentSort.dir === 'asc', nullsFirst: false });
   if (owner) q = q.ilike('owner', owner);
 
-  const { data, error } = await q;
+  let { data, error } = await q;
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="7" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     return;
   }
+
+  // Rasse-Filter: Deckhengst/Stute sind reiner Freitext ohne Verknuepfung
+  // zu horses.id, daher hier ueber nameToBreed (siehe populateHorseNames)
+  // nachtraeglich client-seitig gefiltert statt per Datenbank-Query -
+  // trifft zu, wenn Deckhengst ODER Stute die gewaehlte Rasse haben.
+  const breed = document.querySelector('#f-breed').value;
+  if (breed) {
+    data = data.filter((p) => breedOf(p.stallion) === breed || breedOf(p.mare) === breed);
+  }
+
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Keine Verpaarungen gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Keine Verpaarungen gefunden.</td></tr>';
     return;
   }
   tbody.innerHTML = data.map(rowHtml).join('');
@@ -171,6 +210,13 @@ async function loadPairings() {
   });
 }
 
+// Rasse eines per Name eingetragenen Deckhengsts/Stute (siehe
+// nameToBreed in populateHorseNames) - leer, falls unbekannt (z.B. noch
+// nicht in der Datenbank angelegt).
+function breedOf(name) {
+  return nameToBreed.get((name || '').trim().toLowerCase()) || '';
+}
+
 // "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle
 // gesetzt statt nur als Text angezeigt - wichtig fuer per Decksprung-
 // Button (mdr-Planer) angelegte Verpaarungen, die ohne Wert (unbekannt)
@@ -180,12 +226,14 @@ function rowHtml(p) {
     <button type="button" class="keep-foal-btn keep-foal-yes${p.keep_foal === true ? ' active' : ''}" data-keepfoal="${p.id}" data-value="true" title="Fohlen behalten: Ja">✓</button>
     <button type="button" class="keep-foal-btn keep-foal-no${p.keep_foal === false ? ' active' : ''}" data-keepfoal="${p.id}" data-value="false" title="Fohlen behalten: Nein">✗</button>
   `;
+  const breedCell = [breedOf(p.stallion), breedOf(p.mare)].filter(Boolean).join(' / ') || '-';
   const foalBtn = p.keep_foal !== null
     ? `<button type="button" class="secondary small" data-foal="${p.id}">Fohlen eintragen</button>`
     : '';
   return `<tr>
     <td>${escapeHtml(p.stallion || '')}</td>
     <td>${escapeHtml(p.mare || '')}</td>
+    <td>${escapeHtml(breedCell)}</td>
     <td>${escapeHtml(p.pairing_date || '-')}</td>
     <td class="keep-foal-cell">${keepFoalCell}</td>
     <td>${escapeHtml(p.notes || '')}</td>
@@ -252,7 +300,7 @@ async function onDeletePairing(id) {
 
 function resetFoalForm() {
   ['name', 'gender', 'breed', 'coat_color', 'hlp_slp', 'notes', 'image_url',
-    'purebred_pct', 'ico', 'disease_free', 'breeding_allowed'].forEach((id) => {
+    'purebred_pct', 'breed_composition', 'ico', 'disease_free', 'breeding_allowed'].forEach((id) => {
     document.getElementById(id).value = '';
   });
   document.getElementById('raw-text').value = '';

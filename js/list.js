@@ -35,7 +35,7 @@ async function showMissingDataNotice(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('name, exterior_genetics, pedigree, tournament_potential, disciplines')
+    .select('name, exterior_genetics, pedigree, tournament_potential, disciplines, breed, purebred_pct, breed_composition')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -81,11 +81,14 @@ function showFlashBanner() {
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('owner, gender, genetic_diseases, colors');
+  const { data, error } = await supabaseClient.from('horses').select('owner, gender, breed, genetic_diseases, colors');
   if (error || !data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
+  // "APH" steht bereits fest im HTML (Standardauswahl) - hier nur um
+  // weitere tatsächlich vorkommende Rassen ergänzen.
+  fillSelect('#f-breed', [...new Set(data.map((d) => d.breed).filter(Boolean))].filter((b) => b !== 'APH').sort());
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -132,11 +135,13 @@ function buildQuery() {
   const name = document.querySelector('#f-name').value.trim();
   const owner = document.querySelector('#f-owner').value;
   const gender = document.querySelector('#f-gender').value;
+  const breed = document.querySelector('#f-breed').value;
   const zzl = document.querySelector('#f-zzl').value;
 
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
+  if (breed) q = q.eq('breed', breed);
   // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
   // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,
   // zeigt sich in der Tabelle als "-") mit ein, da beides in der Praxis
@@ -291,6 +296,7 @@ function sortValue(row, field) {
   switch (field) {
     case 'name': return (row.name || '').toLowerCase();
     case 'gender': return (row.gender || '').toLowerCase();
+    case 'breed': return (row.breed || '').toLowerCase();
     case 'coat_color': return (row.coat_color || '').toLowerCase();
     case 'owner': return (row.owner || '').toLowerCase();
     case 'gp': return computeDerived(row).gp;
@@ -325,14 +331,14 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="15">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="16">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="15" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="16" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
@@ -340,7 +346,7 @@ async function loadHorses() {
   const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="15">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -374,6 +380,7 @@ function rowHtml(h) {
     <td data-label="Bearbeiten"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
     <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
+    <td data-label="Rasse">${escapeHtml(h.breed || '')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
     <td data-label="GP">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
