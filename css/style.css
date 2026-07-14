@@ -319,6 +319,8 @@ td.keep-foal-cell { white-space: nowrap; }
   margin-right: 0.3rem;
 }
 .keep-foal-btn:hover { background: var(--border); }
+.keep-foal-yes:hover { border-color: var(--success); background: rgba(107, 157, 0, 0.1); }
+.keep-foal-no:hover { border-color: var(--danger); background: rgba(200, 65, 73, 0.1); }
 .keep-foal-yes.active { background: var(--success); border-color: var(--success); color: #fff; }
 .keep-foal-no.active { background: var(--danger); border-color: var(--danger); color: #fff; }
 .pill {

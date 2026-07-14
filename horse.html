@@ -36,40 +36,37 @@
     </fieldset>
 
     <form id="horse-form">
-      <fieldset>
-        <legend>Stammdaten</legend>
-        <div class="form-grid">
-          <div>
-            <label for="name">Name *</label>
-            <div style="display: flex; gap: 0.4rem; align-items: center;">
-              <button type="button" id="prev-horse-btn" class="secondary" hidden title="Speichern &amp; vorheriges Pferd (alphabetisch)">←</button>
-              <input id="name" required style="flex: 1;" />
-              <button type="button" id="next-horse-btn" class="secondary" hidden title="Speichern &amp; nächstes Pferd (alphabetisch)">→</button>
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <button type="button" id="prev-horse-btn" class="secondary" hidden title="Speichern &amp; vorheriges Pferd (alphabetisch)">←</button>
+        <fieldset style="flex: 1; min-width: 0;">
+          <legend>Stammdaten</legend>
+          <div class="form-grid">
+            <div><label for="name">Name *</label><input id="name" required /></div>
+            <div><label for="external_id">ID</label><input id="external_id" /></div>
+            <div><label for="gender">Geschlecht</label>
+              <select id="gender">
+                <option value=""></option>
+                <option>Stute</option>
+                <option>Hengst</option>
+                <option>Wallach</option>
+                <option>Hengstfohlen</option>
+                <option>Stutfohlen</option>
+              </select>
+            </div>
+            <div><label for="breed">Rasse</label><input id="breed" /></div>
+            <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" step="0.01" /></div>
+            <div><label for="coat_color">Fellfarbe</label><input id="coat_color" /></div>
+            <div><label for="disease_free">Erbkrankheiten</label>
+              <select id="disease_free">
+                <option value="">unbekannt</option>
+                <option value="true">frei von Erbkrankheiten</option>
+                <option value="false">Erbkrankheit vorhanden</option>
+              </select>
             </div>
           </div>
-          <div><label for="external_id">ID</label><input id="external_id" /></div>
-          <div><label for="gender">Geschlecht</label>
-            <select id="gender">
-              <option value=""></option>
-              <option>Stute</option>
-              <option>Hengst</option>
-              <option>Wallach</option>
-              <option>Hengstfohlen</option>
-              <option>Stutfohlen</option>
-            </select>
-          </div>
-          <div><label for="breed">Rasse</label><input id="breed" /></div>
-          <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" step="0.01" /></div>
-          <div><label for="coat_color">Fellfarbe</label><input id="coat_color" /></div>
-          <div><label for="disease_free">Erbkrankheiten</label>
-            <select id="disease_free">
-              <option value="">unbekannt</option>
-              <option value="true">frei von Erbkrankheiten</option>
-              <option value="false">Erbkrankheit vorhanden</option>
-            </select>
-          </div>
-        </div>
-      </fieldset>
+        </fieldset>
+        <button type="button" id="next-horse-btn" class="secondary" hidden title="Speichern &amp; nächstes Pferd (alphabetisch)">→</button>
+      </div>
 
       <fieldset>
         <legend>Verwaltung</legend>
