@@ -409,7 +409,7 @@ function rowHtml(h) {
     <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
     <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
-      <button class="danger small" data-delete="${h.id}" title="Löschen">✗</button>
+      <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
     </td>
   </tr>`;
 }

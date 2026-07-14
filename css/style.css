@@ -120,7 +120,9 @@ button.danger:hover { filter: brightness(0.9); }
    normale Button-Polsterung (0.9rem seitlich) ist fuer eine schmale
    Tabellenspalte zu breit und laesst den Button in die Nachbarspalte
    hineinragen (ueberlappt dann deren Text). */
-.icon-btn { padding: 0.2rem 0.3rem; line-height: 1; }
+/* min-width + zentriert, damit unterschiedlich breite Symbole (z.B. ✏️
+   vs. ✗) trotzdem gleich große Buttons ergeben. */
+.icon-btn { padding: 0.2rem 0.3rem; line-height: 1; min-width: 2.1rem; text-align: center; }
 
 input, select, textarea {
   font: inherit;
@@ -149,6 +151,7 @@ input::placeholder, textarea::placeholder { opacity: 0.5; }
 }
 .view-mode select:disabled { appearance: none; -webkit-appearance: none; -moz-appearance: none; }
 .view-mode textarea[readonly] { resize: none; }
+.view-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
 
 label {
   display: block;

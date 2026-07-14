@@ -13,14 +13,17 @@
     <h1 id="page-heading">🐴 Pferd ansehen</h1>
     <nav>
       <a class="btn secondary" href="index.html">← Zur Übersicht</a>
-      <a class="btn secondary" id="edit-link" href="horse.html">✏️ Bearbeiten</a>
-      <a class="btn secondary" id="mdr-link-btn" href="#" target="_blank" rel="noopener" hidden>🔗 Zum Pferd</a>
-      <button type="button" id="delete-btn" class="danger">🗑️ Löschen</button>
       <button id="logout-btn" class="secondary">Abmelden</button>
     </nav>
   </header>
 
   <main class="container view-mode">
+    <div class="view-actions">
+      <a class="btn secondary" id="edit-link" href="horse.html">✏️ Bearbeiten</a>
+      <a class="btn secondary" id="mdr-link-btn" href="#" target="_blank" rel="noopener" hidden>🔗 Zum Pferd</a>
+      <button type="button" id="delete-btn" class="danger">🗑️ Löschen</button>
+    </div>
+
     <div style="display: flex; align-items: center; gap: 0.6rem;">
       <button type="button" id="prev-horse-btn" class="secondary" title="Vorheriges Pferd (alphabetisch)">←</button>
       <fieldset style="flex: 1; min-width: 0;">
