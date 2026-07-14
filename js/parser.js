@@ -877,6 +877,7 @@ const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' }
 const LOCUS_PRIMARY_ALLELE = {
   Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
   Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1', Cream: 'Cr',
+  Flaxen: 'fl',
 };
 
 // Loci mit mehreren unabhängigen Allelen/Merkmalen statt einem einzigen

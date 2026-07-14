@@ -447,17 +447,27 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
     if (!list.some((x) => x.allele === h.allele)) list.push(h);
   }
 
-  const body = rows.map((r) => {
+  // Flaxen wird vom Spiel nie als eigener Locus getestet (siehe
+  // presentGenesSummary in parser.js) und taucht deshalb nie in "rows"
+  // auf - trotzdem braucht es eine eigene Zeile mit Klick-Button, damit
+  // sich z.B. eine Vererbung vom Elternteil (siehe parentHomozygousLoci)
+  // dort auch anzeigen und manuell bestätigen lässt. Nur für die Anzeige
+  // ergänzt, presentGenesSummary weiter unten bekommt weiterhin die
+  // ungeänderten "rows" (dort wird Flaxen unabhängig davon schon aus
+  // Fellfarbe/Notiz/Name/Elternteil abgeleitet).
+  const displayRows = [...rows, { label: 'Flaxen', value: 'Nicht getestet' }];
+
+  const body = displayRows.map((r) => {
     let value = escapeHtml(r.value);
     const untested = isUntestedLocusValue(r.value);
     const multiAlleles = LOCUS_MULTI_ALLELES[r.label];
+    let badges = '';
 
     if (untested && multiAlleles) {
       // Loci mit mehreren unabhängigen Allelen (KIT/Agouti) - je Allel
       // eigener Zustand/Text/Klick-Button statt nur einem für den ganzen
       // Locus (siehe LOCUS_MULTI_ALLELES).
       const parts = [];
-      let badges = '';
       for (const allele of multiAlleles) {
         const key = `${r.label}:${allele}`;
         const state = ov[key] || null;
@@ -469,10 +479,9 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
           const hint = hintsByLocus[r.label]?.find((h) => h.allele === allele);
           if (hint) parts.push(`${allele}: mindestens 1x vorhanden (${hint.fromParent ? 'laut Elternteil' : 'laut Fellfarbe/Notiz'})`);
         }
-        badges += ' ' + geneOverrideBadge(key, state, allele);
+        badges += geneOverrideBadge(key, state, allele);
       }
       if (parts.length) value += ' — ' + parts.join(', ');
-      value += badges;
     } else if (untested) {
       const overrideState = ov[r.label] || null;
       if (overrideState) {
@@ -493,9 +502,18 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
         if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
         value += ' — ' + parts.join(', ');
       }
-      value += ' ' + geneOverrideBadge(r.label, overrideState);
+      badges = geneOverrideBadge(r.label, overrideState);
     }
-    return `<tr><th>${escapeHtml(r.label)}</th><td>${value}</td></tr>`;
+    // Text und Klick-Button(s) in getrennten Spans innerhalb einer
+    // Flex-Zelle, damit die Buttons unabhängig von der (je Zeile
+    // unterschiedlich langen) Hinweis-Textlänge immer an derselben
+    // Position stehen und so über alle Zeilen hinweg miteinander
+    // ausgerichtet sind (siehe CSS .detail-table td.gene-cell).
+    const cellClass = badges ? ' class="gene-cell"' : '';
+    const cellContent = badges
+      ? `<span class="gene-value-text">${value}</span><span class="gene-badges">${badges}</span>`
+      : value;
+    return `<tr><th>${escapeHtml(r.label)}</th><td${cellClass}>${cellContent}</td></tr>`;
   }).join('');
 
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';

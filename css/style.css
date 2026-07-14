@@ -435,6 +435,14 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 /* Auf der reinen Ansichtsseite (view.html) nur Anzeige, kein Klick. */
 .view-mode .gene-override { cursor: default; pointer-events: none; }
 
+/* Text und Klick-Button(s) je Zeile getrennt (siehe colorGeneticsHtml) -
+   die Buttons stehen dadurch immer am rechten Rand der Zelle und sind so
+   über alle Zeilen hinweg miteinander ausgerichtet, unabhängig davon, wie
+   lang der Hinweistext links davon je Zeile ist. */
+.detail-table td.gene-cell { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.gene-value-text { flex: 1; min-width: 0; }
+.gene-badges { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; }
+
 .group-heading { font-weight: 600; margin: 0.6rem 0 0.2rem; color: var(--accent-dark); }
 
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.2rem 0; }
