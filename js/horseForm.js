@@ -13,8 +13,13 @@ let extraData = {};
 let editingId = null;
 // Benutzername (vor dem @) des eingeloggten Kontos - wird fuer die
 // Pfeil-Navigation (findAdjacentHorseId) gebraucht, damit dort nur durch
-// die eigenen Pferde geblaettert wird.
-let currentIdentity = null;
+// die eigenen Pferde geblaettert wird. Eigener Name (nicht "currentIdentity")
+// noetig, weil horseForm.js und verpaarung.js beide als eigene <script>-Tags
+// auf verpaarung.html geladen werden und sich denselben globalen Scope
+// teilen - eine gleichnamige "let"-Variable in beiden Dateien wuerde einen
+// SyntaxError ausloesen, der das komplette zweite Skript (verpaarung.js)
+// stumm lahmlegt (siehe Commit-Historie).
+let formIdentity = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -29,7 +34,7 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   wireLogout();
-  currentIdentity = session.user.email.split('@')[0];
+  formIdentity = session.user.email.split('@')[0];
 
   const params = new URLSearchParams(window.location.search);
   editingId = params.get('id');
@@ -188,7 +193,7 @@ async function onSaveAndNavigate(direction) {
 // eingeloggter Benutzername) eingeschraenkt, damit man beim Durchklicken
 // nicht auch fremde Pferde anderer Nutzer*innen zu sehen bekommt.
 async function findAdjacentHorseId(direction) {
-  const { data, error } = await supabaseClient.from('horses').select('id, name').ilike('owner', currentIdentity);
+  const { data, error } = await supabaseClient.from('horses').select('id, name').ilike('owner', formIdentity);
   if (error || !data) return null;
   data.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase(), 'de'));
   const idx = data.findIndex((h) => h.id === editingId);
