@@ -89,12 +89,14 @@ async function populateFilterOptions() {
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
-  // "American Paint Horse" steht bereits fest im HTML (Standardauswahl) -
-  // hier nur um weitere tatsächlich vorkommende Rassen ergänzt. Kürzel wie
-  // "APH" werden zusätzlich auf den vollen Namen normalisiert (siehe
-  // normalizeBreed), falls noch nicht normalisierte Altdaten vorkommen.
+  // "American Paint Horse" und "Rasselos" stehen bereits fest im HTML
+  // (Standardauswahl bzw. feste Option) - hier nur um weitere tatsächlich
+  // vorkommende Rassen ergänzt. Kürzel wie "APH" werden zusätzlich auf den
+  // vollen Namen normalisiert (siehe normalizeBreed), falls noch nicht
+  // normalisierte Altdaten vorkommen.
   const breeds = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
   breeds.delete('American Paint Horse');
+  breeds.delete('Rasselos');
   fillSelect('#f-breed', [...breeds].sort());
 
   const diseaseLabels = new Set();
@@ -148,10 +150,9 @@ function buildQuery() {
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
-  // "Rasselos" ist in der Datenbank kein Textwert, sondern null (siehe
-  // normalizeBreed in parser.js) - daher hier extra auf "ist leer" statt
-  // auf Textgleichheit geprüft.
-  if (breed === 'Rasselos') q = q.is('breed', null);
+  // "Rasselos" deckt zusätzlich Pferde ohne jeglichen Rasse-Eintrag mit ab
+  // (null) - beides bedeutet praktisch dasselbe ("keine Rasse bekannt").
+  if (breed === 'Rasselos') q = q.or('breed.eq.Rasselos,breed.is.null');
   else if (breed) q = q.eq('breed', breed);
   // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
   // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,

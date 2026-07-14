@@ -21,14 +21,9 @@ const BREED_ABBREVIATIONS = {
   DRP: 'Deutsches Reitpony',
 };
 
-// "Rasselos" ist im Spiel kein echter Rassename, sondern die Kennzeichnung
-// "keine Rasse" - wird daher wie eine leere Rasse behandelt (null statt dem
-// wörtlichen Text), damit z.B. die Rasseanteile-Prüfung in
-// missingDataLabels (!horse.breed) korrekt greift.
 function normalizeBreed(value) {
   if (!value) return value;
   const trimmed = value.trim();
-  if (/^rasselos$/i.test(trimmed)) return null;
   const abbrKey = Object.keys(BREED_ABBREVIATIONS).find((abbr) => abbr.toLowerCase() === trimmed.toLowerCase());
   return abbrKey ? BREED_ABBREVIATIONS[abbrKey] : trimmed;
 }
@@ -811,12 +806,14 @@ function missingDataLabels(horse) {
   ) {
     missing.push('Turnierwerte');
   }
-  // Ist keine Rasse eingetragen UND das Pferd laut Reinrassigkeit-Wert
-  // nicht zu 100% reinrassig, hätte das Spiel eigentlich eine
-  // Rasseanteile-Aufschlüsselung anzubieten gehabt ("Rasseanteile
-  // anzeigen?", siehe parser.js extractHeaderBlock) - die aber beim
-  // Kopieren nur mitkommt, wenn sie vorher im Spiel aufgeklappt wurde.
-  if (!horse.breed && horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
+  // Ist keine Rasse eingetragen (oder "Rasselos", was im Spiel "keine
+  // Rasse" bedeutet) UND das Pferd laut Reinrassigkeit-Wert nicht zu 100%
+  // reinrassig, hätte das Spiel eigentlich eine Rasseanteile-
+  // Aufschlüsselung anzubieten gehabt ("Rasseanteile anzeigen?", siehe
+  // parser.js extractHeaderBlock) - die aber beim Kopieren nur mitkommt,
+  // wenn sie vorher im Spiel aufgeklappt wurde.
+  const hasNoBreed = !horse.breed || horse.breed === 'Rasselos';
+  if (hasNoBreed && horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
     missing.push('Rasseanteile');
   }
   return missing;

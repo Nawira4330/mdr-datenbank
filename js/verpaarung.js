@@ -64,6 +64,7 @@ async function populateBreedFilter() {
   const { data } = await supabaseClient.from('horses').select('breed');
   const breeds = new Set((data || []).map((h) => normalizeBreed(h.breed)).filter(Boolean));
   breeds.delete('American Paint Horse');
+  breeds.delete('Rasselos');
 
   const sel = document.querySelector('#f-breed');
   const previous = sel.value;
@@ -219,14 +220,10 @@ async function loadPairings() {
 }
 
 // Rasse eines per Name eingetragenen Deckhengsts/Stute (siehe
-// nameToBreed in populateHorseNames) - "Rasselos" für ein bekanntes Pferd
-// ohne eingetragene Rasse, leer nur falls der Name gar nicht in der
-// Datenbank steht (z.B. noch nicht angelegt) - wichtig, um beide Fälle im
-// Rasse-Filter/-Spalte auseinanderzuhalten.
+// nameToBreed in populateHorseNames) - leer, falls unbekannt (z.B. noch
+// nicht in der Datenbank angelegt).
 function breedOf(name) {
-  const key = (name || '').trim().toLowerCase();
-  if (!nameToBreed.has(key)) return '';
-  return nameToBreed.get(key) || 'Rasselos';
+  return nameToBreed.get((name || '').trim().toLowerCase()) || '';
 }
 
 // "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle
