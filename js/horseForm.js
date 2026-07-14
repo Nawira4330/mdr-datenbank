@@ -7,6 +7,7 @@ const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
+  'color_gene_overrides',
 ];
 
 let extraData = {};
@@ -22,6 +23,26 @@ let editingId = null;
 let formIdentity = null;
 
 document.addEventListener('DOMContentLoaded', init);
+
+// Klick auf einen Gen-Bestätigungs-Button (siehe geneOverrideBadge/
+// nextOverrideState in parser.js) - per Event-Delegation auf "document",
+// damit es unabhaengig davon funktioniert, wie oft renderDetailTables die
+// Detail-Tabellen neu aufbaut (dabei wird jedesmal neues HTML erzeugt,
+// ein direkt angehefteter Listener wuerde also verloren gehen). Auf der
+// reinen Ansichtsseite (view.html, erkennbar an ".view-mode") sind die
+// Buttons nur Anzeige, kein Klick-Handling - siehe auch CSS
+// (.view-mode .gene-override { pointer-events: none; }).
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-override-locus]');
+  if (!btn || document.querySelector('.view-mode')) return;
+  const locus = btn.dataset.overrideLocus;
+  const overrides = { ...(extraData.color_gene_overrides || {}) };
+  const next = nextOverrideState(locus, overrides[locus] || null);
+  if (next) overrides[locus] = next;
+  else delete overrides[locus];
+  extraData.color_gene_overrides = overrides;
+  renderDetailTables(extraData);
+});
 
 async function init() {
   // Wird dieses Skript auf einer anderen Seite geladen, um einzelne
@@ -328,7 +349,7 @@ async function renderDetailTables(data) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
     const parentHints = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
-    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints));
+    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides));
   }
   if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
@@ -381,12 +402,30 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
+// Klick-Button je nicht getestetem Locus (siehe nextOverrideState in
+// parser.js) - Klick-Zyklus: unbekannt -> 1x vorhanden -> 2x vorhanden
+// (reinerbig, außer bei Overo) -> nicht vorhanden -> zurück zu unbekannt.
+// Auf der reinen Ansichtsseite (view.html, .view-mode) nur Anzeige, siehe
+// CSS und den Klick-Handler weiter unten.
+function geneOverrideBadge(locus, state) {
+  const stateInfo = {
+    het: { label: '1×', cls: 'het', title: '1x vorhanden (mischerbig) – zum Ändern klicken' },
+    hom: { label: '2×', cls: 'hom', title: '2x vorhanden (reinerbig) – zum Ändern klicken' },
+    absent: { label: '✗', cls: 'absent', title: 'nicht vorhanden – zum Ändern klicken (zurück zu unbekannt)' },
+  }[state] || { label: '?', cls: 'unknown', title: 'Unbekannt, ob vorhanden – zum manuellen Bestätigen klicken' };
+  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(locus)}" title="${escapeHtml(stateInfo.title)}">${stateInfo.label}</button>`;
+}
+
 // Name (Fellfarbe) + Rohwerte je Locus + Zusammenfassung der tatsächlich
 // vorhandenen Gene (großgeschrieben = vorhanden, Ausnahme "pl"). Bei nicht
 // getesteten Loci werden zusätzlich Hinweise aus Fellfarbe-Namen, Notiz
 // UND (falls Vater/Mutter in der Datenbank stehen und dort reinerbig
-// getestet sind) den Eltern einbezogen (siehe fetchParentColorHints).
-function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints) {
+// getestet sind) den Eltern einbezogen (siehe fetchParentColorHints) -
+// eine manuelle Bestätigung/Ausschluss (overrides, per Klick-Button,
+// siehe geneOverrideBadge) hat dabei Vorrang vor diesen automatischen
+// Hinweisen.
+function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides) {
+  const ov = overrides || {};
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName),
     ...inferGeneticHintsFromPhenotype(notes),
@@ -401,25 +440,42 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints) {
 
   const body = rows.map((r) => {
     let value = escapeHtml(r.value);
-    if (isUntestedLocusValue(r.value) && hintsByLocus[r.label]) {
-      const fromPhenotype = hintsByLocus[r.label].filter((h) => !h.fromParent).map((h) => h.allele);
-      const fromParent = hintsByLocus[r.label].filter((h) => h.fromParent).map((h) => h.allele);
-      const parts = [];
-      if (fromPhenotype.length) parts.push(`mindestens ${escapeHtml(fromPhenotype.join(', '))} (laut Fellfarbe/Notiz)`);
-      if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
-      value += ' — ' + parts.join(', ');
+    const untested = isUntestedLocusValue(r.value);
+    const overrideState = untested ? ov[r.label] || null : null;
+
+    if (untested) {
+      if (overrideState) {
+        const primary = LOCUS_PRIMARY_ALLELE[r.label];
+        if (overrideState === 'absent') {
+          value += ' — manuell als nicht vorhanden markiert';
+        } else if (primary) {
+          const code = overrideState === 'hom' ? primary + primary : primary;
+          value += ` — ${overrideState === 'hom' ? 'reinerbig' : 'mindestens'} ${escapeHtml(code)} vorhanden (manuell)`;
+        } else {
+          value += ` — manuell als ${overrideState === 'hom' ? '2x' : '1x'} vorhanden markiert`;
+        }
+      } else if (hintsByLocus[r.label]) {
+        const fromPhenotype = hintsByLocus[r.label].filter((h) => !h.fromParent).map((h) => h.allele);
+        const fromParent = hintsByLocus[r.label].filter((h) => h.fromParent).map((h) => h.allele);
+        const parts = [];
+        if (fromPhenotype.length) parts.push(`mindestens ${escapeHtml(fromPhenotype.join(', '))} (laut Fellfarbe/Notiz)`);
+        if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
+        value += ' — ' + parts.join(', ');
+      }
+      value += ' ' + geneOverrideBadge(r.label, overrideState);
     }
     return `<tr><th>${escapeHtml(r.label)}</th><td>${value}</td></tr>`;
   }).join('');
 
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
 
-  const summary = presentGenesSummary(rows, coatColorName, notes, horseName, parentHints);
+  const summary = presentGenesSummary(rows, coatColorName, notes, horseName, parentHints, overrides);
   let summaryHtml = '';
   if (summary.length) {
     const text = summary.map((s) => {
       if (s.source === 'abgeleitet') return `${s.alleles} (abgeleitet)`;
       if (s.source === 'elternteil') return `${s.alleles} (von Elternteil)`;
+      if (s.source === 'manuell') return `${s.alleles} (manuell)`;
       return s.alleles;
     }).join(', ');
     summaryHtml = `<p class="small muted">Vorhandene Gene: <strong>${escapeHtml(text)}</strong></p>`;
@@ -442,7 +498,7 @@ async function fetchParentRecords(pedigree) {
 
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('name, coat_color, notes, colors')
+    .select('name, coat_color, notes, colors, color_gene_overrides')
     .in('name', parentNames);
   if (error || !data) return [];
   return data;
@@ -456,7 +512,7 @@ async function fetchParentRecords(pedigree) {
 // bedeutet das aber erstmal nur EINE garantierte Kopie (mischerbig),
 // nicht zwangsläufig reinerbig (siehe parentColorHints).
 function parentHomozygousLoci(parent) {
-  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name);
+  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name, null, parent.color_gene_overrides);
   const map = {};
   for (const g of genes) {
     if (isDoubledAllele(g.alleles)) map[g.locus] = halveDoubledAllele(g.alleles);

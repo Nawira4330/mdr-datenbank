@@ -177,7 +177,7 @@ function colorCodeOf(row) {
 // exakt dieselben Werte verwenden.
 function computeDerived(h) {
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
-  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name);
+  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name, null, h.color_gene_overrides);
   return {
     colorCode: colorCodeOf(h),
     presentGenes: genes.map((g) => g.alleles).join(' '),
@@ -217,7 +217,7 @@ const LOCUS_DOMINANT_CHECK = {
 function hasPearlGene(row) {
   const entry = (row.colors || []).find((c) => c.label === 'Cream');
   if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name);
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
   return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
 }
 
@@ -225,7 +225,7 @@ function hasPearlGene(row) {
 // parser.js) - daher ausschließlich aus Fellfarbe/Notiz/Name ableitbar,
 // sowohl als Träger (fl) als auch reinerbig (flfl).
 function hasFlaxenGene(row) {
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name);
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
   return genes.some((g) => g.locus === 'Flaxen');
 }
 

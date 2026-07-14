@@ -858,24 +858,71 @@ function pintoPatternsFromColors(colorRows) {
 
 const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' };
 
+// Manuelle Gen-Bestätigung je Locus (siehe colorGeneticsHtml/
+// geneOverrideBadge und den Klick-Handler in horseForm.js) - Klick-Zyklus:
+// unbekannt (kein Eintrag) -> 1x vorhanden -> 2x vorhanden (reinerbig) ->
+// nicht vorhanden -> zurück zu unbekannt. Nur für Loci mit genau EINEM
+// eindeutigen "sichtbaren" Allel-Kürzel sinnvoll (Agouti/KIT haben mehrere
+// mögliche Allele/Merkmale und werden hier bewusst ausgelassen).
+const LOCUS_PRIMARY_ALLELE = {
+  Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
+  Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1', Cream: 'Cr',
+};
+
+// Overo ist laut MDR-Doku reinerbig dominant letal (siehe
+// PHENOTYPE_GENE_HINTS oben) - "2x vorhanden" wird für diesen Locus daher
+// aus dem Klick-Zyklus ausgelassen (nur 1x <-> nicht vorhanden möglich).
+const OVERRIDE_STATE_ORDER_DEFAULT = ['het', 'hom', 'absent'];
+const OVERRIDE_STATE_ORDER_NO_HOM = ['het', 'absent'];
+
+function overrideStateOrder(locus) {
+  return locus === 'Overo' ? OVERRIDE_STATE_ORDER_NO_HOM : OVERRIDE_STATE_ORDER_DEFAULT;
+}
+
+// Naechster Zustand im Klick-Zyklus (siehe overrideStateOrder) - "null"
+// steht dabei für "unbekannt" (kein manueller Eintrag), sowohl als
+// Start- als auch als Endpunkt des Zyklus.
+function nextOverrideState(locus, current) {
+  const order = overrideStateOrder(locus);
+  const idx = order.indexOf(current);
+  const nextIdx = idx + 1;
+  return nextIdx >= order.length ? null : order[nextIdx];
+}
+
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
 // die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
-// Sooty/Flaxen) - aus Hinweisen im Fellfarbe-Namen, in der Notiz, im
-// Pferdenamen (siehe inferGeneticHintsFromPhenotype) und optional aus
-// reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
+// Sooty/Flaxen) - manuelle Bestätigungen (overrides, siehe
+// LOCUS_PRIMARY_ALLELE) mit Vorrang, sonst Hinweise im Fellfarbe-Namen, in
+// der Notiz, im Pferdenamen (siehe inferGeneticHintsFromPhenotype) und
+// optional aus reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
 // homozygousPresentHints - wird von horseForm.js anhand des Stammbaums
 // befüllt, falls Vater/Mutter in der Datenbank stehen).
-function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints) {
+function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints, overrides) {
   const rows = colorRows || [];
   const confirmed = [];
   const testedLoci = new Set();
+  const ov = overrides || {};
 
   for (const r of rows) {
     if (isUntestedLocusValue(r.value)) continue;
     testedLoci.add(r.label);
     const alleles = extractPresentAlleles(r.value);
     if (alleles) confirmed.push({ locus: r.label, alleles, source: 'getestet' });
+  }
+
+  // Manuell bestätigte (oder als "nicht vorhanden" markierte) Loci
+  // überstimmen die automatisch abgeleiteten Hinweise unten - bei
+  // getesteten Loci wird ein Override ignoriert (der Rohwert bleibt
+  // maßgeblich).
+  const overriddenLoci = new Set(Object.keys(ov).filter((l) => ov[l] && !testedLoci.has(l)));
+  const manual = [];
+  for (const locus of overriddenLoci) {
+    const state = ov[locus];
+    const primary = LOCUS_PRIMARY_ALLELE[locus];
+    if (!primary || state === 'absent') continue;
+    const alleleCode = state === 'hom' ? primary + primary : primary;
+    manual.push({ locus, alleles: alleleCode, source: 'manuell' });
   }
 
   const hints = [
@@ -887,14 +934,14 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   const seen = new Set();
   const inferred = [];
   for (const h of hints) {
-    if (testedLoci.has(h.locus)) continue;
+    if (testedLoci.has(h.locus) || overriddenLoci.has(h.locus)) continue;
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
     seen.add(key);
     inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
   }
 
-  return [...confirmed, ...inferred];
+  return [...confirmed, ...manual, ...inferred];
 }
 
 if (typeof module !== 'undefined' && module.exports) {
