@@ -37,6 +37,8 @@ async function init() {
   document.getElementById('parse-btn').addEventListener('click', onParse);
   document.getElementById('horse-form').addEventListener('submit', onSave);
   document.getElementById('delete-btn').addEventListener('click', onDelete);
+  document.getElementById('purebred_pct').addEventListener('input', updateBreedCompositionVisibility);
+  updateBreedCompositionVisibility();
   wireSaveWarningModal();
 
   if (editingId) {
@@ -96,6 +98,21 @@ function fillForm(data) {
     const el = document.getElementById(id);
     if (el && data[id] !== undefined && data[id] !== null) el.value = String(data[id]);
   }
+  updateBreedCompositionVisibility();
+}
+
+// Das Rasseanteile-Feld ist nur relevant, wenn das Pferd NICHT sicher zu
+// 100% reinrassig ist - bei leerem/unbekanntem Reinrassigkeit-Wert bleibt
+// es trotzdem sichtbar, damit es sich vorsorglich ausfüllen lässt (siehe
+// missingDataLabels: nur bei bekanntem Wert < 100% wird es überhaupt
+// verlangt). Wird sowohl bei jedem fillForm() (Laden/Auslesen) als auch
+// live beim Tippen im Reinrassigkeit-Feld aufgerufen (siehe init()).
+function updateBreedCompositionVisibility() {
+  const field = document.getElementById('breed-composition-field');
+  if (!field) return;
+  const pct = document.getElementById('purebred_pct').value;
+  const isKnownFullyPurebred = pct !== '' && Number(pct) === 100;
+  field.hidden = isKnownFullyPurebred;
 }
 
 function collectForm() {

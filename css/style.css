@@ -131,6 +131,7 @@ input, select, textarea {
   color: var(--text);
   width: 100%;
 }
+input::placeholder, textarea::placeholder { opacity: 0.5; }
 
 label {
   display: block;

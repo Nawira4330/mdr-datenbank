@@ -28,6 +28,12 @@ async function init() {
   document.querySelector('#f-breed').addEventListener('change', loadPairings);
   document.querySelector('#foal-modal-skip').addEventListener('click', closeFoalModal);
   document.querySelector('#foal-modal-save').addEventListener('click', onSaveFoal);
+  // "Automatisch auslesen" im Fohlen-Popup - onParse/fillForm/
+  // updateBreedCompositionVisibility sind aus horseForm.js wiederverwendet
+  // (siehe dessen init(), das hier wegen des page-title-Guards nicht
+  // läuft und diese Buttons deshalb selbst verdrahten muss).
+  document.querySelector('#parse-btn').addEventListener('click', onParse);
+  document.querySelector('#purebred_pct').addEventListener('input', updateBreedCompositionVisibility);
   wireDuplicateModal();
   wireSortableHeaders();
 
@@ -310,6 +316,7 @@ function resetFoalForm() {
   document.getElementById('form-error').textContent = '';
   document.getElementById('detail-tables').innerHTML = '';
   document.getElementById('detail-fieldset').hidden = true;
+  updateBreedCompositionVisibility();
   extraData = {};
 }
 
