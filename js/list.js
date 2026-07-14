@@ -35,20 +35,23 @@ async function showMissingDataNotice(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('name, exterior_genetics, pedigree, tournament_potential, disciplines, breed, purebred_pct, breed_composition')
+    .select('id, name, exterior_genetics, pedigree, tournament_potential, disciplines, breed, purebred_pct, breed_composition')
     .ilike('owner', identity);
   if (error || !data) return;
 
   const incomplete = data
-    .map((h) => ({ name: h.name, missing: missingDataLabels(h) }))
+    .map((h) => ({ id: h.id, name: h.name, missing: missingDataLabels(h) }))
     .filter((h) => h.missing.length);
   if (!incomplete.length) return;
 
+  // Bearbeiten-Stift vor dem Namen (wie in der Uebersichtstabelle), damit
+  // sich das betroffene Pferd direkt aus dem Hinweis heraus oeffnen laesst,
+  // ohne erst in der Liste danach suchen zu muessen.
   const list = incomplete
-    .map((h) => `<li>${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</li>`)
+    .map((h) => `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} - ${escapeHtml(h.missing.join(', '))}</li>`)
     .join('');
   const notice = document.querySelector('#missing-data-notice');
-  notice.innerHTML = `<p><strong>Hinweis:</strong></p><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
+  notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
   notice.hidden = false;
 }
 
