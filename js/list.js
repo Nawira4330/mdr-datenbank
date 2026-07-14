@@ -252,11 +252,14 @@ function matchesGenetikLocus(row, locusName) {
   return check ? check(entry.value) : false;
 }
 
-// Ein Erbkrankheiten-Locuswert gilt als unauffällig, wenn er ausschließlich
-// aus "N" (normal) besteht - jede Kleinbuchstaben-/Risikoallel-Angabe
-// bedeutet Träger/betroffen.
+// Ein Erbkrankheiten-Locuswert gilt als unauffällig, wenn er (ohne die
+// "/"-Trenner) ausschließlich aus großem "N" (normal) besteht - jede
+// Abweichung bedeutet Träger/betroffen. Wichtig: das Risikoallel-Kürzel
+// ist nicht immer klein geschrieben (z.B. "LF/NN" bei LFS, komplett groß)
+// - ein reiner Kleinbuchstaben-Check (wie zuvor) übersieht solche Fälle.
 function isDiseaseClear(value) {
-  return !/[a-z]/.test(value || '');
+  const cleaned = (value || '').replace(/\//g, '');
+  return cleaned === '' || /^N+$/.test(cleaned);
 }
 
 function affectedDiseaseLabels(row) {
