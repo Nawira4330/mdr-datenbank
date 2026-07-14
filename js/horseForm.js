@@ -35,11 +35,14 @@ document.addEventListener('DOMContentLoaded', init);
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-override-locus]');
   if (!btn || document.querySelector('.view-mode')) return;
-  const locus = btn.dataset.overrideLocus;
+  // "key" ist entweder ein bloßer Locus-Name ("Champagne") oder bei Loci
+  // mit mehreren Allelen "Locus:Allel" ("KIT:To"), siehe LOCUS_MULTI_ALLELES
+  // in parser.js.
+  const key = btn.dataset.overrideLocus;
   const overrides = { ...(extraData.color_gene_overrides || {}) };
-  const next = nextOverrideState(locus, overrides[locus] || null);
-  if (next) overrides[locus] = next;
-  else delete overrides[locus];
+  const next = nextOverrideState(key, overrides[key] || null);
+  if (next) overrides[key] = next;
+  else delete overrides[key];
   extraData.color_gene_overrides = overrides;
   renderDetailTables(extraData);
 });
@@ -402,18 +405,24 @@ function exteriorGeneticsHtml(ext) {
   return `<div class="group-heading">Exterieur (Genetik)</div><table class="detail-table">${body}</table>${overall}`;
 }
 
-// Klick-Button je nicht getestetem Locus (siehe nextOverrideState in
+// Klick-Button je nicht getestetem Locus/Allel (siehe nextOverrideState in
 // parser.js) - Klick-Zyklus: unbekannt -> 1x vorhanden -> 2x vorhanden
 // (reinerbig, außer bei Overo) -> nicht vorhanden -> zurück zu unbekannt.
-// Auf der reinen Ansichtsseite (view.html, .view-mode) nur Anzeige, siehe
-// CSS und den Klick-Handler weiter unten.
-function geneOverrideBadge(locus, state) {
+// "key" ist entweder der bloße Locus-Name ("Champagne") oder bei Loci mit
+// mehreren Allelen (siehe LOCUS_MULTI_ALLELES) "Locus:Allel" ("KIT:To") -
+// "allelePrefix" zeigt dann zusätzlich, welches Allel gemeint ist. Auf der
+// reinen Ansichtsseite (view.html, .view-mode) nur Anzeige, siehe CSS und
+// den Klick-Handler weiter unten.
+function geneOverrideBadge(key, state, allelePrefix) {
   const stateInfo = {
-    het: { label: '1×', cls: 'het', title: '1x vorhanden (mischerbig) – zum Ändern klicken' },
-    hom: { label: '2×', cls: 'hom', title: '2x vorhanden (reinerbig) – zum Ändern klicken' },
-    absent: { label: '✗', cls: 'absent', title: 'nicht vorhanden – zum Ändern klicken (zurück zu unbekannt)' },
-  }[state] || { label: '?', cls: 'unknown', title: 'Unbekannt, ob vorhanden – zum manuellen Bestätigen klicken' };
-  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(locus)}" title="${escapeHtml(stateInfo.title)}">${stateInfo.label}</button>`;
+    het: { label: '1×', cls: 'het', title: '1x vorhanden (mischerbig)' },
+    hom: { label: '2×', cls: 'hom', title: '2x vorhanden (reinerbig)' },
+    absent: { label: '✗', cls: 'absent', title: 'nicht vorhanden' },
+  }[state] || { label: '?', cls: 'unknown', title: 'Unbekannt, ob vorhanden' };
+  const prefix = allelePrefix ? `${allelePrefix}: ` : '';
+  const label = allelePrefix ? `${allelePrefix} ${stateInfo.label}` : stateInfo.label;
+  const title = `${prefix}${stateInfo.title} – zum Ändern klicken`;
+  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(key)}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
 }
 
 // Name (Fellfarbe) + Rohwerte je Locus + Zusammenfassung der tatsächlich
@@ -441,9 +450,31 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
   const body = rows.map((r) => {
     let value = escapeHtml(r.value);
     const untested = isUntestedLocusValue(r.value);
-    const overrideState = untested ? ov[r.label] || null : null;
+    const multiAlleles = LOCUS_MULTI_ALLELES[r.label];
 
-    if (untested) {
+    if (untested && multiAlleles) {
+      // Loci mit mehreren unabhängigen Allelen (KIT/Agouti) - je Allel
+      // eigener Zustand/Text/Klick-Button statt nur einem für den ganzen
+      // Locus (siehe LOCUS_MULTI_ALLELES).
+      const parts = [];
+      let badges = '';
+      for (const allele of multiAlleles) {
+        const key = `${r.label}:${allele}`;
+        const state = ov[key] || null;
+        if (state === 'absent') {
+          parts.push(`${allele}: nicht vorhanden (manuell)`);
+        } else if (state) {
+          parts.push(`${allele}: ${state === 'hom' ? 'reinerbig' : 'mindestens 1x'} vorhanden (manuell)`);
+        } else {
+          const hint = hintsByLocus[r.label]?.find((h) => h.allele === allele);
+          if (hint) parts.push(`${allele}: mindestens 1x vorhanden (${hint.fromParent ? 'laut Elternteil' : 'laut Fellfarbe/Notiz'})`);
+        }
+        badges += ' ' + geneOverrideBadge(key, state, allele);
+      }
+      if (parts.length) value += ' — ' + parts.join(', ');
+      value += badges;
+    } else if (untested) {
+      const overrideState = ov[r.label] || null;
       if (overrideState) {
         const primary = LOCUS_PRIMARY_ALLELE[r.label];
         if (overrideState === 'absent') {

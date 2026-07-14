@@ -861,12 +861,20 @@ const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' }
 // Manuelle Gen-Bestätigung je Locus (siehe colorGeneticsHtml/
 // geneOverrideBadge und den Klick-Handler in horseForm.js) - Klick-Zyklus:
 // unbekannt (kein Eintrag) -> 1x vorhanden -> 2x vorhanden (reinerbig) ->
-// nicht vorhanden -> zurück zu unbekannt. Nur für Loci mit genau EINEM
-// eindeutigen "sichtbaren" Allel-Kürzel sinnvoll (Agouti/KIT haben mehrere
-// mögliche Allele/Merkmale und werden hier bewusst ausgelassen).
+// nicht vorhanden -> zurück zu unbekannt.
 const LOCUS_PRIMARY_ALLELE = {
   Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
   Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1', Cream: 'Cr',
+};
+
+// Loci mit mehreren unabhängigen Allelen/Merkmalen statt einem einzigen
+// eindeutigen Code (Gegenstück zu LOCUS_PRIMARY_ALLELE) - hier gibt es
+// pro Allel einen eigenen Klick-Button. Der Override-Schlüssel ist dann
+// nicht der bloße Locus-Name, sondern "Locus:Allel" (z.B. "KIT:To"),
+// siehe geneOverrideBadge/colorGeneticsHtml.
+const LOCUS_MULTI_ALLELES = {
+  KIT: ['To', 'Sb', 'Rn'],
+  Agouti: ['A1', 'At', 'Ap'],
 };
 
 // Overo ist laut MDR-Doku reinerbig dominant letal (siehe
@@ -875,15 +883,22 @@ const LOCUS_PRIMARY_ALLELE = {
 const OVERRIDE_STATE_ORDER_DEFAULT = ['het', 'hom', 'absent'];
 const OVERRIDE_STATE_ORDER_NO_HOM = ['het', 'absent'];
 
-function overrideStateOrder(locus) {
-  return locus === 'Overo' ? OVERRIDE_STATE_ORDER_NO_HOM : OVERRIDE_STATE_ORDER_DEFAULT;
+// Override-Schlüssel sind entweder ein bloßer Locus-Name ("Champagne")
+// oder "Locus:Allel" ("KIT:To", siehe LOCUS_MULTI_ALLELES) - dieser Helfer
+// liefert in beiden Fällen den reinen Locus-Namen davor.
+function localeOfOverrideKey(key) {
+  return key.split(':')[0];
+}
+
+function overrideStateOrder(key) {
+  return localeOfOverrideKey(key) === 'Overo' ? OVERRIDE_STATE_ORDER_NO_HOM : OVERRIDE_STATE_ORDER_DEFAULT;
 }
 
 // Naechster Zustand im Klick-Zyklus (siehe overrideStateOrder) - "null"
 // steht dabei für "unbekannt" (kein manueller Eintrag), sowohl als
 // Start- als auch als Endpunkt des Zyklus.
-function nextOverrideState(locus, current) {
-  const order = overrideStateOrder(locus);
+function nextOverrideState(key, current) {
+  const order = overrideStateOrder(key);
   const idx = order.indexOf(current);
   const nextIdx = idx + 1;
   return nextIdx >= order.length ? null : order[nextIdx];
@@ -911,15 +926,19 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     if (alleles) confirmed.push({ locus: r.label, alleles, source: 'getestet' });
   }
 
-  // Manuell bestätigte (oder als "nicht vorhanden" markierte) Loci
+  // Manuell bestätigte (oder als "nicht vorhanden" markierte) Loci/Allele
   // überstimmen die automatisch abgeleiteten Hinweise unten - bei
   // getesteten Loci wird ein Override ignoriert (der Rohwert bleibt
-  // maßgeblich).
-  const overriddenLoci = new Set(Object.keys(ov).filter((l) => ov[l] && !testedLoci.has(l)));
+  // maßgeblich). Bei Loci mit mehreren Allelen (LOCUS_MULTI_ALLELES)
+  // betrifft das nur das jeweils überschriebene Allel, nicht den ganzen
+  // Locus - andere Allele desselben Locus bleiben von der automatischen
+  // Ableitung unberührt.
+  const overriddenKeys = new Set(Object.keys(ov).filter((k) => ov[k] && !testedLoci.has(localeOfOverrideKey(k))));
   const manual = [];
-  for (const locus of overriddenLoci) {
-    const state = ov[locus];
-    const primary = LOCUS_PRIMARY_ALLELE[locus];
+  for (const key of overriddenKeys) {
+    const state = ov[key];
+    const locus = localeOfOverrideKey(key);
+    const primary = key.includes(':') ? key.split(':')[1] : LOCUS_PRIMARY_ALLELE[key];
     if (!primary || state === 'absent') continue;
     const alleleCode = state === 'hom' ? primary + primary : primary;
     manual.push({ locus, alleles: alleleCode, source: 'manuell' });
@@ -934,7 +953,9 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   const seen = new Set();
   const inferred = [];
   for (const h of hints) {
-    if (testedLoci.has(h.locus) || overriddenLoci.has(h.locus)) continue;
+    if (testedLoci.has(h.locus)) continue;
+    const hKey = LOCUS_MULTI_ALLELES[h.locus] ? `${h.locus}:${h.allele}` : h.locus;
+    if (overriddenKeys.has(hKey)) continue;
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
     seen.add(key);
