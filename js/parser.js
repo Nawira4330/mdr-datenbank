@@ -7,6 +7,27 @@
 // und der komplette Rohtext wird immer mit gespeichert (raw_text), damit
 // nichts verloren geht, falls sich das Seitenlayout im Spiel mal ändert.
 
+// Rasse-Kürzel, wie sie im Spiel teils statt des vollen Namens auftauchen
+// (z.B. im Stammbaum oder wenn manuell so eingetragen) - werden überall,
+// wo eine Rasse gesetzt wird, auf den ausgeschriebenen Namen normalisiert
+// (siehe normalizeBreed), damit Anzeige UND Filterung (exakter Abgleich
+// auf den gespeicherten Spaltenwert) konsistent den vollen Namen nutzen.
+const BREED_ABBREVIATIONS = {
+  APH: 'American Paint Horse',
+  Knab: 'Knabstupper',
+  Anda: 'Andalusier',
+  Lusi: 'Lusitano',
+  QH: 'Quarter Horse',
+  DRP: 'Deutsches Reitpony',
+};
+
+function normalizeBreed(value) {
+  if (!value) return value;
+  const trimmed = value.trim();
+  const abbrKey = Object.keys(BREED_ABBREVIATIONS).find((abbr) => abbr.toLowerCase() === trimmed.toLowerCase());
+  return abbrKey ? BREED_ABBREVIATIONS[abbrKey] : trimmed;
+}
+
 function parseHorseText(rawText) {
   const lines = rawText.replace(/\r\n/g, '\n').split('\n').map((l) => l.trim());
   const nonEmpty = lines.filter(Boolean);
@@ -29,7 +50,7 @@ function parseHorseText(rawText) {
 
   // --- Papiere ---
   const rasse = findValueForLabel(nonEmpty, 'Rasse');
-  if (rasse) result.breed = rasse;
+  if (rasse) result.breed = normalizeBreed(rasse);
   const reinrassigkeit = findValueForLabel(nonEmpty, 'Reinrassigkeit');
   if (reinrassigkeit) {
     const m = reinrassigkeit.match(/([\d.,]+)\s*%/);
@@ -126,7 +147,7 @@ function extractHeaderBlock(lines) {
     out.gender = genderLine;
   }
   const breedLine = lines[ageIdx + 2];
-  if (breedLine) out.breed = breedLine;
+  if (breedLine) out.breed = normalizeBreed(breedLine);
 
   const purebredLine = lines[ageIdx + 3] || '';
   const pm = purebredLine.match(/([\d.,]+)\s*%\s*Reinrassig/i);
@@ -394,7 +415,7 @@ function parsePedigree(lines, mainBreed) {
     if (!current) {
       current = { name: line };
     } else if (!current.breed) {
-      current.breed = line;
+      current.breed = normalizeBreed(line);
       if (!sawSelf) {
         // Der allererste vollständige Name+Rasse-Eintrag ist das Pferd
         // selbst, nicht sein Vorfahre.

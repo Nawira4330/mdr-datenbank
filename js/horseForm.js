@@ -105,6 +105,10 @@ function collectForm() {
     const v = el.value.trim();
     out[id] = v === '' ? null : v;
   }
+  // Rasse-Kürzel (z.B. "APH") auf den ausgeschriebenen Namen normalisieren,
+  // falls direkt ins Formular eingetragen statt per Text-Auslesen (dort
+  // übernimmt das bereits parser.js) - siehe normalizeBreed.
+  if (out.breed) out.breed = normalizeBreed(out.breed);
   for (const id of NUMBER_FIELDS) {
     const el = document.getElementById(id);
     out[id] = el.value === '' ? null : Number(el.value);
@@ -536,7 +540,7 @@ const PEDIGREE_SECTION_ORDER = [
 
 function pedigreeGroupTableHtml(title, entries) {
   if (!entries?.length) return '';
-  const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(p.breed || '')}</td></tr>`).join('');
+  const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(normalizeBreed(p.breed) || '')}</td></tr>`).join('');
   return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
 }
 

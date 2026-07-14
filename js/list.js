@@ -86,9 +86,13 @@ async function populateFilterOptions() {
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
-  // "APH" steht bereits fest im HTML (Standardauswahl) - hier nur um
-  // weitere tatsächlich vorkommende Rassen ergänzen.
-  fillSelect('#f-breed', [...new Set(data.map((d) => d.breed).filter(Boolean))].filter((b) => b !== 'APH').sort());
+  // "American Paint Horse" steht bereits fest im HTML (Standardauswahl) -
+  // hier nur um weitere tatsächlich vorkommende Rassen ergänzt. Kürzel wie
+  // "APH" werden zusätzlich auf den vollen Namen normalisiert (siehe
+  // normalizeBreed), falls noch nicht normalisierte Altdaten vorkommen.
+  const breeds = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
+  breeds.delete('American Paint Horse');
+  fillSelect('#f-breed', [...breeds].sort());
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -380,7 +384,7 @@ function rowHtml(h) {
     <td data-label="Bearbeiten"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
     <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
-    <td data-label="Rasse">${escapeHtml(h.breed || '')}</td>
+    <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || '')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
     <td data-label="GP">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>

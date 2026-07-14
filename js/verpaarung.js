@@ -45,17 +45,19 @@ async function populateHorseNames() {
     const opt = document.createElement('option');
     opt.value = h.name;
     datalist.appendChild(opt);
-    nameToBreed.set((h.name || '').trim().toLowerCase(), h.breed || '');
+    nameToBreed.set((h.name || '').trim().toLowerCase(), normalizeBreed(h.breed) || '');
   });
 }
 
-// "APH" steht bereits fest im HTML (Standardauswahl, siehe f-owner-
-// Analogie in list.js) - hier nur um weitere tatsaechlich vorkommende
-// Rassen ergaenzt.
+// "American Paint Horse" steht bereits fest im HTML (Standardauswahl,
+// siehe f-owner-Analogie in list.js) - hier nur um weitere tatsaechlich
+// vorkommende Rassen ergaenzt. Kürzel wie "APH" werden zusätzlich auf den
+// vollen Namen normalisiert (siehe normalizeBreed), falls noch nicht
+// normalisierte Altdaten vorkommen.
 async function populateBreedFilter() {
   const { data } = await supabaseClient.from('horses').select('breed');
-  const breeds = new Set((data || []).map((h) => h.breed).filter(Boolean));
-  breeds.delete('APH');
+  const breeds = new Set((data || []).map((h) => normalizeBreed(h.breed)).filter(Boolean));
+  breeds.delete('American Paint Horse');
 
   const sel = document.querySelector('#f-breed');
   const previous = sel.value;
@@ -67,7 +69,7 @@ async function populateBreedFilter() {
     opt.dataset.dynamic = 'true';
     sel.appendChild(opt);
   });
-  sel.value = previous || 'APH';
+  sel.value = previous || 'American Paint Horse';
 }
 
 // Besitzer-Filter ist standardmäßig auf den eigenen Benutzernamen gesetzt,
