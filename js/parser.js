@@ -21,11 +21,37 @@ const BREED_ABBREVIATIONS = {
   DRP: 'Deutsches Reitpony',
 };
 
+// "Rasselos" ist im Spiel kein echter Rassename, sondern die Kennzeichnung
+// "keine Rasse" - wird daher wie eine leere Rasse behandelt (null statt dem
+// wörtlichen Text), damit z.B. die Rasseanteile-Prüfung in
+// missingDataLabels (!horse.breed) korrekt greift.
 function normalizeBreed(value) {
   if (!value) return value;
   const trimmed = value.trim();
+  if (/^rasselos$/i.test(trimmed)) return null;
   const abbrKey = Object.keys(BREED_ABBREVIATIONS).find((abbr) => abbr.toLowerCase() === trimmed.toLowerCase());
   return abbrKey ? BREED_ABBREVIATIONS[abbrKey] : trimmed;
+}
+
+// Bei nicht 100% reinrassigen Pferden zeigt das Spiel hinter der
+// "Reinrassigkeit:"-Zeile optional eine Rasseanteile-Aufschlüsselung -
+// aber nur, wenn "Rasseanteile anzeigen?" vorher im Spiel aufgeklappt
+// wurde, bevor die Seite kopiert wurde. Je Zeile ein Prozentwert gefolgt
+// von der jeweiligen Rasse, z.B. "50.00 % Knabstrupper".
+function parseBreedComposition(lines) {
+  const reinIdx = lines.findIndex((l) => /^Reinrassigkeit\s*:/i.test(l));
+  if (reinIdx === -1) return null;
+
+  const parts = [];
+  for (let i = reinIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    const m = line.match(/^([\d.,]+)\s*%\s+(.+)$/);
+    if (!m) break;
+    const pct = m[1].replace(',', '.');
+    parts.push(`${pct}% ${normalizeBreed(m[2].trim())}`);
+  }
+  return parts.length ? parts.join(', ') : null;
 }
 
 function parseHorseText(rawText) {
@@ -56,6 +82,8 @@ function parseHorseText(rawText) {
     const m = reinrassigkeit.match(/([\d.,]+)\s*%/);
     if (m) result.purebred_pct = parseFloat(m[1].replace(',', '.'));
   }
+  const breedComposition = parseBreedComposition(lines);
+  if (breedComposition) result.breed_composition = breedComposition;
   const zuchtzulassungLine = nonEmpty.find((l) => /^Zuchtzulassung\b/i.test(l));
   if (zuchtzulassungLine) {
     result.breeding_allowed = /ja/i.test(zuchtzulassungLine.replace(/^Zuchtzulassung/i, ''));
