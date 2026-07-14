@@ -219,10 +219,14 @@ async function loadPairings() {
 }
 
 // Rasse eines per Name eingetragenen Deckhengsts/Stute (siehe
-// nameToBreed in populateHorseNames) - leer, falls unbekannt (z.B. noch
-// nicht in der Datenbank angelegt).
+// nameToBreed in populateHorseNames) - "Rasselos" für ein bekanntes Pferd
+// ohne eingetragene Rasse, leer nur falls der Name gar nicht in der
+// Datenbank steht (z.B. noch nicht angelegt) - wichtig, um beide Fälle im
+// Rasse-Filter/-Spalte auseinanderzuhalten.
 function breedOf(name) {
-  return nameToBreed.get((name || '').trim().toLowerCase()) || '';
+  const key = (name || '').trim().toLowerCase();
+  if (!nameToBreed.has(key)) return '';
+  return nameToBreed.get(key) || 'Rasselos';
 }
 
 // "Fohlen behalten" wird per zwei Buttons (✓/✗) direkt in der Tabelle

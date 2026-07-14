@@ -148,7 +148,11 @@ function buildQuery() {
   if (name) q = q.ilike('name', `%${name}%`);
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
-  if (breed) q = q.eq('breed', breed);
+  // "Rasselos" ist in der Datenbank kein Textwert, sondern null (siehe
+  // normalizeBreed in parser.js) - daher hier extra auf "ist leer" statt
+  // auf Textgleichheit geprüft.
+  if (breed === 'Rasselos') q = q.is('breed', null);
+  else if (breed) q = q.eq('breed', breed);
   // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
   // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,
   // zeigt sich in der Tabelle als "-") mit ein, da beides in der Praxis
@@ -387,7 +391,7 @@ function rowHtml(h) {
     <td data-label="Bearbeiten"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a></td>
     <td data-label="Name" class="name-cell">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
-    <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || '')}</td>
+    <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
     <td data-label="GP">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
