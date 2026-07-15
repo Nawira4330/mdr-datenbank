@@ -828,14 +828,13 @@ function missingDataLabels(horse) {
   ) {
     missing.push('Turnierwerte');
   }
-  // Ist keine Rasse eingetragen (oder "Rasselos", was im Spiel "keine
-  // Rasse" bedeutet) UND das Pferd laut Reinrassigkeit-Wert nicht zu 100%
-  // reinrassig, hätte das Spiel eigentlich eine Rasseanteile-
-  // Aufschlüsselung anzubieten gehabt ("Rasseanteile anzeigen?", siehe
-  // parser.js extractHeaderBlock) - die aber beim Kopieren nur mitkommt,
-  // wenn sie vorher im Spiel aufgeklappt wurde.
-  const hasNoBreed = !horse.breed || horse.breed === 'Rasselos';
-  if (hasNoBreed && horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
+  // Ist ein Pferd laut Reinrassigkeit-Wert nicht zu 100% reinrassig,
+  // hätte das Spiel eigentlich eine Rasseanteile-Aufschlüsselung
+  // anzubieten gehabt ("Rasseanteile anzeigen?", siehe parser.js
+  // extractHeaderBlock) - die aber beim Kopieren nur mitkommt, wenn sie
+  // vorher im Spiel aufgeklappt wurde. Das gilt unabhängig davon, ob
+  // (zusätzlich zu den Anteilen) eine Haupt-Rasse eingetragen ist.
+  if (horse.purebred_pct != null && horse.purebred_pct < 100 && !horse.breed_composition) {
     missing.push('Rasseanteile');
   }
   return missing;
@@ -919,6 +918,16 @@ function nextOverrideState(key, current) {
   const nextIdx = idx + 1;
   return nextIdx >= order.length ? null : order[nextIdx];
 }
+
+// Die 10 im Spiel testbaren Erbkrankheiten (siehe extractSimpleTable
+// 'Erbkrankheiten') - anders als bei der Farbgenetik sind hier
+// normalerweise ALLE Krankheiten getestet (Rohwerte wie "NN/NN"); fehlt
+// eine davon trotzdem im Array (z.B. bei einem noch nicht beim Tierarzt
+// getesteten Fohlen), zeigt horseForm.js/diseaseTableHtml dafür eine
+// eigene "Nicht getestet"-Zeile mit Klick-Button (gleicher Mechanismus
+// wie bei den Farbgenetik-Loci: unbekannt -> Träger -> betroffen -> frei
+// -> zurück zu unbekannt, siehe nextOverrideState).
+const KNOWN_DISEASE_CODES = ['CA', 'HERDA', 'PSSM', 'EMH', 'ASD', 'HYPP', 'LFS', 'SCID', 'GBED', 'JEB'];
 
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,

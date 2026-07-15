@@ -262,8 +262,16 @@ function isDiseaseClear(value) {
   return cleaned === '' || /^N+$/.test(cleaned);
 }
 
+// Zusätzlich zu tatsächlich getesteten (und auffälligen) Erbkrankheiten
+// auch manuell als Träger/betroffen bestätigte, noch nicht getestete
+// Krankheiten mit einbeziehen (siehe diseaseOverrideBadge in
+// horseForm.js) - "frei"/unbekannt zählt dagegen nicht als betroffen.
 function affectedDiseaseLabels(row) {
-  return (row.genetic_diseases || []).filter((d) => !isDiseaseClear(d.value)).map((d) => d.label);
+  const tested = (row.genetic_diseases || []).filter((d) => !isDiseaseClear(d.value)).map((d) => d.label);
+  const testedCodes = new Set((row.genetic_diseases || []).map((d) => d.label));
+  const ov = row.disease_gene_overrides || {};
+  const manual = Object.keys(ov).filter((code) => (ov[code] === 'het' || ov[code] === 'hom') && !testedCodes.has(code));
+  return [...tested, ...manual];
 }
 
 function matchesEkh(row, selectedCodes) {

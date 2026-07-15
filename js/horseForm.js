@@ -7,7 +7,7 @@ const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
-  'color_gene_overrides',
+  'color_gene_overrides', 'disease_gene_overrides',
 ];
 
 let extraData = {};
@@ -35,15 +35,18 @@ document.addEventListener('DOMContentLoaded', init);
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-override-locus]');
   if (!btn || document.querySelector('.view-mode')) return;
-  // "key" ist entweder ein bloßer Locus-Name ("Champagne") oder bei Loci
-  // mit mehreren Allelen "Locus:Allel" ("KIT:To"), siehe LOCUS_MULTI_ALLELES
-  // in parser.js.
+  // "key" ist entweder ein bloßer Locus-/Krankheits-Name ("Champagne",
+  // "CA") oder bei Loci mit mehreren Allelen "Locus:Allel" ("KIT:To"),
+  // siehe LOCUS_MULTI_ALLELES in parser.js. "data-override-group"
+  // unterscheidet Farbgenetik (color_gene_overrides, Standard) von
+  // Erbkrankheiten (disease_gene_overrides).
   const key = btn.dataset.overrideLocus;
-  const overrides = { ...(extraData.color_gene_overrides || {}) };
+  const field = btn.dataset.overrideGroup === 'disease' ? 'disease_gene_overrides' : 'color_gene_overrides';
+  const overrides = { ...(extraData[field] || {}) };
   const next = nextOverrideState(key, overrides[key] || null);
   if (next) overrides[key] = next;
   else delete overrides[key];
-  extraData.color_gene_overrides = overrides;
+  extraData[field] = overrides;
   renderDetailTables(extraData);
 });
 
@@ -127,6 +130,12 @@ function fillForm(data) {
     const el = document.getElementById(id);
     if (el && data[id] !== undefined && data[id] !== null) el.value = String(data[id]);
   }
+  // "Rasselos" ist im Spiel eine echte Ausprägung ("keine Rasse"), keine
+  // fehlende Angabe - wird deshalb auch im Bearbeitungsformular als Wert
+  // eingetragen statt leer gelassen, konsistent mit der Übersichtstabelle
+  // und den Filtern (siehe list.js: normalizeBreed(h.breed) || 'Rasselos').
+  const breedEl = document.getElementById('breed');
+  if (breedEl && !breedEl.value.trim()) breedEl.value = 'Rasselos';
   updateBreedCompositionVisibility();
 }
 
@@ -173,7 +182,7 @@ const MISSING_DATA_SENTENCES = {
   'Ext%': 'Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.',
   'Stammbaum': 'Der Stammbaum konnte nicht vollständig erfasst werden.',
   'Turnierwerte': 'Die Turnierwerte (GP/Begabung) konnten nicht vollständig erfasst werden.',
-  'Rasseanteile': 'Das Pferd ist nicht 100% reinrassig und hat keine Rasse eingetragen - bitte die Rasseanteile ergänzen.',
+  'Rasseanteile': 'Das Pferd ist nicht 100% reinrassig - bitte die Rasseanteile ergänzen.',
 };
 function missingDataWarnings(payload) {
   return missingDataLabels(payload).map((label) => MISSING_DATA_SENTENCES[label]);
@@ -347,7 +356,9 @@ async function renderDetailTables(data) {
   const fieldset = document.getElementById('detail-fieldset');
   const parts = [];
 
-  if (data.genetic_diseases?.length) parts.push(simpleTableHtml('Erbkrankheiten', data.genetic_diseases));
+  if (data.genetic_diseases?.length || data.colors?.length) {
+    parts.push(diseaseTableHtml(data.genetic_diseases, data.disease_gene_overrides));
+  }
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
@@ -381,6 +392,47 @@ async function renderDetailTables(data) {
 function simpleTableHtml(title, rows) {
   const body = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
   return `<div class="group-heading">${escapeHtml(title)}</div><table class="detail-table">${body}</table>`;
+}
+
+// Wie geneOverrideBadge, aber mit auf Erbkrankheiten zugeschnittenem
+// Wortlaut ("Träger"/"Betroffen"/"Frei" statt "1x/2x vorhanden"/"nicht
+// vorhanden") - optisch identisch (dieselben CSS-Klassen und
+// Zustandssymbole), nur andere Tooltip-Bedeutung. data-override-group
+// unterscheidet im Klick-Handler zwischen Farbgenetik und Erbkrankheiten
+// (siehe document.addEventListener('click', ...) oben).
+function diseaseOverrideBadge(code, state) {
+  const stateInfo = {
+    het: { label: '1×', cls: 'het', title: 'Träger (mischerbig)' },
+    hom: { label: '2×', cls: 'hom', title: 'Betroffen (reinerbig)' },
+    absent: { label: '✗', cls: 'absent', title: 'Frei (kein Risikoallel bekannt)' },
+  }[state] || { label: '?', cls: 'unknown', title: 'Unbekannt, ob Träger/betroffen' };
+  const title = `${stateInfo.title} – zum Ändern klicken`;
+  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(code)}" data-override-group="disease" title="${escapeHtml(title)}">${stateInfo.label}</button>`;
+}
+
+// Zeigt zunächst alle tatsächlich getesteten Erbkrankheiten (Rohwerte wie
+// "NN/NN", unverändert), danach je fehlender Krankheit aus
+// KNOWN_DISEASE_CODES (siehe parser.js) eine "Nicht getestet"-Zeile mit
+// Klick-Button zur manuellen Träger/Betroffen/Frei-Bestätigung - z.B. für
+// junge Fohlen, die noch nicht beim Tierarzt getestet wurden.
+function diseaseTableHtml(diseases, overrides) {
+  const rows = diseases || [];
+  const ov = overrides || {};
+  const testedCodes = new Set(rows.map((d) => d.label));
+
+  const testedBody = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
+
+  const untestedBody = KNOWN_DISEASE_CODES.filter((code) => !testedCodes.has(code)).map((code) => {
+    const state = ov[code] || null;
+    let text = 'Nicht getestet';
+    if (state === 'het') text += ' — Träger (manuell)';
+    else if (state === 'hom') text += ' — betroffen, reinerbig (manuell)';
+    else if (state === 'absent') text += ' — frei (manuell)';
+    const badge = diseaseOverrideBadge(code, state);
+    return `<tr><th>${escapeHtml(code)}</th><td class="gene-cell"><span class="gene-value-text">${text}</span><span class="gene-badges">${badge}</span></td></tr>`;
+  }).join('');
+
+  return `<div class="group-heading">Erbkrankheiten</div><table class="detail-table">${testedBody}${untestedBody}</table>`;
 }
 
 // Wie simpleTableHtml, aber zusätzlich mit berechnetem Durchschnitt anhand

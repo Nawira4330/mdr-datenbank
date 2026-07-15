@@ -25,6 +25,7 @@ create table if not exists public.horses (
 
   -- Strukturierte Detaildaten (aus dem Text-Parser)
   genetic_diseases jsonb,       -- Erbkrankheiten-Tabelle
+  disease_gene_overrides jsonb, -- manuelle Traeger/Betroffen-Bestaetigung je nicht getesteter Erbkrankheit (siehe js/horseForm.js)
   colors jsonb,                 -- Farbgenetik-Tabelle
   color_gene_overrides jsonb,   -- manuelle Gen-Bestaetigung je nicht getestetem Locus (siehe js/horseForm.js)
   exterior_genetics jsonb,      -- Exterieur Genotyp-Tabelle + Gesamtwert
@@ -210,6 +211,7 @@ create table if not exists public.foal_reference_data (
   hlp_slp text,
   ico numeric,
   genetic_diseases jsonb,
+  disease_gene_overrides jsonb,
   colors jsonb,
   color_gene_overrides jsonb,
   exterior_genetics jsonb,
@@ -252,12 +254,12 @@ as $$
 begin
   insert into public.foal_reference_data (
     horse_id, kept, user_id, name, external_id, gender, breed, purebred_pct, breed_composition, coat_color,
-    disease_free, owner, breeding_allowed, hlp_slp, ico, genetic_diseases, colors, color_gene_overrides,
+    disease_free, owner, breeding_allowed, hlp_slp, ico, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides,
     exterior_genetics, exterior_descriptive, temperament, disciplines, traits,
     tournament_potential, pedigree, raw_text, notes, image_url
   ) values (
     new.id, true, new.user_id, new.name, new.external_id, new.gender, new.breed, new.purebred_pct, new.breed_composition, new.coat_color,
-    new.disease_free, new.owner, new.breeding_allowed, new.hlp_slp, new.ico, new.genetic_diseases, new.colors, new.color_gene_overrides,
+    new.disease_free, new.owner, new.breeding_allowed, new.hlp_slp, new.ico, new.genetic_diseases, new.disease_gene_overrides, new.colors, new.color_gene_overrides,
     new.exterior_genetics, new.exterior_descriptive, new.temperament, new.disciplines, new.traits,
     new.tournament_potential, new.pedigree, new.raw_text, new.notes, new.image_url
   )
@@ -268,6 +270,7 @@ begin
     purebred_pct = excluded.purebred_pct, breed_composition = excluded.breed_composition, coat_color = excluded.coat_color,
     disease_free = excluded.disease_free, owner = excluded.owner, breeding_allowed = excluded.breeding_allowed,
     hlp_slp = excluded.hlp_slp, ico = excluded.ico, genetic_diseases = excluded.genetic_diseases,
+    disease_gene_overrides = excluded.disease_gene_overrides,
     colors = excluded.colors, color_gene_overrides = excluded.color_gene_overrides, exterior_genetics = excluded.exterior_genetics,
     exterior_descriptive = excluded.exterior_descriptive, temperament = excluded.temperament,
     disciplines = excluded.disciplines, traits = excluded.traits,
