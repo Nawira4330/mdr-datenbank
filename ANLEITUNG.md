@@ -1,401 +1,414 @@
 # Anleitung: MDR Pferdedatenbank
 
-Schritt-für-Schritt-Anleitung für die komplette Webseite: jede Seite, jede
-Schaltfläche und jedes Feld, dazu jeweils **welche Daten dahinterstecken**
-(Datenbank-Spalte bzw. Berechnung), damit du auch nachvollziehen kannst,
-*warum* etwas angezeigt wird.
+Diese Anleitung erklärt Schritt für Schritt, wie du die Pferdedatenbank
+benutzt – jede Seite, jeden Button und jedes Feld, dazu jeweils *wofür*
+es gedacht ist und *wann* du es brauchst.
 
 ## Inhalt
 
-1. [Überblick](#1-überblick)
-2. [Anmelden](#2-anmelden-loginhtml)
-3. [Übersicht](#3-übersicht-indexhtml)
-4. [Pferd anlegen/bearbeiten](#4-pferd-anlegenbearbeiten-horsehtml)
-5. [Pferd ansehen](#5-pferd-ansehen-viewhtml)
-6. [Verpaarungs-Log](#6-verpaarungs-log-verpaarunghtml)
-7. [Verwaltung](#7-verwaltung-verwaltunghtml)
-8. [Zucht-/Turnierplaner (extern)](#8-zucht-turnierplaner-extern)
-9. [Datenmodell-Referenz](#9-datenmodell-referenz)
+1. [Über diese Datenbank](#1-über-diese-datenbank)
+2. [Anmelden](#2-anmelden)
+3. [Übersicht (Pferdeliste)](#3-übersicht-pferdeliste)
+4. [Pferd anlegen oder bearbeiten](#4-pferd-anlegen-oder-bearbeiten)
+5. [Pferd ansehen](#5-pferd-ansehen)
+6. [Verpaarungs-Log](#6-verpaarungs-log)
+7. [Verwaltung](#7-verwaltung)
+8. [Zucht-/Turnierplaner](#8-zucht-turnierplaner)
+9. [Häufige Fragen](#9-häufige-fragen)
 
 ---
 
-## 1. Überblick
+## 1. Über diese Datenbank
 
-- **Frontend**: reine HTML/CSS/JS-Seiten ohne Build-Schritt, gehostet über
-  GitHub Pages.
-- **Datenbank**: [Supabase](https://supabase.com) – eine einzige Tabelle
-  `horses` (alle Pferde) plus `pairings` (Verpaarungs-Log) und
-  `foal_reference_data` (Fohlen-Referenzwerte für den externen
-  Zucht-/Turnierplaner). Jede Seite lädt/speichert direkt über
-  `js/supabaseClient.js`.
-- **Login**: Alle eingeloggten Konten sehen und bearbeiten **dieselbe**,
-  geteilte Pferdedatenbank. Nur eine feste Admin-E-Mail-Adresse
-  (`js/auth.js`, `ADMIN_EMAILS`) sieht zusätzlich die Seite „Verwaltung“.
-- **Text-Parser** (`js/parser.js`): Das Spiel bietet keine offizielle
-  Export-Funktion. Fast alle Felder werden daher automatisch aus dem
-  kopierten Seitentext der Pferdeseite im Spiel ausgelesen – reine
-  Texterkennung, „best effort“. Der komplette Rohtext wird beim Auslesen
-  **nicht** dauerhaft gespeichert (nur bis zum Speichern zwischengehalten),
-  damit du das Ergebnis vor dem Speichern kontrollieren kannst.
+Diese Webseite ist die gemeinsame Pferdedatenbank unserer Zuchtgemeinschaft.
+Alle angemeldeten Mitglieder sehen und bearbeiten dieselbe Liste – es gibt
+keine getrennten „eigenen Datenbanken“ pro Person. Jede und jeder kann
+grundsätzlich alle Pferde sehen, auch die von anderen; manche Hinweise
+(z.B. „fehlende Daten“) zeigt dir die Seite aber nur zu deinen eigenen
+Pferden an, damit du nicht von fremden Baustellen abgelenkt wirst.
+
+Fast alle Angaben zu einem Pferd musst du nicht von Hand eintippen: du
+kopierst einfach die Pferdeseite aus dem Spiel und die Datenbank liest
+daraus automatisch alles Wichtige aus. Weil das Spiel dafür keine
+offizielle Funktion anbietet, ist diese Erkennung „best effort“ – schau
+dir die erkannten Felder vor dem Speichern immer kurz an.
 
 ---
 
-## 2. Anmelden (`login.html`)
+## 2. Anmelden
 
 **Schritt für Schritt:**
-1. Benutzername (oder bei der Admin-Person die echte E-Mail-Adresse) und
-   Passwort eingeben.
-2. „Anmelden“ klicken.
+1. Deinen Benutzernamen (den du von der Zuchtgemeinschaft bekommen hast)
+   und dein Passwort eingeben.
+2. Auf „Anmelden“ klicken.
 
-**Was passiert dahinter:** Ein Benutzername wird intern zu
-`<benutzername>@benutzer.mdr-datenbank.local` ergänzt (`resolveLoginEmail`
-in `js/auth.js`), da Supabase Auth nur E-Mail-Logins kennt. Enthält die
-Eingabe ein „@“, wird sie unverändert verwendet (Admin-Zugang). Neue Konten
-lassen sich hier **nicht** selbst anlegen – das geht nur über die Seite
-„Verwaltung“ bzw. direkt im Supabase-Dashboard.
-
-Ist bereits eine gültige Sitzung vorhanden, leitet die Seite automatisch
-zur Übersicht weiter.
+Bist du bereits angemeldet, wenn du die Seite öffnest, wirst du
+automatisch direkt zur Übersicht weitergeleitet. Neue Zugänge kannst du
+dir hier nicht selbst anlegen – wende dich dafür an die Person mit
+Verwaltungszugriff.
 
 ---
 
-## 3. Übersicht (`index.html`)
+## 3. Übersicht (Pferdeliste)
 
-Startseite nach dem Login: Tabelle aller Pferde mit Filtern, Sortierung
-und Mehrfachauswahl.
+Das ist die Startseite nach dem Anmelden: eine Tabelle mit allen Pferden,
+dazu Filter, Sortierung und die Möglichkeit, mehrere Pferde auf einmal
+auszuwählen.
 
 ### 3.1 Kopfzeile
 
-- **+ Neues Pferd** → `horse.html` (leeres Formular).
-- **💞 Verpaarungs-Log** → `verpaarung.html`.
-- **Zucht-/Turnierplaner ↗** → externes, separates Tool (siehe
-  [Abschnitt 8](#8-zucht-turnierplaner-extern)).
-- **Verwaltung** – nur sichtbar, wenn die eingeloggte E-Mail in
-  `ADMIN_EMAILS` steht.
+Oben rechts findest du überall folgende Schaltflächen (nicht auf jeder
+Seite alle):
+
+- **+ Neues Pferd** – öffnet ein leeres Formular, um ein neues Pferd
+  anzulegen.
+- **💞 Verpaarungs-Log** – öffnet das Verpaarungs-Log (siehe
+  [Abschnitt 6](#6-verpaarungs-log)).
+- **Zucht-/Turnierplaner ↗** – öffnet unser separates Zucht-Planungs-Tool
+  in einem neuen Tab (siehe [Abschnitt 8](#8-zucht-turnierplaner)).
+- **📖 Anleitung** – diese Seite hier.
+- **Verwaltung** – nur sichtbar, wenn du Verwaltungszugriff hast (siehe
+  [Abschnitt 7](#7-verwaltung)).
 - **Abmelden**.
 
 ### 3.2 Hinweis auf fehlende Daten
 
-Direkt unter der Kopfzeile klappt bei Bedarf ein Hinweis auf, welche
-**eigenen** Pferde (Besitzer = eingeloggter Benutzername) unvollständige
-Daten haben (z.B. weil beim Kopieren aus dem Spiel nicht die ganze Seite
-markiert wurde). Die Prüfung läuft über `missingDataLabels()` in
-`js/parser.js` und erkennt vier mögliche Lücken:
+Direkt unter der Kopfzeile erscheint bei Bedarf ein gelber Hinweiskasten,
+der dir zeigt, welche **deiner eigenen** Pferde noch unvollständige
+Angaben haben – zum Beispiel, weil beim Kopieren aus dem Spiel nicht die
+komplette Seite markiert wurde. Folgende Lücken werden erkannt:
 
-| Label | Bedingung | Bedeutet |
-|---|---|---|
-| Ext% | `exterior_genetics.overall.percent` fehlt | Exterieur-Genetik-Tabelle wurde nicht (vollständig) erfasst |
-| Stammbaum | kein Vorfahre in `pedigree` gespeichert | Stammbaum-Abschnitt fehlte im kopierten Text |
-| Turnierwerte | GP, Begabung oder nicht alle 7 Disziplin-Kategorien (je 4 Einträge) vorhanden | „Alle Disziplinen anzeigen?“ wurde im Spiel vor dem Kopieren nicht aufgeklappt |
-| Rasseanteile | `purebred_pct < 100` und `breed_composition` leer | Pferd ist nicht 100% reinrassig, die Aufschlüsselung fehlt noch – **unabhängig davon, ob eine Haupt-Rasse eingetragen ist** |
+| Hinweis | Bedeutet |
+|---|---|
+| Ext% | Der genetische Exterieur-Wert fehlt oder konnte nicht berechnet werden. |
+| Stammbaum | Es wurden keine Vorfahren gespeichert – der Stammbaum-Abschnitt fehlte vermutlich im kopierten Text. |
+| Turnierwerte | Gesamtpotenzial, Begabung oder nicht alle Disziplinen wurden erfasst – meist, weil „Alle Disziplinen anzeigen?“ im Spiel vor dem Kopieren nicht aufgeklappt war. |
+| Rasseanteile | Das Pferd ist laut Reinrassigkeit-Wert nicht zu 100% reinrassig, aber die Aufschlüsselung der Rasseanteile fehlt noch – das gilt auch, wenn schon eine Hauptrasse eingetragen ist. |
 
-Über den ✏️-Link in der Liste springst du direkt zum betroffenen Pferd.
-Der Hinweiskasten selbst ist einklappbar (Klick auf die Überschrift),
-startet aber standardmäßig aufgeklappt.
+Über den ✏️-Stift in der Liste springst du direkt zum betroffenen Pferd,
+um die Lücke zu schließen. Der Hinweiskasten lässt sich einklappen (Klick
+auf die Überschrift), ist beim Öffnen der Seite aber immer erst
+aufgeklappt.
 
-### 3.3 Flash-Banner
+### 3.3 Meldung nach dem Speichern
 
-Nach dem Anlegen/Speichern eines Pferds (aus `horse.html`) erscheint hier
-einmalig „„Name“ wurde neu angelegt/aktualisiert.“ (aus `sessionStorage`,
-verschwindet bei der nächsten Interaktion).
+Nachdem du ein Pferd angelegt oder gespeichert hast, siehst du beim
+nächsten Blick auf die Übersicht kurz eine Meldung wie „„Name“ wurde neu
+angelegt/aktualisiert.“ Sie verschwindet von selbst, sobald du irgendwo
+klickst oder etwas änderst.
 
-### 3.4 Filter
+### 3.4 Filtern und Suchen
 
-Drei Filter-Gruppen, kombinierbar; „Filtern“ übernimmt sie, „Zurücksetzen“
-leert alle Felder inkl. der beiden Mehrfachauswahl-Dropdowns.
+Es gibt drei Filter-Bereiche, die sich beliebig kombinieren lassen. Mit
+„Filtern“ wendest du sie an, mit „Zurücksetzen“ leerst du alle Felder auf
+einmal.
 
 **Suche**
-- **Name** – Teiltreffer, case-insensitive (`ilike`).
-- **Besitzer**, **Geschlecht** – exakte Auswahl, Optionsliste wird aus den
-  tatsächlich vorkommenden Werten befüllt.
-- **Rasse** – exakter Treffer auf `breed`; die Option „Rasselos“ deckt
-  zusätzlich Pferde mit leerem `breed` ab (`breed.eq.Rasselos,breed.is.null`).
-- **ZZL** (Zuchtzulassung) – „Ja“ = `breeding_allowed = true`; „Nein“
-  schließt sowohl explizit „Nein“ als auch noch unbekannt (leer) mit ein.
+- **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
+  Rolle.
+- **Besitzer**, **Geschlecht**, **Rasse** – Auswahllisten mit den
+  tatsächlich vorkommenden Werten. Die Rasse-Liste startet standardmäßig
+  bei „American Paint Horse“; „Rasselos“ zeigt gezielt Pferde ohne
+  eingetragene Rasse.
+- **ZZL** (Zuchtzulassung) – „Ja“ zeigt nur zugelassene Pferde; „Nein“
+  zeigt sowohl ausdrücklich nicht zugelassene als auch noch nicht
+  entschiedene Pferde.
 
-**Genetik & Gesundheit** (Mehrfachauswahl-Dropdowns)
-- **Genetik**: alle im Bestand vorkommenden Farbgenetik-Loci (aus `colors`)
-  plus feste Zusatzoptionen „Pearl (auch Träger)“, „Flaxen (auch Träger)“,
-  „Sabino“, „Roan“, „Tobiano“ (diese drei sind Teilmerkmale des
-  Sammel-Locus KIT). Ein Pferd passt, wenn es das sichtbare/dominante Allel
-  trägt (z.B. Champagne: Rohwert enthält „Ch“).
-- **EKH** (Erbkrankheiten): Auswahl „Keine“ (= `disease_free = true`) oder
-  eine der 10 testbaren Krankheiten (CA, HERDA, PSSM, EMH, ASD, HYPP, LFS,
-  SCID, GBED, JEB) – ein Pferd passt, wenn der Rohwert nicht rein aus „N“
-  besteht **oder** die Krankheit manuell als Träger/betroffen bestätigt
-  wurde (siehe [4.5](#erbkrankheiten)).
+**Genetik & Gesundheit**
+- **Genetik** – wähle ein oder mehrere Merkmale aus (z.B. Champagne,
+  Tobiano, Pearl); die Liste zeigt dir nur Pferde, die dieses Merkmal
+  sichtbar/nachweislich tragen.
+- **EKH** (Erbkrankheiten) – „Keine“ zeigt nachweislich freie Pferde,
+  oder wähle eine bestimmte Krankheit, um Träger/betroffene Pferde zu
+  finden (auch, wenn das nur manuell vermerkt statt beim Tierarzt
+  getestet wurde, siehe [4.4](#44-erkannte-daten-ansehen)).
 
-**Leistungswerte** – GP/Ext/Ext%/Int jeweils „größer als“/„kleiner als“
-ein Zahlenwert (siehe Berechnung in [Abschnitt 9](#9-datenmodell-referenz)).
+**Leistungswerte** – filtere nach GP, Ext, Ext% oder Int, jeweils
+„größer als“ oder „kleiner als“ ein Wert deiner Wahl.
 
-### 3.5 Tabelle
+### 3.5 Die Tabelle
 
-Spalten: Auswahl-Checkbox, 🔗-Link (nur falls `external_id` gesetzt, führt
-direkt zur Pferdeseite im Spiel), Name (Link → `view.html`), Geschlecht,
-Rasse (leer wird als „Rasselos“ angezeigt), Farbe, Genetik (kompakte
-Kurzfassung der vorhandenen Gene), GP, Ext, Ext%, Int, HLP/SLP (nur die
-Punktzahl, „-“ bei nicht bestanden), ZZL (Ja/Nein/„-“), EKH (Liste
-auffälliger Krankheiten oder „-“), Besitzer, Aktionen (✏️ Bearbeiten,
-✗ Löschen).
+Von links nach rechts: Auswahl-Kästchen, 🔗-Link (nur wenn eine
+Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
+(klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen)),
+Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
+Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer und Aktionen
+(✏️ Bearbeiten, ✗ Löschen).
 
-**Sortieren**: Klick auf eine Spaltenüberschrift (Mauszeiger wird zur
-Hand) sortiert danach, erneuter Klick dreht die Richtung um; auf schmalen Bildschirmen
-übernehmen die Dropdowns „Sortieren“/Richtung dieselbe Funktion (Kopfzeile
-ist dort ausgeblendet). Fehlende Werte landen dabei immer am Ende.
+**Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste
+danach, ein weiterer Klick dreht die Richtung um. Auf dem Handy gibt es
+dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
 
-**Mehrfachauswahl**: Checkboxen je Zeile bzw. „Alle auswählen“ blenden eine
-Leiste mit „Ausgewählte löschen“ ein (Popup zur Bestätigung, listet alle
-betroffenen Namen einzeln auf).
+**Mehrere Pferde auf einmal löschen**: Kästchen bei den gewünschten
+Pferden anhaken (oder „Alle auswählen“) – es erscheint eine Leiste mit
+„Ausgewählte löschen“.
 
-**Löschen** (einzeln über ✗ oder mehrfach über die Auswahl-Leiste) ist
-**endgültig** – es gibt keinen Papierkorb.
+**Wichtig**: Löschen (einzeln über ✗ oder mehrfach über die
+Auswahl-Leiste) ist **endgültig** und lässt sich nicht rückgängig
+machen.
 
 ---
 
-## 4. Pferd anlegen/bearbeiten (`horse.html`)
+## 4. Pferd anlegen oder bearbeiten
 
-Dasselbe Formular für Neuanlage (`horse.html`) und Bearbeiten
-(`horse.html?id=<uuid>`, per ✏️ aus der Übersicht/Ansicht erreichbar). Beim
-Bearbeiten zeigt der Titel „Pferd bearbeiten“, ein „Pferd löschen“-Button
-erscheint, und die Pfeile ← / → tauchen auf.
+Neue Pferde und bereits vorhandene Pferde benutzen dasselbe Formular.
+Beim Bearbeiten eines bestehenden Pferds siehst du zusätzlich einen
+„Pferd löschen“-Button und die Pfeile ← / → oben neben den Stammdaten.
 
 ### 4.1 Text automatisch auslesen
 
-**Schritt für Schritt:**
-1. Im Spiel die Pferdeseite öffnen, komplette Seite markieren (Strg+A),
-   kopieren (Strg+C).
-2. Text in das Feld „Text von der Pferdeseite einfügen“ einfügen.
-3. „Automatisch auslesen“ klicken.
-4. Alle unten befüllten Felder **vor dem Speichern prüfen** – die
-   Erkennung ist textmusterbasiert und kann bei Layout-Änderungen im Spiel
-   danebenliegen.
+Der schnellste Weg, ein Pferd einzutragen:
 
-`parseHorseText()` (`js/parser.js`) erkennt dabei: Name, Alter/Geschlecht,
-Rasse, Reinrassigkeit(-%) inkl. optionaler Rasseanteile-Aufschlüsselung,
-Fellfarbe, Besitzer, Erbkrankheiten-Status/-Tabelle, Zuchtzulassung,
-HLP/SLP, ICO, Farbgenetik-Tabelle, Exterieur (Genetik + Körperbau),
-Interieur, Disziplinen, Eigenschaften, Turnierpotenzial und den Stammbaum.
-Ein noch unbenanntes Fohlen (Spielname „Unbekannt“) wird automatisch
-`Fohlen_<Besitzer>_<Mutter>x<Vater>` genannt, damit nicht mehrere Fohlen
-denselben Platzhalter-Namen bekommen.
+1. Im Spiel die Pferdeseite öffnen, die komplette Seite markieren
+   (Strg+A) und kopieren (Strg+C).
+2. Den Text in das Feld „Text von der Pferdeseite einfügen“ einfügen.
+3. Auf „Automatisch auslesen“ klicken.
+4. Alle darunter befüllten Felder **kurz prüfen**, bevor du speicherst –
+   die automatische Erkennung ist textbasiert und kann bei
+   Layout-Änderungen im Spiel danebenliegen.
 
-Der eingeklappte Zustand des Kastens merkt sich nichts dauerhaft – beim
-Bearbeiten eines bestehenden Pferds startet er eingeklappt (meist nicht
-mehr gebraucht), lässt sich aber jederzeit wieder aufklappen, um erneut
-auszulesen (z.B. nach einem Update im Spiel).
+Dabei werden automatisch erkannt: Name, Alter/Geschlecht, Rasse,
+Reinrassigkeit (inklusive Rasseanteile, falls im Spiel vorher
+aufgeklappt), Fellfarbe, Besitzer, Erbkrankheiten-Status, Zuchtzulassung,
+HLP/SLP, ICO, die komplette Farbgenetik-Tabelle, Exterieur, Interieur,
+Disziplinen, Eigenschaften, Turnierpotenzial und der Stammbaum. Ein noch
+unbenanntes Fohlen wird automatisch nach dem Muster
+„Fohlen_Besitzer_MutterxVater“ benannt, damit nicht mehrere Fohlen
+denselben Platzhalter-Namen bekommen und sich versehentlich überschreiben.
+
+Dieser Einfügekasten ist einklappbar. Beim Bearbeiten eines bereits
+vorhandenen Pferds startet er automatisch eingeklappt (du brauchst ihn ja
+meist nicht mehr), lässt sich aber jederzeit wieder aufklappen, wenn du
+z.B. nach einem Update im Spiel erneut auslesen willst.
 
 ### 4.2 Stammdaten
 
-| Feld | Datenbank-Spalte | Hinweis |
-|---|---|---|
-| Name * | `name` | Pflichtfeld. Beim Speichern wird case-insensitiv nach einem gleichnamigen Pferd gesucht – gibt es eins, wird **dieses aktualisiert** statt doppelt angelegt (verhindert Dubletten). |
-| ID | `external_id` | Frei vergebbare Nummer zur eigenen Zuordnung; wird zusätzlich genutzt, um den 🔗-Link zur Pferdeseite im Spiel zu bauen (`…/index2.php?site=pferd&id=<ID>`). |
-| Geschlecht | `gender` | Stute/Hengst/Wallach/Hengstfohlen/Stutfohlen. |
-| Rasse | `breed` | Wird beim manuellen Eintippen wie beim Auslesen automatisch normalisiert (Kürzel wie „APH“ → „American Paint Horse“, siehe `normalizeBreed`). **Ist keine Rasse bekannt, trägt das Feld beim Laden/Auslesen automatisch „Rasselos“ ein** statt leer zu bleiben – das ist im Spiel eine echte Ausprägung, keine fehlende Angabe, und passt damit zur Anzeige/den Filtern in der Übersicht. |
-| Reinrassigkeit (%) | `purebred_pct` | Steuert die Sichtbarkeit/Pflicht des Rasseanteile-Felds (siehe unten). |
-| Rasseanteile | `breed_composition` | Nur sichtbar/relevant, solange die Reinrassigkeit nicht bekanntermaßen 100% ist (`purebred_pct` leer oder < 100 blendet das Feld ein). **Ist das Pferd nachweislich nicht 100% reinrassig und dieses Feld leer, warnt die Seite beim Speichern** (siehe [4.6](#46-speichern)) – unabhängig davon, ob zusätzlich eine Haupt-Rasse eingetragen ist. |
-| Fellfarbe | `coat_color` | Freitext; fließt zusätzlich in die automatische Farbgenetik-Ableitung ein (z.B. „Palomino“ → Cream-Hinweis). |
-| Erbkrankheiten (Auswahl) | `disease_free` | Grob-Status „frei“/„vorhanden“/unbekannt, unabhängig von der detaillierten Erbkrankheiten-Tabelle weiter unten. |
+- **Name** (Pflichtfeld) – trägst du einen Namen ein, der schon existiert
+  (Groß-/Kleinschreibung egal), wird automatisch **das bestehende Pferd
+  aktualisiert** statt versehentlich ein zweites angelegt.
+- **ID** – eine frei wählbare Nummer zur eigenen Zuordnung. Trägst du
+  hier die Spiel-ID ein, entsteht daraus automatisch der 🔗-Link zur
+  Pferdeseite im Spiel (in der Übersicht und auf der Ansichtsseite).
+- **Geschlecht**.
+- **Rasse** – wird beim Eintippen wie beim automatischen Auslesen
+  automatisch ausgeschrieben (z.B. wird aus dem Kürzel „APH“
+  automatisch „American Paint Horse“). Ist keine Rasse bekannt, trägt
+  das Feld automatisch „Rasselos“ ein, statt leer zu bleiben.
+- **Reinrassigkeit (%)** – bestimmt, ob das Feld „Rasseanteile“
+  überhaupt angezeigt wird.
+- **Rasseanteile** – erscheint, solange die Reinrassigkeit nicht sicher
+  bei 100% liegt (leeres Feld zählt dabei als „noch unklar“ und blendet
+  es vorsorglich ein). Ist ein Pferd nachweislich nicht zu 100%
+  reinrassig und dieses Feld leer, warnt dich die Seite beim Speichern
+  (siehe [4.6](#46-speichern)) – ganz unabhängig davon, ob zusätzlich
+  schon eine Hauptrasse eingetragen ist.
+- **Fellfarbe** – wird auch benutzt, um automatisch auf mögliche Gene zu
+  schließen (z.B. deutet „Palomino“ auf das Cream-Gen hin).
+- **Erbkrankheiten** (Auswahl frei/vorhanden/unbekannt) – ein grober
+  Gesamtstatus, unabhängig von der ausführlichen Krankheiten-Tabelle
+  weiter unten.
 
-### 4.3 Verwaltung / Papiere & Zucht / Sonstiges
+### 4.3 Weitere Angaben
 
-| Feld | Spalte |
-|---|---|
-| Besitzer | `owner` |
-| Zuchtzulassung | `breeding_allowed` |
-| HLP/SLP | `hlp_slp` |
-| ICO (%) | `ico` |
-| Notizen | `notes` – fließt ebenfalls in die automatische Farbgenetik-Ableitung ein |
-| Bild-URL | `image_url` |
+- **Verwaltung**: Besitzer.
+- **Papiere & Zucht**: Zuchtzulassung, HLP/SLP, ICO.
+- **Sonstiges**: Notizen (fließen ebenfalls in die automatische
+  Gen-Erkennung ein), Bild-URL.
 
-### 4.4 Erkannte Detaildaten
+### 4.4 Erkannte Daten ansehen
 
-Erscheint nach dem Auslesen bzw. beim Laden eines bestehenden Pferds, nur
-zur Ansicht (kein eigenes Formular). Reihenfolge und Inhalte:
+Sobald ein Pferd Daten hat (nach dem Auslesen oder beim Öffnen eines
+bestehenden Pferds), erscheint darunter ein Bereich mit allen erkannten
+Detailwerten – reine Anzeige, kein eigenes Formular:
 
-<a id="erbkrankheiten"></a>**Erbkrankheiten** – zeigt zuerst alle
-tatsächlich getesteten Krankheiten mit Rohwert (z.B. „NN/NN“ = frei).
-Danach folgt für jede der 10 bekannten Krankheiten, die **nicht** getestet
-wurde, eine „Nicht getestet“-Zeile mit einem Klick-Button (z.B. für junge
-Fohlen ohne Tierarzt-Test): Klicken zyklisch durch **unbekannt → Träger
-(1×) → betroffen/reinerbig (2×) → frei (✗) → zurück zu unbekannt**. Diese
-manuelle Bestätigung landet in `disease_gene_overrides` (JSON, pro
-Krankheits-Code) und zählt auch im EKH-Filter der Übersicht mit.
+**Erbkrankheiten** – zeigt zuerst alle tatsächlich getesteten Krankheiten
+mit ihrem Ergebnis. Für jede der bekannten Krankheiten, die noch **nicht**
+getestet wurde (z.B. bei einem jungen Fohlen ohne Tierarzt-Test),
+erscheint stattdessen eine „Nicht getestet“-Zeile mit einem Klick-Button.
+Jeder Klick wechselt den Zustand weiter: **unbekannt → Träger → betroffen
+→ frei → wieder unbekannt**. So kannst du eine begründete Vermutung
+festhalten, auch ohne offiziellen Test – sie zählt dann auch im
+EKH-Filter der Übersicht mit.
 
-**Farbgenetik** – Name der Fellfarbe, dann je Genetik-Locus der Rohwert.
-Bei nicht getesteten Loci zeigt die Zeile zusätzlich einen automatischen
-Hinweis (aus Fellfarbe-Name/Notiz/Pferdename abgeleitet, z.B. „Palomino“ →
-mindestens „Cr“; oder von einem in der Datenbank stehenden, dort
-reinerbig getesteten Elternteil übernommen) **und** einen Klick-Button zur
-manuellen Bestätigung (gleicher Zyklus wie bei Erbkrankheiten, aber
-„vorhanden“/„nicht vorhanden“ statt „Träger“/„betroffen“) – landet in
-`color_gene_overrides`. Eine manuelle Bestätigung hat immer Vorrang vor
-dem automatischen Hinweis. Loci mit mehreren unabhängigen Merkmalen (KIT:
-Tobiano/Sabino/Roan; Agouti: A1/At/Ap; Cream: Cr/Pearl) haben einen
-eigenen Button je Merkmal. Am Ende steht eine Zusammenfassung „Vorhandene
-Gene“ (getestet + manuell + abgeleitet) – das ist exakt die Kurzfassung,
-die auch in der Übersichtsspalte „Genetik“ erscheint.
+**Farbgenetik** – zeigt den Namen der Fellfarbe und darunter jeden
+Genort mit seinem bekannten Wert. Ist ein Genort noch nicht getestet,
+zeigt die Zeile zusätzlich einen automatischen Hinweis (abgeleitet aus
+Fellfarbe, Notiz oder Pferdename – z.B. deutet „Palomino“ auf das
+Cream-Gen hin; oder übernommen von einem Elternteil, das für dieses Gen
+bereits reinerbig in der Datenbank steht) **und** einen Klick-Button zur
+manuellen Bestätigung, genau wie bei den Erbkrankheiten. Eine manuelle
+Bestätigung geht dabei immer vor dem automatischen Hinweis. Bei Genorten
+mit mehreren möglichen Ausprägungen (z.B. Scheckung: Tobiano/Sabino/Roan,
+oder Agouti: die drei Braun-Varianten, oder Cream/Pearl) gibt es für
+jede Ausprägung einen eigenen Button. Ganz unten steht eine
+Zusammenfassung „Vorhandene Gene“ – genau die, die auch in der
+Übersichtsspalte „Genetik“ erscheint.
 
-**Exterieur (Genetik)** – Genotyp je Körperteil plus errechnetem Score
-(„X/16“) und daraus dem Exterieur-Gesamtwert in % (das ist der Wert
-hinter „Ext%“).
+**Exterieur (Genetik)** – der genetische Wert je Körperteil, daraus
+ergibt sich der Gesamtwert „Ext%“.
 
-**Exterieur (Körperbau)** – beschreibende Bewertung je Körperteil
-(„exzellent“ … „viel zu klein“ usw.) plus Durchschnitt auf einer Skala 1–5
-(das ist der Wert hinter „Ext“).
+**Exterieur (Körperbau)** – die beschreibende Bewertung je Körperteil
+(„exzellent“, „passabel“ usw.), daraus ergibt sich der Durchschnittswert
+„Ext“.
 
-**Interieur (Mentalität)** – analog, Skala 1 (exzellent) bis 4 (schlecht),
-Durchschnitt = „Int“.
+**Interieur (Mentalität)** – genauso, ergibt den Wert „Int“.
 
-**Turnierpotenzial** – GP (Gesamtpotenzial), Begabung, und die daraus
-abgeleitete Hauptdisziplin-Kategorie (z.B. „Western“ für die Begabung
-„Trail“).
+**Turnierpotenzial** – Gesamtpotenzial, Begabung und die dazu passende
+Hauptdisziplin.
 
-**Disziplinen / Eigenschaften** – je Kategorie eine Tabelle mit
-Potenzial-% (Disziplinen zusätzlich mit aktuellem Trainingsstand).
+**Disziplinen / Eigenschaften** – die Potenzial-Werte je Disziplin bzw.
+Eigenschaft.
 
-**Stammbaum** – Vorfahren in der Reihenfolge des kopierten Texts,
-gruppiert in Eltern/Großeltern/Urgroßeltern/weitere Vorfahren. **Wichtig:**
-Der Text enthält keine Einrückung, daher lässt sich daraus **keine**
-Baumstruktur (wer ist wessen Vater/Mutter) rekonstruieren – nur die reine
-Reihenfolge. Die ersten beiden Einträge sind aber laut Spiel immer
-zuverlässig Vater, dann Mutter.
+**Stammbaum** – die Vorfahren in der Reihenfolge, wie sie im Spieltext
+standen, gruppiert nach Eltern/Großeltern/Urgroßeltern/weitere Vorfahren.
+Die ersten beiden Einträge sind dabei immer zuverlässig Vater, dann
+Mutter.
 
-### 4.5 Navigation
+### 4.5 Zwischen Pferden wechseln
 
-- **← / →** (nur beim Bearbeiten): speichert das aktuelle Pferd wie der
-  normale Speichern-Button und springt danach direkt zum alphabetisch
-  vorherigen/nächsten **eigenen** Pferd (Besitzer = eingeloggter
-  Benutzername) – zum zügigen Durcharbeiten einer ganzen Liste ohne Umweg
-  über die Übersicht.
-- **Pferd löschen** (nur beim Bearbeiten) – endgültig, mit
-  Bestätigungsdialog.
+Beim Bearbeiten eines bestehenden Pferds erscheinen links und rechts
+neben den Stammdaten zwei Pfeile:
+
+- **← / →** – speichert das aktuelle Pferd (wie der normale
+  Speichern-Button) und springt danach direkt zum alphabetisch
+  vorherigen/nächsten **eigenen** Pferd. So kannst du eine ganze Liste
+  am Stück durcharbeiten, ohne jedes Mal über die Übersicht zu gehen.
+
+„Pferd löschen“ entfernt das Pferd endgültig (mit Sicherheitsabfrage).
 
 ### 4.6 Speichern
 
-Beim Klick auf „Speichern“ (bzw. bei ← / →) prüft die Seite zuerst, ob
-Daten fehlen (siehe die vier Warnungen aus [3.2](#32-hinweis-auf-fehlende-daten)).
-Trifft eine davon zu, öffnet ein Popup mit der Liste der fehlenden Punkte
-– „Zurück zur Bearbeitung“ bricht ab, „Trotzdem speichern“ speichert
-unverändert weiter. Ohne Warnung wird direkt gespeichert. Der Rohtext aus
-dem Einfüge-Feld wird dabei **nie** dauerhaft gespeichert (`raw_text` wird
-vor dem Schreiben auf `null` gesetzt) – nur das daraus erkannte Ergebnis.
+Beim Klick auf „Speichern“ (oder auf ← / →) prüft die Seite zuerst, ob
+noch Angaben fehlen (siehe die vier Hinweise aus
+[3.2](#32-hinweis-auf-fehlende-daten)). Fehlt etwas, öffnet sich ein
+Popup mit der Liste der fehlenden Punkte: „Zurück zur Bearbeitung“
+bricht ab, „Trotzdem speichern“ speichert unverändert weiter. Fehlt
+nichts, wird direkt gespeichert. Der ursprünglich eingefügte Spieltext
+selbst wird dabei **nicht** dauerhaft gespeichert – nur das daraus
+erkannte Ergebnis.
 
 ---
 
-## 5. Pferd ansehen (`view.html`)
+## 5. Pferd ansehen
 
-Reine Lesansicht (alle Felder `readonly`/`disabled`), erreichbar über
-einen Klick auf den Namen in der Übersicht.
+Klickst du in der Übersicht auf den Namen eines Pferds, öffnet sich eine
+reine Ansichtsseite – alle Felder sind hier nur zum Lesen, nichts lässt
+sich versehentlich verändern.
 
-- **✏️ Bearbeiten** → `horse.html?id=…`.
-- **🔗 Zum Pferd** – nur sichtbar, wenn `external_id` gesetzt ist, öffnet
-  die Pferdeseite im Spiel in einem neuen Tab.
+- **✏️ Bearbeiten** – wechselt ins normale Bearbeiten-Formular.
+- **🔗 Zum Pferd** – nur sichtbar, wenn eine Spiel-ID hinterlegt ist,
+  öffnet die Pferdeseite im Spiel in einem neuen Tab.
 - **🗑️ Löschen** – wie in der Übersicht, endgültig.
-- **← / →** – blättert alphabetisch durch **alle** Pferde (nicht nur die
-  eigenen wie beim Bearbeiten), da man beim reinen Ansehen nicht auf den
-  eigenen Bestand beschränkt sein soll.
-- Zeigt dieselben „Erkannten Detaildaten“ wie das Bearbeiten-Formular
-  (siehe [4.4](#44-erkannte-detaildaten)), allerdings ohne Klick-Buttons
-  für die Gen-/Erbkrankheiten-Bestätigung (nur Anzeige).
+- **← / →** – blättert alphabetisch durch **alle** Pferde (nicht nur
+  deine eigenen wie beim Bearbeiten), da du beim reinen Ansehen ja auch
+  fremde Pferde durchstöbern können sollst.
+- Zeigt dieselben erkannten Detaildaten wie das Bearbeiten-Formular
+  (siehe [4.4](#44-erkannte-daten-ansehen)), allerdings ohne die
+  Klick-Buttons zur manuellen Gen-/Erbkrankheiten-Bestätigung – hier
+  wird nur angezeigt, was bereits hinterlegt ist.
 
 ---
 
-## 6. Verpaarungs-Log (`verpaarung.html`)
+## 6. Verpaarungs-Log
 
-Protokolliert Decksprünge (Deckhengst × Stute), unabhängig von den
-eigentlichen Pferde-Datensätzen.
+Hier trägst du Decksprünge ein (welcher Deckhengst mit welcher Stute
+verpaart wurde) – unabhängig von den eigentlichen Pferde-Datensätzen.
 
 ### 6.1 Neue Verpaarung eintragen
 
-**Schritt für Schritt:**
-1. Deckhengst und Stute eintragen (Pflichtfelder, mit Namens-Vorschlägen
-   aus der Pferdedatenbank – aber reiner Freitext, auch Pferde außerhalb
-   dieser Datenbank sind möglich).
-2. Optional Abfohldatum, „Fohlen behalten?“ (Ja/Nein/unbekannt), Besitzer
-   (vorbelegt mit dem eigenen Benutzernamen), Notizen.
-3. „Eintragen“.
+1. Deckhengst und Stute eintragen (Pflichtfelder). Beim Tippen bekommst
+   du Namensvorschläge aus der Pferdedatenbank, du kannst aber auch
+   Pferde eintragen, die gar nicht in dieser Datenbank stehen.
+2. Optional: Abfohldatum, „Fohlen behalten?“ (Ja/Nein/unbekannt),
+   Besitzer (ist vorbelegt mit deinem eigenen Benutzernamen), Notizen.
+3. „Eintragen“ klicken.
 
-Wird „Fohlen behalten?“ dabei direkt auf Ja **oder** Nein gesetzt (nicht
+Setzt du „Fohlen behalten?“ dabei direkt auf Ja oder Nein (nicht
 „unbekannt“), öffnet sich sofort das Fohlen-Popup (siehe 6.3).
 
-### 6.2 Tabelle
+### 6.2 Die Tabelle
 
-Spalten: Deckhengst, Stute, Rasse (aus den Namen der beiden abgeleitet,
-falls sie als eigene Pferde in der Datenbank stehen), Abfohldatum,
-„Fohlen behalten?“ (zwei Buttons ✓/✗, direkt anklickbar), Notizen,
-Besitzer, Aktionen. Sortierbar per Klick auf Deckhengst/Stute/Abfohldatum.
-Filter: Besitzer (standardmäßig der eigene Benutzername) und Rasse (client-
-seitig über den Namensabgleich, da Deckhengst/Stute keine feste Verknüpfung
-zu einem Pferde-Datensatz haben).
+Spalten: Deckhengst, Stute, Rasse (wird automatisch anhand der Namen
+ermittelt, falls beide als eigene Pferde in der Datenbank stehen),
+Abfohldatum, „Fohlen behalten?“ (zwei Buttons ✓/✗ zum direkten
+Anklicken), Notizen, Besitzer, Aktionen. Sortierbar per Klick auf
+Deckhengst, Stute oder Abfohldatum. Der Besitzer-Filter zeigt
+standardmäßig nur deine eigenen Verpaarungen – du kannst aber jederzeit
+auf einen anderen Besitzer umschalten, um dessen Verpaarungen
+anzusehen.
 
-**„Fohlen behalten?“ nachträglich setzen/ändern**: Klick auf ✓ oder ✗.
-War der Wert vorher unbekannt, öffnet sich danach automatisch das
-Fohlen-Popup (z.B. für Verpaarungen, die der externe Zucht-/Turnierplaner
-per „Decksprung“-Button automatisch ohne Wert angelegt hat).
+„Fohlen behalten?“ lässt sich jederzeit über die ✓/✗-Buttons nachträglich
+setzen oder ändern. War der Wert vorher unbekannt, öffnet sich danach
+automatisch das Fohlen-Popup.
 
-**Abfohldatum bearbeiten**: „Bearbeiten“ öffnet eine einfache
-Eingabeaufforderung (Format JJJJ-MM-TT, leer = entfernen).
-
-**Löschen**: endgültig, mit Bestätigung.
+Beim Abfohldatum öffnet „Bearbeiten“ ein einfaches Eingabefeld (Format
+JJJJ-MM-TT, leer lassen zum Entfernen). „Löschen“ entfernt den Eintrag
+endgültig.
 
 ### 6.3 Fohlen-Popup
 
-Nutzt dasselbe Formular wie „Pferd anlegen“ (identische Felder, siehe
-[Abschnitt 4](#4-pferd-anlegenbearbeiten-horsehtml) inkl. Text-Parser und
-Rasseanteile-Logik), aber mit eigenem Speichern-Ziel:
+Nutzt dasselbe Formular wie „Pferd anlegen“ (siehe
+[Abschnitt 4](#4-pferd-anlegen-oder-bearbeiten)), speichert die Daten
+aber je nach deiner Auswahl unterschiedlich:
 
-- **„Fohlen behalten“ = Ja**: Wird als **echtes neues Pferd** in `horses`
-  gespeichert (bzw. ein bestehendes aktualisiert, falls der Name schon
-  existiert). Zusätzlich prüft die Seite über den Stammbaum, ob bereits
-  ein Pferd mit genau diesem Vater/dieser Mutter existiert (z.B. ein
-  vorher automatisch als „Fohlen_…“ angelegtes Fohlen, das jetzt unter
-  seinem echten Namen erneut eingetragen wird) – falls ja, fragt ein
-  Popup nach, ob es sich um dasselbe Pferd handelt, und aktualisiert dann
-  statt neu anzulegen.
-- **„Fohlen behalten“ = Nein**: Wird **nicht** als Pferd gespeichert,
-  sondern nur als Referenzdatensatz in `foal_reference_data` – reine
-  Statistik-Grundlage für die Fohlenwert-Schätzung im externen
-  Zucht-/Turnierplaner. Kann jederzeit übersprungen werden.
+- **„Fohlen behalten“ = Ja**: Das Fohlen wird als **echtes neues Pferd**
+  gespeichert (oder ein bestehendes aktualisiert, falls der Name schon
+  existiert). Findet die Seite dabei anhand von Deckhengst und Stute
+  bereits ein Pferd mit genau diesem Vater/dieser Mutter (z.B. ein
+  vorher automatisch benanntes Fohlen, das jetzt unter seinem echten
+  Namen erneut eingetragen wird), fragt sie nach, ob es sich um
+  dasselbe Pferd handelt, und aktualisiert es dann statt es doppelt
+  anzulegen.
+- **„Fohlen behalten“ = Nein**: Das Fohlen wird **nicht** als Pferd in
+  der Datenbank gespeichert, sondern nur als Referenzwert für die
+  Fohlenwert-Schätzung im Zucht-/Turnierplaner. Du kannst diesen Schritt
+  auch überspringen, wenn du die Werte nicht erfassen möchtest.
 
-„Überspringen“ schließt das Popup ohne zu speichern.
-
----
-
-## 7. Verwaltung (`verwaltung.html`)
-
-Nur für die Admin-Person sichtbar (feste E-Mail-Adresse in
-`ADMIN_EMAILS`). Enthält **keine** eigene Funktion, sondern eine
-Schritt-für-Schritt-Anleitung, um im Supabase-Dashboard (verlinkt)
-Benutzerkonten anzulegen/zu löschen bzw. Passwörter zurückzusetzen – neue
-Konten lassen sich aus der Web-App selbst heraus nicht anlegen.
+„Überspringen“ schließt das Popup, ohne etwas zu speichern.
 
 ---
 
-## 8. Zucht-/Turnierplaner (extern)
+## 7. Verwaltung
 
-Verlinkt aus Kopfzeile/Übersicht/Verwaltung, führt zu einem **separaten
-Repository** (`mdr-planer`). Greift rein lesend (kein Login) auf dieselbe
-Supabase-Datenbank zu und wird von dieser Anleitung nicht mit abgedeckt –
-siehe dessen eigene Dokumentation.
+Diese Seite ist nur sichtbar, wenn du Verwaltungszugriff hast. Sie
+enthält keine eigene Funktion, sondern eine Schritt-für-Schritt-Anleitung,
+wie du neue Zugänge für andere Mitglieder anlegst, löschst oder
+Passwörter zurücksetzt.
 
 ---
 
-## 9. Datenmodell-Referenz
+## 8. Zucht-/Turnierplaner
 
-Die vier „Leistungswerte“-Spalten in Übersicht/Filter existieren **nicht**
-als eigene Datenbank-Spalten, sondern werden bei jedem Laden aus den
-gespeicherten JSON-Feldern neu berechnet (`computeDerived()` in
-`js/list.js`, dieselbe Logik wie in `js/horseForm.js`):
+Dieser Link führt zu unserem separaten Zucht-Planungs-Tool. Es greift
+auf dieselbe Pferdedatenbank zu, ist aber ein eigenständiges Werkzeug mit
+eigener Bedienung – diese Anleitung deckt es nicht mit ab.
 
-| Anzeige | Berechnung |
-|---|---|
-| **GP** | `tournament_potential.Gesamtpotenzial`, direkt aus dem Turnierpotenzial-Textblock übernommen |
-| **Ext** | Durchschnitt der Körperbau-Bewertungen (`exterior_descriptive`) auf der Skala 1 (exzellent) – 5 (viel zu …) |
-| **Ext%** | `exterior_genetics.overall.percent` – errechnet aus den 16-Zeichen-Genotypen je Körperteil |
-| **Int** | Durchschnitt der Mentalitäts-Bewertungen (`temperament`) auf der Skala 1 (exzellent) – 4 (schlecht) |
-| **Genetik** (Übersichtsspalte) | Kurzfassung aller vorhandenen Gene aus `presentGenesSummary()`: getestete Loci + manuelle Bestätigungen (`color_gene_overrides`) + aus Fellfarbe/Notiz/Name abgeleitete Hinweise |
+---
 
-Alle übrigen Anzeige-Felder entsprechen 1:1 einer Spalte der `horses`-
-Tabelle (siehe `supabase/schema.sql`); die wichtigsten stehen bereits in
-den Tabellen weiter oben bei den jeweiligen Formularfeldern.
+## 9. Häufige Fragen
+
+**Warum sehe ich bei einem Pferd andere Werte als im Spiel?**
+GP, Ext, Ext% und Int werden nicht 1:1 aus dem Spiel übernommen, sondern
+bei jedem Aufruf aus den erkannten Detaildaten neu berechnet (siehe
+[4.4](#44-erkannte-daten-ansehen)) – Ext aus dem Durchschnitt der
+Körperbau-Bewertungen, Ext% aus der genetischen Exterieur-Tabelle, Int
+aus dem Durchschnitt der Mentalitäts-Bewertungen. Stimmen die
+zugrundeliegenden Werte, stimmt auch das Ergebnis.
+
+**Warum wurde mein neu eingetragenes Pferd nicht doppelt angelegt?**
+Weil du wahrscheinlich denselben Namen wie ein bereits vorhandenes Pferd
+verwendet hast (siehe [4.2](#42-stammdaten)) – die Seite aktualisiert in
+diesem Fall automatisch das bestehende Pferd statt ein zweites
+anzulegen.
+
+**Kann ich eine Löschung rückgängig machen?**
+Nein. Sowohl das Löschen einzelner Pferde/Verpaarungen als auch das
+Löschen mehrerer auf einmal ist endgültig.
+
+**Warum sehe ich bei manchen Genen einen Hinweis wie „mindestens Ch“
+statt eines eindeutigen Werts?**
+Das Gen wurde nicht getestet, aber aus der Fellfarbe, der Notiz, dem
+Namen oder von einem Elternteil abgeleitet (siehe
+[4.4](#44-erkannte-daten-ansehen)). Solche Hinweise sind Vermutungen,
+keine getesteten Werte – bist du dir sicher, kannst du sie über den
+Klick-Button manuell bestätigen.
