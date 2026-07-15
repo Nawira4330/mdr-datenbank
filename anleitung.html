@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Anleitung – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>📖 Anleitung</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div id="anleitung-content" class="markdown-content">
+      <p class="muted small">Anleitung wird geladen…</p>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async function () {
+      const session = await requireSession();
+      if (!session) return;
+      wireLogout();
+
+      const container = document.getElementById('anleitung-content');
+      try {
+        const res = await fetch('ANLEITUNG.md');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const markdown = await res.text();
+        container.innerHTML = marked.parse(markdown);
+      } catch (err) {
+        container.innerHTML = '<p class="error">Anleitung konnte nicht geladen werden: ' + err.message + '</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
