@@ -876,7 +876,7 @@ const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' }
 // nicht vorhanden -> zurück zu unbekannt.
 const LOCUS_PRIMARY_ALLELE = {
   Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
-  Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1', Cream: 'Cr',
+  Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1',
   Flaxen: 'fl',
 };
 
@@ -884,10 +884,13 @@ const LOCUS_PRIMARY_ALLELE = {
 // eindeutigen Code (Gegenstück zu LOCUS_PRIMARY_ALLELE) - hier gibt es
 // pro Allel einen eigenen Klick-Button. Der Override-Schlüssel ist dann
 // nicht der bloße Locus-Name, sondern "Locus:Allel" (z.B. "KIT:To"),
-// siehe geneOverrideBadge/colorGeneticsHtml.
+// siehe geneOverrideBadge/colorGeneticsHtml. Cream traegt sowohl Cr
+// (Cream-Aufhellung) als auch pl (Pearl, geteilter Locus, siehe
+// PHENOTYPE_GENE_HINTS) - beide unabhaengig voneinander bestaetigbar.
 const LOCUS_MULTI_ALLELES = {
   KIT: ['To', 'Sb', 'Rn'],
   Agouti: ['A1', 'At', 'Ap'],
+  Cream: ['Cr', 'pl'],
 };
 
 // Overo ist laut MDR-Doku reinerbig dominant letal (siehe

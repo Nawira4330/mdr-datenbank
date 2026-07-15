@@ -476,8 +476,16 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
         } else if (state) {
           parts.push(`${allele}: ${state === 'hom' ? 'reinerbig' : 'mindestens 1x'} vorhanden (manuell)`);
         } else {
-          const hint = hintsByLocus[r.label]?.find((h) => h.allele === allele);
-          if (hint) parts.push(`${allele}: mindestens 1x vorhanden (${hint.fromParent ? 'laut Elternteil' : 'laut Fellfarbe/Notiz'})`);
+          // Manche abgeleiteten Hinweise sind schon verdoppelt (z.B. "pl"
+          // bei Pearl, das nur reinerbig sichtbar ist, siehe
+          // PHENOTYPE_GENE_HINTS) - dann nicht nur auf exakte Gleichheit
+          // mit dem einfachen Allel-Kürzel prüfen, sondern auch auf die
+          // doppelte Form, und den Text entsprechend anpassen.
+          const hint = hintsByLocus[r.label]?.find((h) => h.allele === allele || h.allele === allele + allele);
+          if (hint) {
+            const isDoubled = hint.allele === allele + allele;
+            parts.push(`${allele}: ${isDoubled ? 'reinerbig' : 'mindestens 1x'} vorhanden (${hint.fromParent ? 'laut Elternteil' : 'laut Fellfarbe/Notiz'})`);
+          }
         }
         badges += geneOverrideBadge(key, state, allele);
       }
