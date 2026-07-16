@@ -112,14 +112,16 @@ function parseHorseText(rawText) {
   result.tournament_potential = parseTournamentPotential(lines);
   result.pedigree = parsePedigree(lines, result.breed);
 
-  // Noch unbenannte Fohlen heißen im Spiel schlicht "Unbekannt" - damit
-  // nicht mehrere Fohlen mit demselben Namen angelegt werden (siehe
-  // Dopplungs-Erkennung beim Speichern), wird stattdessen ein Name aus
-  // Besitzer und Eltern gebildet. Die ersten beiden Stammbaum-Einträge
-  // sind laut Spiel immer Vater und Mutter in dieser Reihenfolge (siehe
-  // parsePedigree/PEDIGREE_SECTION_LABELS: "Eltern des Vaters" kommt vor
-  // "Eltern der Mutter").
-  if (result.name === 'Unbekannt') {
+  // Noch unbenannte Fohlen heißen im Spiel schlicht "Unbekannt", oder -
+  // wenn schon ein Zuchtkürzel vergeben wurde, der eigentliche Name aber
+  // noch fehlt ("folgt später") - "Namen geben?". In beiden Fällen wird
+  // statt des Platzhaltertexts ein Name aus Besitzer und Eltern gebildet,
+  // damit nicht mehrere Fohlen mit demselben Namen angelegt werden (siehe
+  // Dopplungs-Erkennung beim Speichern). Die ersten beiden
+  // Stammbaum-Einträge sind laut Spiel immer Vater und Mutter in dieser
+  // Reihenfolge (siehe parsePedigree/PEDIGREE_SECTION_LABELS: "Eltern des
+  // Vaters" kommt vor "Eltern der Mutter").
+  if (result.name === 'Unbekannt' || /Namen geben\?/i.test(result.name || '')) {
     const ancestors = result.pedigree.ancestors || [];
     const vater = ancestors[0]?.name || 'Unbekannt';
     const mutter = ancestors[1]?.name || 'Unbekannt';
