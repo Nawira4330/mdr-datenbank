@@ -21,6 +21,12 @@ const BREED_ABBREVIATIONS = {
   DRP: 'Deutsches Reitpony',
 };
 
+// Zuchtkürzel-Präfixe/-Suffixe, mit denen Züchter ihre Fohlen schon vor der
+// eigentlichen Namensgebung markieren (z.B. "~VL~ Namen geben?"). Steht nur
+// das Kürzel allein als Name, ist das Fohlen ebenso unbenannt wie bei
+// "Unbekannt" oder "Namen geben?" - siehe parseHorseText.
+const ZUCHTKUERZEL = ['~VL~', '-Cookie-', '°Sol°', '*Iced*', "Lucky's", '~Ts~', '4Leafs', 'Van Het Dok'];
+
 function normalizeBreed(value) {
   if (!value) return value;
   const trimmed = value.trim();
@@ -112,16 +118,21 @@ function parseHorseText(rawText) {
   result.tournament_potential = parseTournamentPotential(lines);
   result.pedigree = parsePedigree(lines, result.breed);
 
-  // Noch unbenannte Fohlen heißen im Spiel schlicht "Unbekannt", oder -
-  // wenn schon ein Zuchtkürzel vergeben wurde, der eigentliche Name aber
-  // noch fehlt ("folgt später") - "Namen geben?". In beiden Fällen wird
-  // statt des Platzhaltertexts ein Name aus Besitzer und Eltern gebildet,
-  // damit nicht mehrere Fohlen mit demselben Namen angelegt werden (siehe
-  // Dopplungs-Erkennung beim Speichern). Die ersten beiden
+  // Noch unbenannte Fohlen heißen im Spiel schlicht "Unbekannt", zeigen
+  // "Namen geben?" (ggf. mit Zuchtkürzel davor/danach), oder tragen noch
+  // gar keinen eigenen Namen außer dem bloßen Zuchtkürzel selbst. In allen
+  // Fällen wird statt des Platzhaltertexts ein Name aus Besitzer und Eltern
+  // gebildet, damit nicht mehrere Fohlen mit demselben Namen angelegt
+  // werden (siehe Dopplungs-Erkennung beim Speichern). Die ersten beiden
   // Stammbaum-Einträge sind laut Spiel immer Vater und Mutter in dieser
   // Reihenfolge (siehe parsePedigree/PEDIGREE_SECTION_LABELS: "Eltern des
   // Vaters" kommt vor "Eltern der Mutter").
-  if (result.name === 'Unbekannt' || /Namen geben\?/i.test(result.name || '')) {
+  const trimmedName = (result.name || '').trim();
+  if (
+    trimmedName === 'Unbekannt' ||
+    /Namen geben\?/i.test(trimmedName) ||
+    ZUCHTKUERZEL.includes(trimmedName)
+  ) {
     const ancestors = result.pedigree.ancestors || [];
     const vater = ancestors[0]?.name || 'Unbekannt';
     const mutter = ancestors[1]?.name || 'Unbekannt';
