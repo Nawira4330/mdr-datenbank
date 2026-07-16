@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Durchschnittsrechner – MDR Pferdedatenbank</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>📊 Durchschnittsrechner</h1>
+    <nav>
+      <a class="btn secondary" href="index.html">← Zur Übersicht</a>
+      <a class="btn secondary" href="anleitung.html">📖 Anleitung</a>
+      <button id="logout-btn" class="secondary">Abmelden</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <p class="muted small">
+      Berechnet die Durchschnittswerte (GP, Ext, Ext%, Int) über alle Pferde, die zu den
+      gewählten Filtern passen. Ein leerer Filter ("Alle") bezieht alle Pferde mit ein.
+    </p>
+
+    <form id="avg-filter-form" class="filter-bar">
+      <div class="field">
+        <label for="d-owner">Besitzer</label>
+        <select id="d-owner"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="d-breed">Rasse</label>
+        <select id="d-breed"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="d-gender">Geschlecht</label>
+        <select id="d-gender"><option value="">Alle</option></select>
+      </div>
+      <div class="field">
+        <label for="d-zzl">ZZL</label>
+        <select id="d-zzl">
+          <option value="">Alle</option>
+          <option value="true">Mit ZZL</option>
+          <option value="false">Ohne ZZL</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button type="button" id="avg-reset" class="secondary">Zurücksetzen</button>
+        <button type="submit">Berechnen</button>
+      </div>
+    </form>
+
+    <fieldset>
+      <legend>Ergebnis</legend>
+      <div id="avg-result"><p class="muted small">Lade…</p></div>
+    </fieldset>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/durchschnitt.js"></script>
+</body>
+</html>
