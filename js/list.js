@@ -657,7 +657,7 @@ function onBulkDelete() {
 
 // --- CSV-Export ---
 
-const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse', 'Farbe', 'Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'HLP/SLP', 'ZZL', 'EKH', 'Besitzer'];
+const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse - Rasseanteile', 'Farbe Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'Besitzer', 'MDR-Link'];
 
 // Semikolon statt Komma als Trennzeichen, da deutsches Excel Kommas als
 // Dezimaltrennzeichen liest und eine mit Komma getrennte CSV-Datei sonst
@@ -669,21 +669,23 @@ function csvEscape(value) {
 
 function csvRowOf(h) {
   const d = computeDerived(h);
-  const affected = affectedDiseaseLabels(h);
+  const breed = normalizeBreed(h.breed) || 'Rasselos';
+  const breedCell = h.breed_composition ? `${breed} - ${h.breed_composition}` : breed;
+  const colorGeneticsCell = [h.coat_color, d.presentGenes].filter(Boolean).join(' ');
+  const mdrLink = h.external_id
+    ? `https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}`
+    : '';
   return [
     h.name || '',
     h.gender || '',
-    normalizeBreed(h.breed) || 'Rasselos',
-    h.coat_color || '',
-    d.presentGenes,
+    breedCell,
+    colorGeneticsCell,
     d.gp ?? '',
     d.extAvg != null ? d.extAvg.toFixed(2) : '',
     d.extPercent != null ? d.extPercent + '%' : '',
     d.intAvg != null ? d.intAvg.toFixed(2) : '',
-    hlpSlpDisplay(h.hlp_slp),
-    zzlDisplay(h.breeding_allowed),
-    affected.length ? affected.join(', ') : '-',
     h.owner || '',
+    mdrLink,
   ];
 }
 
