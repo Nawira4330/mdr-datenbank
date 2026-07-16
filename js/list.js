@@ -25,6 +25,7 @@ async function init() {
   wireSelection();
   wireCheckDropdowns();
   wireDeleteModal();
+  wireExportCsv();
   showFlashBanner();
   await showMissingDataNotice(session);
   await populateFilterOptions();
@@ -652,4 +653,63 @@ function onBulkDelete() {
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   if (!rows.length) return;
   openDeleteModal(rows);
+}
+
+// --- CSV-Export ---
+
+const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse', 'Farbe', 'Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'HLP/SLP', 'ZZL', 'EKH', 'Besitzer'];
+
+// Semikolon statt Komma als Trennzeichen, da deutsches Excel Kommas als
+// Dezimaltrennzeichen liest und eine mit Komma getrennte CSV-Datei sonst
+// nicht automatisch in Spalten aufgeteilt würde.
+function csvEscape(value) {
+  const str = String(value ?? '');
+  return /[;"\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+}
+
+function csvRowOf(h) {
+  const d = computeDerived(h);
+  const affected = affectedDiseaseLabels(h);
+  return [
+    h.name || '',
+    h.gender || '',
+    normalizeBreed(h.breed) || 'Rasselos',
+    h.coat_color || '',
+    d.presentGenes,
+    d.gp ?? '',
+    d.extAvg != null ? d.extAvg.toFixed(2) : '',
+    d.extPercent != null ? d.extPercent + '%' : '',
+    d.intAvg != null ? d.intAvg.toFixed(2) : '',
+    hlpSlpDisplay(h.hlp_slp),
+    zzlDisplay(h.breeding_allowed),
+    affected.length ? affected.join(', ') : '-',
+    h.owner || '',
+  ];
+}
+
+// Exportiert genau die aktuell gefilterten/sortierten Zeilen (lastRenderedRows,
+// siehe loadHorses) - berücksichtigt also automatisch alle aktiven Filter.
+function exportCsv() {
+  if (!lastRenderedRows.length) {
+    alert('Keine Pferde zum Exportieren (Filter ergibt keine Treffer).');
+    return;
+  }
+
+  const lines = [CSV_COLUMNS, ...lastRenderedRows.map(csvRowOf)]
+    .map((row) => row.map(csvEscape).join(';'));
+  // BOM voranstellen, damit Excel die UTF-8-Kodierung (Umlaute) korrekt erkennt.
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pferde_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function wireExportCsv() {
+  document.querySelector('#export-csv-btn').addEventListener('click', exportCsv);
 }
