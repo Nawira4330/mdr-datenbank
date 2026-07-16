@@ -24,6 +24,7 @@ async function initView() {
   document.getElementById('delete-btn').addEventListener('click', onDeleteView);
   document.getElementById('prev-horse-btn').addEventListener('click', () => onNavigateView('prev'));
   document.getElementById('next-horse-btn').addEventListener('click', () => onNavigateView('next'));
+  wireTabs();
 
   await loadHorse(viewHorseId);
 

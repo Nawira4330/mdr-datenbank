@@ -72,6 +72,7 @@ async function init() {
   document.getElementById('purebred_pct').addEventListener('input', updateBreedCompositionVisibility);
   updateBreedCompositionVisibility();
   wireSaveWarningModal();
+  wireTabs();
 
   if (editingId) {
     document.getElementById('page-title').textContent = '🐴 Pferd bearbeiten';
@@ -351,42 +352,87 @@ async function onDelete() {
 
 // --- Detail-Tabellen (nur Anzeige) ---
 
+// Verteilt die erkannten Detaildaten auf die 4 Reiter (Stammdaten/
+// Genetik/Turnierwerte/Stammbaum, siehe horse.html/view.html + wireTabs)
+// statt sie wie zuvor in einem einzigen Block anzuzeigen. Das
+// Fohlen-Popup in verpaarung.html nutzt dieselben Funktionen aber noch
+// ein einzelnes "detail-tables" (keine Reiter, dafür kompakter) -
+// fillDetailContainer() ist daher pro Container ein No-Op, falls das
+// jeweilige Ziel-Element auf der aktuellen Seite gar nicht existiert, und
+// am Ende wird zusätzlich - nur falls vorhanden - alles gesammelt in
+// "detail-tables" geschrieben.
 async function renderDetailTables(data) {
-  const container = document.getElementById('detail-tables');
-  const fieldset = document.getElementById('detail-fieldset');
-  const parts = [];
+  const genetikParts = [];
+  const turnierParts = [];
+  const stammbaumParts = [];
 
   if (data.genetic_diseases?.length || data.colors?.length) {
-    parts.push(diseaseTableHtml(data.genetic_diseases, data.disease_gene_overrides));
+    genetikParts.push(diseaseTableHtml(data.genetic_diseases, data.disease_gene_overrides));
   }
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
     const parentHints = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
-    parts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides));
+    genetikParts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides));
   }
-  if (data.exterior_genetics?.rows?.length) parts.push(exteriorGeneticsHtml(data.exterior_genetics));
+  if (data.exterior_genetics?.rows?.length) genetikParts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
-    parts.push(scoredTableHtml(
+    genetikParts.push(scoredTableHtml(
       'Exterieur (Körperbau)', data.exterior_descriptive, scoreExteriorTerm,
       'Skala 1 = exzellent … 3 = passabel … 5 = stark abweichend',
     ));
   }
   if (data.temperament?.length) {
-    parts.push(scoredTableHtml(
+    genetikParts.push(scoredTableHtml(
       'Interieur (Mentalität)', data.temperament, scoreTemperamentTerm,
       'Skala 1 = exzellent … 4 = schlecht',
     ));
   }
-  if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
-    parts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
-  }
-  if (data.disciplines && Object.keys(data.disciplines).length) parts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
-  if (data.traits && Object.keys(data.traits).length) parts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
-  if (hasPedigreeData(data.pedigree)) parts.push(pedigreeHtml(data.pedigree));
 
-  container.innerHTML = parts.join('');
-  fieldset.hidden = parts.length === 0;
+  if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
+    turnierParts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
+  }
+  if (data.disciplines && Object.keys(data.disciplines).length) turnierParts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
+  if (data.traits && Object.keys(data.traits).length) turnierParts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
+
+  if (hasPedigreeData(data.pedigree)) stammbaumParts.push(pedigreeHtml(data.pedigree));
+
+  fillDetailContainer('detail-genetik', genetikParts);
+  fillDetailContainer('detail-turnier', turnierParts);
+  fillDetailContainer('detail-stammbaum', stammbaumParts);
+
+  const legacyContainer = document.getElementById('detail-tables');
+  if (legacyContainer) {
+    const allParts = [...genetikParts, ...turnierParts, ...stammbaumParts];
+    legacyContainer.innerHTML = allParts.join('');
+    const legacyFieldset = document.getElementById('detail-fieldset');
+    if (legacyFieldset) legacyFieldset.hidden = allParts.length === 0;
+  }
+}
+
+function fillDetailContainer(id, parts) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = parts.join('');
+}
+
+// --- Reiter (Stammdaten/Genetik/Turnierwerte/Stammbaum) ---
+// Auf horse.html UND view.html verwendet (siehe wireTabs()-Aufruf in
+// init() bzw. horseView.js/initView()) - auf verpaarung.html's
+// Fohlen-Popup gibt es keine ".tab-btn"-Elemente, wireTabs() findet dort
+// also einfach nichts und tut nichts.
+function wireTabs() {
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+}
+
+function activateTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach((panel) => {
+    panel.hidden = panel.dataset.tabPanel !== tab;
+  });
 }
 
 function simpleTableHtml(title, rows) {

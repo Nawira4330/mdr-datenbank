@@ -166,6 +166,17 @@ Neue Pferde und bereits vorhandene Pferde benutzen dasselbe Formular.
 Beim Bearbeiten eines bestehenden Pferds siehst du zusätzlich einen
 „Pferd löschen“-Button und die Pfeile ← / → oben neben den Stammdaten.
 
+Das Formular ist in **4 Reiter** aufgeteilt, zwischen denen du oben
+beliebig hin- und herklicken kannst (bereits eingetragene Werte bleiben
+beim Wechseln erhalten):
+
+- **Stammdaten** – Stammdaten, Verwaltung, Papiere & Zucht, Sonstiges
+  (siehe [4.2](#42-stammdaten)/[4.3](#43-weitere-angaben)).
+- **Genetik** – Erbkrankheiten, Farbgenetik, Exterieur (Genetik),
+  Exterieur (Körperbau), Interieur (siehe [4.4](#44-erkannte-daten-ansehen)).
+- **Turnierwerte** – Turnierpotenzial, Disziplinen, Eigenschaften.
+- **Stammbaum** – die Vorfahren.
+
 ### 4.1 Text automatisch auslesen
 
 Der schnellste Weg, ein Pferd einzutragen:
@@ -229,8 +240,9 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
 ### 4.4 Erkannte Daten ansehen
 
 Sobald ein Pferd Daten hat (nach dem Auslesen oder beim Öffnen eines
-bestehenden Pferds), erscheint darunter ein Bereich mit allen erkannten
-Detailwerten – reine Anzeige, kein eigenes Formular:
+bestehenden Pferds), zeigen die Reiter „Genetik“, „Turnierwerte“ und
+„Stammbaum“ alle erkannten Detailwerte – reine Anzeige, kein eigenes
+Formular:
 
 **Erbkrankheiten** – zeigt zuerst alle tatsächlich getesteten Krankheiten
 mit ihrem Ergebnis. Für jede der bekannten Krankheiten, die noch **nicht**
@@ -304,7 +316,9 @@ erkannte Ergebnis.
 
 Klickst du in der Übersicht auf den Namen eines Pferds, öffnet sich eine
 reine Ansichtsseite – alle Felder sind hier nur zum Lesen, nichts lässt
-sich versehentlich verändern.
+sich versehentlich verändern. Dieselben 4 Reiter wie beim Bearbeiten
+(siehe [Abschnitt 4](#4-pferd-anlegen-oder-bearbeiten)) gliedern auch
+hier die Ansicht.
 
 - **✏️ Bearbeiten** – wechselt ins normale Bearbeiten-Formular.
 - **🔗 Zum Pferd** – nur sichtbar, wenn eine Spiel-ID hinterlegt ist,
