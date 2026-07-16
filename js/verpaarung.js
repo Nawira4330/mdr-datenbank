@@ -415,7 +415,7 @@ async function onSaveFoal() {
     // Datensatz aktualisieren statt doppelt anzulegen.
     const { data: existingByName, error: lookupError } = await supabaseClient
       .from('horses')
-      .select('id')
+      .select('*')
       .ilike('name', formData.name)
       .limit(1)
       .maybeSingle();
@@ -425,6 +425,7 @@ async function onSaveFoal() {
     }
 
     let targetId = existingByName?.id || null;
+    let existingRecord = existingByName || null;
 
     // Kein exakter Namenstreffer -> zusätzlich per Stammbaum prüfen (z.B.
     // vorher automatisch als "Fohlen_..." angelegtes Fohlen, jetzt unter
@@ -433,11 +434,25 @@ async function onSaveFoal() {
       const candidate = await findPedigreeCandidate(currentPairing.stallion, currentPairing.mare, formData.name);
       if (candidate) {
         const isSame = await askIsSameHorse(candidate.name);
-        if (isSame) targetId = candidate.id;
+        if (isSame) {
+          targetId = candidate.id;
+          ({ data: existingRecord } = await supabaseClient.from('horses').select('*').eq('id', targetId).maybeSingle());
+        }
       }
     }
 
     if (targetId) {
+      // Wie horseForm.js performSave: dieses Formular wurde als
+      // vermeintlich neues Fohlen ausgefüllt, nicht aus dem bereits
+      // bestehenden Datensatz vorbefüllt - leere Felder sollen ihn darum
+      // nur ergänzen statt ihn zu leeren.
+      if (existingRecord) {
+        for (const key of Object.keys(payload)) {
+          if (isEmptyValue(key, payload[key]) && !isEmptyValue(key, existingRecord[key])) {
+            payload[key] = existingRecord[key];
+          }
+        }
+      }
       ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));
     } else {
       payload.user_id = session.user.id;

@@ -287,6 +287,19 @@ function wireSaveWarningModal() {
   });
 }
 
+// Ob ein Feldwert als "nichts eingetragen" gilt - Arrays/Objekte, die
+// parseHorseText auch bei fehlendem Abschnitt im Text immer zurückgibt
+// (z.B. leeres colors-Array statt undefined), zählen hier genauso als
+// leer wie null selbst (collectForm wandelt bereits '' in null um).
+function isEmptyValue(key, value) {
+  if (value == null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (key === 'pedigree') return !hasPedigreeData(value);
+  if (key === 'exterior_genetics') return !value.rows || value.rows.length === 0;
+  if (typeof value === 'object') return Object.keys(value).length === 0;
+  return false;
+}
+
 async function performSave(formData, payload, session) {
   const errorEl = document.getElementById('form-error');
 
@@ -299,7 +312,7 @@ async function performSave(formData, payload, session) {
   if (!targetId) {
     const { data: existing, error: lookupError } = await supabaseClient
       .from('horses')
-      .select('id')
+      .select('*')
       .ilike('name', formData.name)
       .limit(1)
       .maybeSingle();
@@ -307,7 +320,21 @@ async function performSave(formData, payload, session) {
       errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + lookupError.message;
       return;
     }
-    if (existing) targetId = existing.id;
+    if (existing) {
+      targetId = existing.id;
+      // Das Formular wurde hier als vermeintlich NEUES Pferd ausgefüllt
+      // (kein loadHorse() zuvor, siehe init) - Felder, die in diesem
+      // Durchgang gar nicht ausgefüllt/erkannt wurden, sollen den bereits
+      // vorhandenen Datensatz nur ERGÄNZEN statt ihn zu leeren. Beim
+      // reguläten Bearbeiten (targetId = editingId, siehe unten) gilt das
+      // bewusst NICHT: dort ist das Formular mit den alten Werten
+      // vorbefüllt, ein leeres Feld dort also eine bewusste Änderung.
+      for (const key of Object.keys(payload)) {
+        if (isEmptyValue(key, payload[key]) && !isEmptyValue(key, existing[key])) {
+          payload[key] = existing[key];
+        }
+      }
+    }
   }
 
   let error;
