@@ -14,6 +14,11 @@ async function init() {
   document.querySelector('#session-email').textContent = `Angemeldet als: ${displayIdentity}`;
   if (admin) {
     document.querySelector('#verwaltung-link').hidden = false;
+  } else {
+    // Löschen (einzeln wie mehrfach) bleibt in der Übersicht dem Admin
+    // vorbehalten - versteckt per CSS (siehe style.css), damit rowHtml()
+    // nicht zwei verschiedene Markup-Varianten pflegen muss.
+    document.body.classList.add('hide-delete');
   }
   wireFilterForm();
   wireSortableHeaders();

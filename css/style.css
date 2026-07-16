@@ -312,6 +312,18 @@ label {
 }
 .mobile-select-all input { width: auto; }
 
+/* Löschen (einzeln wie mehrfach) ist in der Übersicht dem Admin
+   vorbehalten (siehe list.js/init) - Checkboxen, Sammel-Löschleiste und
+   der einzelne ✗-Button bleiben für alle anderen Konten komplett
+   ausgeblendet statt nur deaktiviert. */
+body.hide-delete #select-all,
+body.hide-delete .mobile-select-all,
+body.hide-delete #bulk-actions,
+body.hide-delete [data-select],
+body.hide-delete [data-delete] {
+  display: none !important;
+}
+
 /* Ersetzt in der mobilen Kartenansicht das Sortieren per Klick auf die
    (dort ausgeblendete) Tabellenkopfzeile. */
 .mobile-sort { display: none; align-items: center; gap: 0.4rem; }
