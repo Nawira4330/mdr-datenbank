@@ -667,6 +667,13 @@ function csvEscape(value) {
   return /[;"\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
 }
 
+// Deutsches Dezimalkomma statt Punkt - mit Punkt liest Excel (deutsches
+// Gebietsschema) Werte wie "2.10" sonst fälschlich als Datum (2. Oktober)
+// statt als Zahl.
+function deDecimal(value) {
+  return String(value).replace('.', ',');
+}
+
 function csvRowOf(h) {
   const d = computeDerived(h);
   const breed = normalizeBreed(h.breed) || 'Rasselos';
@@ -681,9 +688,9 @@ function csvRowOf(h) {
     breedCell,
     colorGeneticsCell,
     d.gp ?? '',
-    d.extAvg != null ? d.extAvg.toFixed(2) : '',
-    d.extPercent != null ? d.extPercent + '%' : '',
-    d.intAvg != null ? d.intAvg.toFixed(2) : '',
+    d.extAvg != null ? deDecimal(d.extAvg.toFixed(2)) : '',
+    d.extPercent != null ? deDecimal(d.extPercent) + '%' : '',
+    d.intAvg != null ? deDecimal(d.intAvg.toFixed(2)) : '',
     h.owner || '',
     mdrLink,
   ];
