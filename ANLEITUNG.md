@@ -13,8 +13,9 @@ es gedacht ist und *wann* du es brauchst.
 5. [Pferd ansehen](#5-pferd-ansehen)
 6. [Verpaarungs-Log](#6-verpaarungs-log)
 7. [Verwaltung](#7-verwaltung)
-8. [Zucht-/Turnierplaner](#8-zucht-turnierplaner)
-9. [Häufige Fragen](#9-häufige-fragen)
+8. [Durchschnittsrechner](#8-durchschnittsrechner)
+9. [Zucht-/Turnierplaner](#9-zucht-turnierplaner)
+10. [Häufige Fragen](#10-häufige-fragen)
 
 ---
 
@@ -65,7 +66,9 @@ Seite alle):
 - **💞 Verpaarungs-Log** – öffnet das Verpaarungs-Log (siehe
   [Abschnitt 6](#6-verpaarungs-log)).
 - **Zucht-/Turnierplaner ↗** – öffnet unser separates Zucht-Planungs-Tool
-  in einem neuen Tab (siehe [Abschnitt 8](#8-zucht-turnierplaner)).
+  in einem neuen Tab (siehe [Abschnitt 9](#9-zucht-turnierplaner)).
+- **📊 Durchschnitt** – öffnet den Durchschnittsrechner (siehe
+  [Abschnitt 8](#8-durchschnittsrechner)).
 - **📖 Anleitung** – diese Seite hier.
 - **Verwaltung** – nur sichtbar, wenn du Verwaltungszugriff hast (siehe
   [Abschnitt 7](#7-verwaltung)).
@@ -107,9 +110,8 @@ einmal.
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
   Rolle.
 - **Besitzer**, **Geschlecht**, **Rasse** – Auswahllisten mit den
-  tatsächlich vorkommenden Werten. Die Rasse-Liste startet standardmäßig
-  bei „American Paint Horse“; „Rasselos“ zeigt gezielt Pferde ohne
-  eingetragene Rasse.
+  tatsächlich vorkommenden Werten, standardmäßig auf „Alle“ gestellt;
+  „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse.
 - **ZZL** (Zuchtzulassung) – „Ja“ zeigt nur zugelassene Pferde; „Nein“
   zeigt sowohl ausdrücklich nicht zugelassene als auch noch nicht
   entschiedene Pferde.
@@ -133,15 +135,24 @@ Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
 (klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen)),
 Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
 Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer und Aktionen
-(✏️ Bearbeiten, ✗ Löschen).
+(✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
 
 **Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste
 danach, ein weiterer Klick dreht die Richtung um. Auf dem Handy gibt es
 dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
 
-**Mehrere Pferde auf einmal löschen**: Kästchen bei den gewünschten
-Pferden anhaken (oder „Alle auswählen“) – es erscheint eine Leiste mit
-„Ausgewählte löschen“.
+**Pferde auswählen**: Die Kästchen links dienen zwei Zwecken:
+- **CSV-Export** (siehe unten) – für alle nutzbar.
+- **Mehrere Pferde auf einmal löschen** – Kästchen anhaken (oder „Alle
+  auswählen“), es erscheint eine Leiste mit „Ausgewählte löschen“; dieser
+  Button ist nur mit Verwaltungszugriff sichtbar.
+
+**CSV-Export**: Der Button „📄 CSV exportieren“ oberhalb der Tabelle
+speichert eine Excel-taugliche Datei mit Name, Geschlecht, Rasse (inkl.
+Rasseanteile), Farbe/Genetik, GP, Ext, Ext%, Int, Besitzer und dem
+vollständigen Spiel-Link. Sind über die Kästchen einzelne Pferde
+ausgewählt, werden nur diese exportiert – ohne Auswahl exportiert der
+Button stattdessen alle gerade sichtbaren (gefilterten) Pferde.
 
 **Wichtig**: Löschen (einzeln über ✗ oder mehrfach über die
 Auswahl-Leiste) ist **endgültig** und lässt sich nicht rückgängig
@@ -377,7 +388,25 @@ Passwörter zurücksetzt.
 
 ---
 
-## 8. Zucht-/Turnierplaner
+## 8. Durchschnittsrechner
+
+Berechnet Durchschnittswerte (GP, Ext, Ext%, Int) über alle Pferde, die
+zu den gewählten Filtern passen.
+
+1. **Besitzer**, **Rasse**, **Geschlecht**, **ZZL** einzeln oder
+   kombiniert einschränken – jeder leere Filter („Alle“) bezieht alle
+   Pferde mit ein.
+2. „Berechnen“ klicken.
+
+Das Ergebnis zeigt die Anzahl der passenden Pferde sowie je Wert den
+Durchschnitt – steht bei einem Wert ein Zusatz wie „(aus 12 von 14
+Pferden mit Wert)“, hatten nicht alle passenden Pferde diesen Wert
+erfasst (er wird dann nur aus den vorhandenen Werten berechnet, nicht
+aus allen). „Zurücksetzen“ leert alle Filter wieder.
+
+---
+
+## 9. Zucht-/Turnierplaner
 
 Dieser Link führt zu unserem separaten Zucht-Planungs-Tool. Es greift
 auf dieselbe Pferdedatenbank zu, ist aber ein eigenständiges Werkzeug mit
@@ -385,7 +414,7 @@ eigener Bedienung – diese Anleitung deckt es nicht mit ab.
 
 ---
 
-## 9. Häufige Fragen
+## 10. Häufige Fragen
 
 **Warum sehe ich bei einem Pferd andere Werte als im Spiel?**
 GP, Ext, Ext% und Int werden nicht 1:1 aus dem Spiel übernommen, sondern
@@ -403,7 +432,9 @@ anzulegen.
 
 **Kann ich eine Löschung rückgängig machen?**
 Nein. Sowohl das Löschen einzelner Pferde/Verpaarungen als auch das
-Löschen mehrerer auf einmal ist endgültig.
+Löschen mehrerer auf einmal ist endgültig. In der Pferde-Übersicht ist
+das Löschen (einzeln wie mehrfach) außerdem auf Verwaltungszugriff
+beschränkt – ohne diesen siehst du dort nur noch ✏️ Bearbeiten.
 
 **Warum sehe ich bei manchen Genen einen Hinweis wie „mindestens Ch“
 statt eines eindeutigen Werts?**

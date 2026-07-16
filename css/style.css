@@ -313,14 +313,12 @@ label {
 .mobile-select-all input { width: auto; }
 
 /* Löschen (einzeln wie mehrfach) ist in der Übersicht dem Admin
-   vorbehalten (siehe list.js/init) - Checkboxen, Sammel-Löschleiste und
-   der einzelne ✗-Button bleiben für alle anderen Konten komplett
-   ausgeblendet statt nur deaktiviert. */
-body.hide-delete #select-all,
-body.hide-delete .mobile-select-all,
-body.hide-delete #bulk-actions,
-body.hide-delete [data-select],
-body.hide-delete [data-delete] {
+   vorbehalten (siehe list.js/init) - die Kästchen selbst bleiben aber für
+   alle sichtbar, da sie auch zum Auswählen der zu exportierenden Pferde
+   dienen (siehe exportCsv). Nur der einzelne ✗-Button und der
+   Sammel-Löschen-Button bleiben für alle anderen Konten ausgeblendet. */
+body.hide-delete [data-delete],
+body.hide-delete #bulk-delete-btn {
   display: none !important;
 }
 

@@ -689,15 +689,21 @@ function csvRowOf(h) {
   ];
 }
 
-// Exportiert genau die aktuell gefilterten/sortierten Zeilen (lastRenderedRows,
-// siehe loadHorses) - berücksichtigt also automatisch alle aktiven Filter.
+// Sind über die Kästchen einzelne Pferde ausgewählt, werden nur diese
+// exportiert - ohne Auswahl exportiert der Button stattdessen alle
+// aktuell gefilterten/sortierten Zeilen (lastRenderedRows, siehe
+// loadHorses), berücksichtigt also automatisch alle aktiven Filter.
 function exportCsv() {
-  if (!lastRenderedRows.length) {
+  const rows = selectedIds.size > 0
+    ? lastRenderedRows.filter((r) => selectedIds.has(r.id))
+    : lastRenderedRows;
+
+  if (!rows.length) {
     alert('Keine Pferde zum Exportieren (Filter ergibt keine Treffer).');
     return;
   }
 
-  const lines = [CSV_COLUMNS, ...lastRenderedRows.map(csvRowOf)]
+  const lines = [CSV_COLUMNS, ...rows.map(csvRowOf)]
     .map((row) => row.map(csvEscape).join(';'));
   // BOM voranstellen, damit Excel die UTF-8-Kodierung (Umlaute) korrekt erkennt.
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
