@@ -121,7 +121,7 @@ function parseHorseText(rawText) {
   // Noch unbenannte Fohlen heißen im Spiel schlicht "Unbekannt", zeigen
   // "Namen geben?" (ggf. mit Zuchtkürzel davor/danach), oder tragen noch
   // gar keinen eigenen Namen außer dem bloßen Zuchtkürzel selbst. In allen
-  // Fällen wird statt des Platzhaltertexts ein Name aus Besitzer und Eltern
+  // Fällen wird statt des Platzhaltertexts ein Name aus den Eltern
   // gebildet, damit nicht mehrere Fohlen mit demselben Namen angelegt
   // werden (siehe Dopplungs-Erkennung beim Speichern). Die ersten beiden
   // Stammbaum-Einträge sind laut Spiel immer Vater und Mutter in dieser
@@ -136,8 +136,7 @@ function parseHorseText(rawText) {
     const ancestors = result.pedigree.ancestors || [];
     const vater = ancestors[0]?.name || 'Unbekannt';
     const mutter = ancestors[1]?.name || 'Unbekannt';
-    const besitzer = result.owner || 'Unbekannt';
-    result.name = `Fohlen_${besitzer}_${mutter}x${vater}`;
+    result.name = `Fohlen_${mutter} X ${vater}`;
   }
 
   return result;

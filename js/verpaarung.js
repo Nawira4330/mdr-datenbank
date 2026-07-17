@@ -348,8 +348,8 @@ function closeFoalModal() {
 // und Stute der aktuellen Verpaarung passt - Vater/Mutter sind laut
 // parser.js/parsePedigree immer die ersten beiden Stammbaum-Einträge.
 // Damit lassen sich z.B. Fohlen wiedererkennen, die zuerst automatisch
-// als "Fohlen_Besitzer_MutterxVater" angelegt und später unter ihrem
-// echten Namen erneut eingetragen wurden.
+// als "Fohlen_Mutter X Vater" angelegt und später unter ihrem echten
+// Namen erneut eingetragen wurden.
 async function findPedigreeCandidate(stallion, mare, excludeName) {
   const { data, error } = await supabaseClient.from('horses').select('id, name, pedigree');
   if (error || !data) return null;

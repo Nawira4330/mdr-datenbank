@@ -195,8 +195,8 @@ aufgeklappt), Fellfarbe, Besitzer, Erbkrankheiten-Status, Zuchtzulassung,
 HLP/SLP, ICO, die komplette Farbgenetik-Tabelle, Exterieur, Interieur,
 Disziplinen, Eigenschaften, Turnierpotenzial und der Stammbaum. Ein noch
 unbenanntes Fohlen wird automatisch nach dem Muster
-„Fohlen_Besitzer_MutterxVater“ benannt, damit nicht mehrere Fohlen
-denselben Platzhalter-Namen bekommen und sich versehentlich überschreiben.
+„Fohlen_Mutter X Vater“ benannt, damit nicht mehrere Fohlen denselben
+Platzhalter-Namen bekommen und sich versehentlich überschreiben.
 
 Dieser Einfügekasten ist einklappbar. Beim Bearbeiten eines bereits
 vorhandenen Pferds startet er automatisch eingeklappt (du brauchst ihn ja
