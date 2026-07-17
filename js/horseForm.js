@@ -113,9 +113,28 @@ async function onParse() {
   }
   const parsed = parseHorseText(text);
   fillForm(parsed);
-  extraData = { ...extraData, ...parsed };
-  await renderDetailTables(parsed);
+  extraData = mergeParsedIntoExisting(extraData, parsed);
+  await renderDetailTables(extraData);
   statusEl.textContent = 'Erkannt: ' + (parsed.name || 'kein Name gefunden') + ' — bitte Felder unten prüfen, bevor du speicherst.';
+}
+
+// Wird beim Bearbeiten eines bereits gespeicherten Pferds erneut "Text
+// von der Pferdeseite einfügen" benutzt (z.B. weil inzwischen ein
+// Farbgen-Test durchgeführt wurde und jetzt ein sicheres Ergebnis
+// vorliegt), soll das nur ERGÄNZEN: tatsächlich neu erkannte Werte
+// überschreiben die alten, liefert der aktuelle Text für ein Feld aber
+// nichts (z.B. weil diesmal eine kürzere Kopie eingefügt wurde), bleibt
+// der bisherige Wert erhalten statt geleert zu werden - siehe
+// isEmptyValue. Bei einem neuen Pferd (extraData vorher leer) hat das
+// keine Wirkung.
+function mergeParsedIntoExisting(oldData, parsed) {
+  const merged = { ...oldData, ...parsed };
+  for (const key of JSONB_KEYS) {
+    if (parsed[key] !== undefined && isEmptyValue(key, parsed[key]) && !isEmptyValue(key, oldData[key])) {
+      merged[key] = oldData[key];
+    }
+  }
+  return merged;
 }
 
 function fillForm(data) {
