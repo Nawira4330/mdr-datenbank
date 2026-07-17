@@ -130,9 +130,7 @@ async function onParse() {
 function mergeParsedIntoExisting(oldData, parsed) {
   const merged = { ...oldData, ...parsed };
   for (const key of JSONB_KEYS) {
-    if (parsed[key] !== undefined && isEmptyValue(key, parsed[key]) && !isEmptyValue(key, oldData[key])) {
-      merged[key] = oldData[key];
-    }
+    merged[key] = mergeFieldValue(key, oldData[key], parsed[key]);
   }
   return merged;
 }
@@ -319,6 +317,25 @@ function isEmptyValue(key, value) {
   return false;
 }
 
+// Führt einen einzelnen Feldwert beim Aktualisieren zusammen (siehe
+// mergeParsedIntoExisting und performSave). "disciplines"/"traits" sind
+// nach Kategorie gruppiert (z.B. "Barock", "Western") - zeigt das Spiel
+// ohne aufgeklapptes "Alle Disziplinen anzeigen?" nur eine einzelne
+// Kategorie, würden die übrigen sonst als "neuer, vollständiger Wert"
+// gelten und verschwinden. Deshalb hier kategorienweise zusammenführen
+// statt alles-oder-nichts: neue Kategorien ergänzen/überschreiben, im
+// neuen Text fehlende Kategorien bleiben aus dem alten Wert erhalten.
+// Für alle anderen Felder gilt weiterhin: neuer Wert leer und alter
+// nicht -> alten Wert behalten, sonst neuen Wert übernehmen.
+function mergeFieldValue(key, oldValue, newValue) {
+  if (newValue === undefined) return oldValue;
+  if (key === 'disciplines' || key === 'traits') {
+    return { ...(oldValue || {}), ...(newValue || {}) };
+  }
+  if (isEmptyValue(key, newValue) && !isEmptyValue(key, oldValue)) return oldValue;
+  return newValue;
+}
+
 async function performSave(formData, payload, session) {
   const errorEl = document.getElementById('form-error');
 
@@ -349,9 +366,7 @@ async function performSave(formData, payload, session) {
       // bewusst NICHT: dort ist das Formular mit den alten Werten
       // vorbefüllt, ein leeres Feld dort also eine bewusste Änderung.
       for (const key of Object.keys(payload)) {
-        if (isEmptyValue(key, payload[key]) && !isEmptyValue(key, existing[key])) {
-          payload[key] = existing[key];
-        }
+        payload[key] = mergeFieldValue(key, existing[key], payload[key]);
       }
     }
   }

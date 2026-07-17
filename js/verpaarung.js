@@ -448,9 +448,7 @@ async function onSaveFoal() {
       // nur ergänzen statt ihn zu leeren.
       if (existingRecord) {
         for (const key of Object.keys(payload)) {
-          if (isEmptyValue(key, payload[key]) && !isEmptyValue(key, existingRecord[key])) {
-            payload[key] = existingRecord[key];
-          }
+          payload[key] = mergeFieldValue(key, existingRecord[key], payload[key]);
         }
       }
       ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));
