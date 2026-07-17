@@ -518,19 +518,28 @@ function diseaseOverrideBadge(code, state) {
   return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(code)}" data-override-group="disease" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
 }
 
-// Zeigt zunächst alle tatsächlich getesteten Erbkrankheiten (Rohwerte wie
-// "NN/NN", unverändert), danach je fehlender Krankheit aus
-// KNOWN_DISEASE_CODES (siehe parser.js) eine "Nicht getestet"-Zeile mit
-// Klick-Button zur manuellen Träger/Betroffen/Frei-Bestätigung - z.B. für
+// Zeigt für jede bekannte Krankheit (KNOWN_DISEASE_CODES, siehe
+// parser.js) entweder das tatsächliche Testergebnis (Rohwert wie
+// "NN/NN", unverändert) oder - falls die Krankheit im Text komplett
+// fehlte ODER dort explizit als "Nicht getestet" stand (beides kommt
+// vor, je nach Spielversion/Kopierweg) - eine "Nicht getestet"-Zeile mit
+// Klick-Button zur manuellen Träger/Betroffen/Frei-Bestätigung, z.B. für
 // junge Fohlen, die noch nicht beim Tierarzt getestet wurden.
 function diseaseTableHtml(diseases, overrides) {
   const rows = diseases || [];
   const ov = overrides || {};
-  const testedCodes = new Set(rows.map((d) => d.label));
+  const valueByCode = {};
+  for (const r of rows) valueByCode[r.label] = r.value;
+  // Krankheiten aus dem Text, die nicht zu den bekannten Kürzeln gehören,
+  // trotzdem mit anzeigen (unverändert, ohne Klick-Button) statt sie
+  // stillschweigend zu verlieren.
+  const extraCodes = rows.map((r) => r.label).filter((code) => !KNOWN_DISEASE_CODES.includes(code));
 
-  const testedBody = rows.map((r) => `<tr><th>${escapeHtml(r.label)}</th><td>${escapeHtml(r.value)}</td></tr>`).join('');
-
-  const untestedBody = KNOWN_DISEASE_CODES.filter((code) => !testedCodes.has(code)).map((code) => {
+  const body = [...KNOWN_DISEASE_CODES, ...extraCodes].map((code) => {
+    const rawValue = valueByCode[code];
+    if (rawValue !== undefined && !isUntestedLocusValue(rawValue)) {
+      return `<tr><th>${escapeHtml(code)}</th><td>${escapeHtml(rawValue)}</td></tr>`;
+    }
     const state = ov[code] || null;
     let text = 'Nicht getestet';
     if (state === 'het') text += ' — Träger (manuell)';
@@ -540,7 +549,7 @@ function diseaseTableHtml(diseases, overrides) {
     return `<tr><th>${escapeHtml(code)}</th><td class="gene-cell"><span class="gene-value-text">${text}</span><span class="gene-badges">${badge}</span></td></tr>`;
   }).join('');
 
-  return `<div class="group-heading">Erbkrankheiten</div><table class="detail-table">${testedBody}${untestedBody}</table>`;
+  return `<div class="group-heading">Erbkrankheiten</div><table class="detail-table">${body}</table>`;
 }
 
 // Wie simpleTableHtml, aber zusätzlich mit berechnetem Durchschnitt anhand
