@@ -513,8 +513,9 @@ function diseaseOverrideBadge(code, state) {
     hom: { label: '2×', cls: 'hom', title: 'Betroffen (reinerbig)' },
     absent: { label: '✗', cls: 'absent', title: 'Frei (kein Risikoallel bekannt)' },
   }[state] || { label: '?', cls: 'unknown', title: 'Unbekannt, ob Träger/betroffen' };
-  const title = `${stateInfo.title} – zum Ändern klicken`;
-  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(code)}" data-override-group="disease" title="${escapeHtml(title)}">${stateInfo.label}</button>`;
+  const label = `${code} ${stateInfo.label}`;
+  const title = `${code}: ${stateInfo.title} – zum Ändern klicken`;
+  return `<button type="button" class="gene-override gene-override-${stateInfo.cls}" data-override-locus="${escapeHtml(code)}" data-override-group="disease" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
 }
 
 // Zeigt zunächst alle tatsächlich getesteten Erbkrankheiten (Rohwerte wie
@@ -669,7 +670,7 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
         if (fromParent.length) parts.push(`mindestens ${escapeHtml(fromParent.join(', '))} (laut Elternteil)`);
         value += ' — ' + parts.join(', ');
       }
-      badges = geneOverrideBadge(r.label, overrideState);
+      badges = geneOverrideBadge(r.label, overrideState, LOCUS_PRIMARY_ALLELE[r.label]);
     }
     // Text und Klick-Button(s) in getrennten Spans innerhalb einer
     // Flex-Zelle, damit die Buttons unabhängig von der (je Zeile
