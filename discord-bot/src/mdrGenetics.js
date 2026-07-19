@@ -143,6 +143,24 @@ function extractPresentAlleles(rawValue) {
   return tokens.filter((t) => t === 'pl' || /[A-Z]/.test(t)).join('');
 }
 
+// Anzeige-Reihenfolge (Grundfarbe/Aufhellungen/Sonderfarben/Scheckungen/
+// Flaxen) - 1:1 aus ../../js/parser.js portiert, siehe dort für Details.
+const GENE_DISPLAY_ORDER = [
+  'Extension', 'Agouti',
+  'Cream', 'Dun',
+  'Champagne', 'Silver', 'Grey',
+  'KIT', 'Overo', 'Splashed', 'Appaloosa', 'PATN1',
+  'Flaxen',
+];
+
+function sortGenesForDisplay(genes) {
+  return [...genes].sort((a, b) => {
+    const ai = GENE_DISPLAY_ORDER.indexOf(a.locus);
+    const bi = GENE_DISPLAY_ORDER.indexOf(b.locus);
+    return (ai === -1 ? GENE_DISPLAY_ORDER.length : ai) - (bi === -1 ? GENE_DISPLAY_ORDER.length : bi);
+  });
+}
+
 // Liefert {locus, alleles, source}[] - "getestet" (aus colorRows) und
 // "abgeleitet"/"elternteil" (aus Fellfarbe/Notiz/Name bzw. Eltern-Hinweisen,
 // hier ohne parentHints, da der Bot keine Eltern-Cross-Referenz macht).
@@ -174,7 +192,7 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
   }
 
-  return [...confirmed, ...inferred];
+  return sortGenesForDisplay([...confirmed, ...inferred]);
 }
 
 module.exports = { presentGenesSummary };

@@ -942,6 +942,28 @@ function nextOverrideState(key, current) {
 // -> zurück zu unbekannt, siehe nextOverrideState).
 const KNOWN_DISEASE_CODES = ['CA', 'HERDA', 'PSSM', 'EMH', 'ASD', 'HYPP', 'LFS', 'SCID', 'GBED', 'JEB'];
 
+// Anzeige-Reihenfolge für presentGenesSummary (Übersicht/Farbgenetik-
+// Zusammenfassung/CSV-Export): Grundfarbe, Aufhellungen, Sonderfarben,
+// Scheckungen, Flaxen - unabhängig davon, in welcher Reihenfolge das
+// Spiel die Loci testet. "Cream" deckt dabei auch Pearl mit ab (siehe
+// LOCUS_MULTI_ALLELES), "KIT" alle Scheckungs-Allele (To/Sb/Rn). Loci
+// außerhalb dieser Liste (z.B. Sooty/Rabicano/Pangare) landen am Ende.
+const GENE_DISPLAY_ORDER = [
+  'Extension', 'Agouti',
+  'Cream', 'Dun',
+  'Champagne', 'Silver', 'Grey',
+  'KIT', 'Overo', 'Splashed', 'Appaloosa', 'PATN1',
+  'Flaxen',
+];
+
+function sortGenesForDisplay(genes) {
+  return [...genes].sort((a, b) => {
+    const ai = GENE_DISPLAY_ORDER.indexOf(a.locus);
+    const bi = GENE_DISPLAY_ORDER.indexOf(b.locus);
+    return (ai === -1 ? GENE_DISPLAY_ORDER.length : ai) - (bi === -1 ? GENE_DISPLAY_ORDER.length : bi);
+  });
+}
+
 // Fasst alle tatsächlich vorhandenen Gene eines Pferdes zusammen: zuerst
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
 // die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
@@ -950,7 +972,10 @@ const KNOWN_DISEASE_CODES = ['CA', 'HERDA', 'PSSM', 'EMH', 'ASD', 'HYPP', 'LFS',
 // der Notiz, im Pferdenamen (siehe inferGeneticHintsFromPhenotype) und
 // optional aus reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
 // homozygousPresentHints - wird von horseForm.js anhand des Stammbaums
-// befüllt, falls Vater/Mutter in der Datenbank stehen).
+// befüllt, falls Vater/Mutter in der Datenbank stehen). Das Ergebnis wird
+// abschließend in eine feste Anzeige-Reihenfolge gebracht (siehe
+// sortGenesForDisplay), unabhängig von der Reihenfolge, in der die
+// einzelnen Quellen (getestet/manuell/abgeleitet) hier gesammelt wurden.
 function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints, overrides) {
   const rows = colorRows || [];
   const confirmed = [];
@@ -1000,7 +1025,7 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
   }
 
-  return [...confirmed, ...manual, ...inferred];
+  return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -70,11 +70,11 @@ Seite alle):
   in einem neuen Tab (siehe [Abschnitt 10](#10-zucht-turnierplaner)).
 - **📊 Durchschnitt** – öffnet den Durchschnittsrechner (siehe
   [Abschnitt 8](#8-durchschnittsrechner)).
-- **⚙️ Einstellungen** – persönliche Einstellungen (siehe
-  [Abschnitt 9](#9-einstellungen)).
 - **📖 Anleitung** – diese Seite hier.
 - **Verwaltung** – nur sichtbar, wenn du Verwaltungszugriff hast (siehe
   [Abschnitt 7](#7-verwaltung)).
+- **⚙️** – persönliche Einstellungen (nur als Symbol, direkt neben
+  „Abmelden“, siehe [Abschnitt 9](#9-einstellungen)).
 - **Abmelden**.
 
 ### 3.2 Hinweis auf fehlende Daten
