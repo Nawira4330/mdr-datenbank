@@ -72,6 +72,7 @@ async function init() {
   document.getElementById('purebred_pct').addEventListener('input', updateBreedCompositionVisibility);
   updateBreedCompositionVisibility();
   wireSaveWarningModal();
+  wireDuplicateCheckModal();
   wireTabs();
 
   if (editingId) {
@@ -336,6 +337,62 @@ function mergeFieldValue(key, oldValue, newValue) {
   return newValue;
 }
 
+// GP/Ext/Ext%/Int aus einem Pferde-Datensatz (Payload oder bestehender
+// DB-Zeile) berechnen - wie list.js/computeDerived, hier nur die vier für
+// den Dopplungs-Check gebrauchten Werte statt aller abgeleiteten Felder.
+function quickStatsOf(data) {
+  const gpRaw = data.tournament_potential?.['Gesamtpotenzial'];
+  return {
+    gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
+    ext: averageScore(data.exterior_descriptive, scoreExteriorTerm),
+    extPercent: data.exterior_genetics?.overall?.percent ?? null,
+    int: averageScore(data.temperament, scoreTemperamentTerm),
+  };
+}
+
+// Gilt nur als Übereinstimmung, wenn alle vier Werte auf beiden Seiten
+// tatsächlich vorhanden UND exakt gleich sind - sonst würden z.B. zwei
+// verschiedene, noch komplett ungetestete Fohlen (überall null) fälschlich
+// als Dopplung gelten.
+function statsMatch(a, b) {
+  return ['gp', 'ext', 'extPercent', 'int'].every((k) => a[k] != null && a[k] === b[k]);
+}
+
+let duplicateCheckResolve = null;
+function wireDuplicateCheckModal() {
+  document.getElementById('duplicate-check-cancel').addEventListener('click', () => {
+    document.getElementById('duplicate-check-modal').hidden = true;
+    duplicateCheckResolve?.(false);
+  });
+  document.getElementById('duplicate-check-confirm').addEventListener('click', () => {
+    document.getElementById('duplicate-check-modal').hidden = true;
+    duplicateCheckResolve?.(true);
+  });
+}
+
+// Zeigt die Ja/Nein-Nachfrage samt Gegenüberstellung Name/Besitzer/ID/
+// GP/Ext/Ext%/Int von neuem und bereits vorhandenem Datensatz - liefert
+// true (dasselbe Pferd -> bestehenden Datensatz ergänzen) oder false
+// (anderes Pferd -> normal neu anlegen).
+function askIsDuplicateHorse(reasonParts, neu, alt) {
+  document.getElementById('duplicate-check-reason').textContent =
+    `Übereinstimmung: ${reasonParts.join(', ')}.`;
+  const rows = [
+    ['Name', neu.name, alt.name],
+    ['Besitzer', neu.owner, alt.owner],
+    ['ID', neu.external_id, alt.external_id],
+    ['GP', neu.gp, alt.gp],
+    ['Ext', neu.ext != null ? neu.ext.toFixed(2) : null, alt.ext != null ? alt.ext.toFixed(2) : null],
+    ['Ext%', neu.extPercent != null ? neu.extPercent + '%' : null, alt.extPercent != null ? alt.extPercent + '%' : null],
+    ['Int', neu.int != null ? neu.int.toFixed(2) : null, alt.int != null ? alt.int.toFixed(2) : null],
+  ];
+  document.getElementById('duplicate-check-body').innerHTML = rows.map(([label, a, b]) =>
+    `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(a ?? '-')}</td><td>${escapeHtml(b ?? '-')}</td></tr>`
+  ).join('');
+  document.getElementById('duplicate-check-modal').hidden = false;
+  return new Promise((resolve) => { duplicateCheckResolve = resolve; });
+}
+
 async function performSave(formData, payload, session) {
   const errorEl = document.getElementById('form-error');
 
@@ -367,6 +424,51 @@ async function performSave(formData, payload, session) {
       // vorbefüllt, ein leeres Feld dort also eine bewusste Änderung.
       for (const key of Object.keys(payload)) {
         payload[key] = mergeFieldValue(key, existing[key], payload[key]);
+      }
+    } else {
+      // Kein exakter Namenstreffer - trotzdem prüfen, ob es sich um
+      // dasselbe Pferd unter anderem Namen handeln könnte (z.B. ein
+      // Fohlen, das zuerst automatisch als "Fohlen_Mutter X Vater"
+      // angelegt wurde und jetzt unter seinem echten Namen erneut
+      // eingetragen wird): gleiche Spiel-ID oder identische GP/Ext/Ext%/
+      // Int-Werte. Anders als beim exakten Namenstreffer NICHT still
+      // aktualisieren, sondern erst nachfragen (siehe askIsDuplicateHorse).
+      const newStats = quickStatsOf(payload);
+      const { data: candidates, error: statsLookupError } = await supabaseClient
+        .from('horses')
+        .select('id, name, owner, external_id, tournament_potential, exterior_descriptive, exterior_genetics, temperament');
+      if (statsLookupError) {
+        errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + statsLookupError.message;
+        return;
+      }
+      let candidate = null;
+      const reasonParts = [];
+      if (payload.external_id) {
+        candidate = (candidates || []).find((h) => h.external_id === payload.external_id) || null;
+        if (candidate) reasonParts.push('gleiche ID');
+      }
+      if (!candidate) {
+        candidate = (candidates || []).find((h) => statsMatch(newStats, quickStatsOf(h))) || null;
+        if (candidate) reasonParts.push('GP, Ext, Ext% und Int identisch');
+      } else if (statsMatch(newStats, quickStatsOf(candidate))) {
+        reasonParts.push('GP, Ext, Ext% und Int identisch');
+      }
+
+      if (candidate) {
+        const { data: fullCandidate } = await supabaseClient.from('horses').select('*').eq('id', candidate.id).maybeSingle();
+        if (fullCandidate) {
+          const isSame = await askIsDuplicateHorse(
+            reasonParts,
+            { name: formData.name, owner: formData.owner, external_id: formData.external_id, ...newStats },
+            { name: fullCandidate.name, owner: fullCandidate.owner, external_id: fullCandidate.external_id, ...quickStatsOf(fullCandidate) },
+          );
+          if (isSame) {
+            targetId = fullCandidate.id;
+            for (const key of Object.keys(payload)) {
+              payload[key] = mergeFieldValue(key, fullCandidate[key], payload[key]);
+            }
+          }
+        }
       }
     }
   }

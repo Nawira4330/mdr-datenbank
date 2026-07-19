@@ -143,6 +143,24 @@
         </div>
       </div>
     </div>
+
+    <div id="duplicate-check-modal" class="modal-overlay" hidden>
+      <div class="modal-box" style="max-width: 560px;">
+        <h2>Möglicherweise bereits vorhanden</h2>
+        <p id="duplicate-check-reason" class="small muted"></p>
+        <div class="table-wrap">
+          <table class="detail-table">
+            <thead><tr><th></th><th>Neu (jetzt eingegeben)</th><th>Bereits vorhanden</th></tr></thead>
+            <tbody id="duplicate-check-body"></tbody>
+          </table>
+        </div>
+        <p class="small muted">Handelt es sich um dasselbe Pferd?</p>
+        <div class="modal-actions">
+          <button type="button" id="duplicate-check-cancel" class="secondary">Nein, neu anlegen</button>
+          <button type="button" id="duplicate-check-confirm">Ja, Datensatz ergänzen</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="js/config.js"></script>
