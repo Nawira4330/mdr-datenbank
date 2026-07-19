@@ -348,6 +348,13 @@ tr:hover td { background: rgba(107, 157, 0, 0.05); }
 td.actions-cell .btn, td.actions-cell button { margin-right: 0.4rem; }
 td.actions-cell .btn:last-child, td.actions-cell button:last-child { margin-right: 0; }
 
+/* Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen", siehe list.js/cmpClass) -
+   grün über, rot unter der gewählten Vergleichsbasis. */
+td.cmp-above { background: rgba(107, 157, 0, 0.16); }
+td.cmp-above, td.cmp-above a { color: var(--success); font-weight: 600; }
+td.cmp-below { background: rgba(200, 65, 73, 0.14); }
+td.cmp-below, td.cmp-below a { color: var(--danger); font-weight: 600; }
+
 td.keep-foal-cell { white-space: nowrap; }
 .keep-foal-btn {
   padding: 0.25rem 0.55rem;

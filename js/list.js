@@ -8,6 +8,10 @@ let pendingDeleteIds = [];
 // applyClientFilters), nicht bei "Alle (auch außerhalb meiner Auswahl)"
 // oder einer konkret gewählten einzelnen Rasse.
 let preferredBreeds = null;
+// Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen", siehe wireCompareAvg) -
+// null = aus, sonst {gp, ext, extPercent, int} als Vergleichsbasis für
+// die Grün/Rot-Markierung in rowHtml.
+let compareBaseline = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -32,6 +36,7 @@ async function init() {
   wireCheckDropdowns();
   wireDeleteModal();
   wireExportCsv();
+  wireCompareAvg();
   showFlashBanner();
   await loadPreferredBreeds(session);
   await showMissingDataNotice(session);
@@ -123,6 +128,16 @@ async function populateFilterOptions() {
   breeds.delete('American Paint Horse');
   breeds.delete('Rasselos');
   fillSelect('#f-breed', [...breeds].sort());
+
+  // Vergleichsbasis-Auswahl für den Ø-Vergleich (siehe wireCompareAvg) -
+  // eigene Selects, unabhängig von den obigen Übersichts-Filtern, da sie
+  // festlegen, welche Pferde in die Durchschnittsberechnung einfließen,
+  // nicht welche in der Tabelle angezeigt werden.
+  const allBreeds = new Set(breeds);
+  allBreeds.add('American Paint Horse');
+  allBreeds.add('Rasselos');
+  fillSelect('#cmp-breed', [...allBreeds].sort());
+  fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -218,6 +233,87 @@ function computeDerived(h) {
     extPercent: h.exterior_genetics?.overall?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
+}
+
+// --- Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen") ---
+
+function wireCompareAvg() {
+  const toggle = document.querySelector('#compare-avg-toggle');
+  const panel = document.querySelector('#compare-avg-panel');
+  const recompute = async () => {
+    if (!toggle.checked) return;
+    compareBaseline = await computeCompareBaseline();
+    await loadHorses();
+  };
+  toggle.addEventListener('change', async () => {
+    panel.hidden = !toggle.checked;
+    compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
+    await loadHorses();
+  });
+  ['#cmp-breed', '#cmp-zzl', '#cmp-owner'].forEach((sel) => {
+    document.querySelector(sel).addEventListener('change', recompute);
+  });
+}
+
+// Durchschnitt von GP/Ext/Ext%/Int über die per Rasse/ZZL/Besitzer
+// eingeschränkte Vergleichsbasis (eigene Auswahl, unabhängig von den
+// Übersichts-Filtern) - wie durchschnitt.js, aber nur die vier hier
+// gebrauchten Werte statt der vollen Ergebnis-Tabelle.
+async function computeCompareBaseline() {
+  let q = supabaseClient.from('horses').select('tournament_potential, exterior_descriptive, exterior_genetics, temperament');
+  const breed = document.querySelector('#cmp-breed').value;
+  const zzl = document.querySelector('#cmp-zzl').value;
+  const owner = document.querySelector('#cmp-owner').value;
+  if (breed === 'Rasselos') q = q.or('breed.eq.Rasselos,breed.is.null');
+  else if (breed) q = q.eq('breed', breed);
+  if (zzl === 'true') q = q.eq('breeding_allowed', true);
+  else if (zzl === 'false') q = q.or('breeding_allowed.eq.false,breeding_allowed.is.null');
+  if (owner) q = q.eq('owner', owner);
+
+  const { data, error } = await q;
+  if (error || !data || !data.length) return null;
+
+  const avg = (values) => {
+    const nums = values.filter((v) => v != null && !Number.isNaN(v));
+    return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+  };
+  return {
+    gp: avg(data.map((h) => {
+      const raw = h.tournament_potential?.['Gesamtpotenzial'];
+      return raw != null && raw !== '' ? Number(raw) : null;
+    })),
+    ext: avg(data.map((h) => averageScore(h.exterior_descriptive, scoreExteriorTerm))),
+    extPercent: avg(data.map((h) => h.exterior_genetics?.overall?.percent ?? null)),
+    int: avg(data.map((h) => averageScore(h.temperament, scoreTemperamentTerm))),
+  };
+}
+
+// Klasse für eine einzelne Werte-Zelle (GP/Ext/Ext%/Int) - grün über,
+// rot unter der Vergleichsbasis, nichts bei fehlendem Wert auf einer der
+// beiden Seiten.
+function cmpClass(value, baseline) {
+  if (!compareBaseline || value == null || baseline == null) return '';
+  if (value > baseline) return 'cmp-above';
+  if (value < baseline) return 'cmp-below';
+  return '';
+}
+
+// Klasse für die Name-Zelle - Mehrheitsentscheid über die vier Werte
+// (mehr darüber als darunter -> grün, umgekehrt rot, sonst nichts).
+function overallCmpClass(d) {
+  if (!compareBaseline) return '';
+  const pairs = [
+    [d.gp, compareBaseline.gp],
+    [d.extAvg, compareBaseline.ext],
+    [d.extPercent, compareBaseline.extPercent],
+    [d.intAvg, compareBaseline.int],
+  ].filter(([v, b]) => v != null && b != null);
+  if (!pairs.length) return '';
+  const above = pairs.filter(([v, b]) => v > b).length;
+  const below = pairs.filter(([v, b]) => v < b).length;
+  if (above > below) return 'cmp-above';
+  if (below > above) return 'cmp-below';
+  return '';
 }
 
 // Ob ein Locus sein dominantes/sichtbares Allel trägt, nach der vom Nutzer
@@ -465,19 +561,20 @@ function rowHtml(h) {
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
+  const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
     <td data-label="Link">${linkCell}</td>
-    <td data-label="Name" class="name-cell">${nameCell}</td>
+    <td data-label="Name" class="${nameCls}">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
-    <td data-label="GP">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td data-label="Ext">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td data-label="Ext%">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td data-label="Int">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
+    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
+    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
+    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
