@@ -310,6 +310,18 @@ nichts, wird direkt gespeichert. Der ursprünglich eingefügte Spieltext
 selbst wird dabei **nicht** dauerhaft gespeichert – nur das daraus
 erkannte Ergebnis.
 
+**Dopplungs-Check beim Anlegen**: Trägst du ein vermeintlich neues Pferd
+ein und es gibt bereits einen Datensatz mit **gleicher Spiel-ID** oder
+**identischem GP, Ext, Ext% und Int**, öffnet sich vor dem Speichern ein
+Popup mit einer Gegenüberstellung (Name/Besitzer/ID/Werte) von neuem und
+bereits vorhandenem Datensatz, inklusive Angabe, welche Daten
+übereinstimmen. „Ja, Datensatz ergänzen“ aktualisiert das bereits
+vorhandene Pferd (auch der Name wird übernommen) statt es doppelt
+anzulegen – nützlich z.B. bei einem Fohlen, das zuerst automatisch als
+„Fohlen_Mutter X Vater“ angelegt und jetzt unter seinem echten Namen
+erneut eingetragen wird. „Nein, neu anlegen“ legt wie gewohnt einen
+neuen, separaten Datensatz an.
+
 ---
 
 ## 5. Pferd ansehen
