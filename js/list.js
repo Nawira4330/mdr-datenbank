@@ -125,8 +125,10 @@ async function populateFilterOptions() {
   // vorhandenen "colors"-Labels abgeleitet.
   populateCheckDropdown('f-genetik-drop', [...locusLabels].sort(), {
     extra: [
-      { value: '__pearl__', label: 'Pearl (auch Träger)' },
-      { value: '__flaxen__', label: 'Flaxen (auch Träger)' },
+      { value: '__pearl__', label: 'pl – Pearl (mind. 1x)' },
+      { value: '__pearl_doubled__', label: 'plpl – Pearl (reinerbig)' },
+      { value: '__flaxen__', label: 'fl – Flaxen (mind. 1x)' },
+      { value: '__flaxen_doubled__', label: 'flfl – Flaxen (reinerbig)' },
       { value: '__kit_sb__', label: 'Sabino' },
       { value: '__kit_rn__', label: 'Roan' },
       { value: '__kit_to__', label: 'Tobiano' },
@@ -227,12 +229,28 @@ function hasPearlGene(row) {
   return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
 }
 
+// Wie hasPearlGene, aber nur reinerbig ("plpl") statt schon bei einer
+// einzelnen Kopie - für die separate "plpl"-Filteroption.
+function hasPearlGeneDoubled(row) {
+  const entry = (row.colors || []).find((c) => c.label === 'Cream');
+  if (entry && !isUntestedLocusValue(entry.value) && /^plpl$/i.test(entry.value)) return true;
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  return genes.some((g) => g.locus === 'Cream' && /^plpl$/i.test(g.alleles));
+}
+
 // Flaxen wird vom Spiel nicht als eigener Locus getestet (siehe
 // parser.js) - daher ausschließlich aus Fellfarbe/Notiz/Name ableitbar,
 // sowohl als Träger (fl) als auch reinerbig (flfl).
 function hasFlaxenGene(row) {
   const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
   return genes.some((g) => g.locus === 'Flaxen');
+}
+
+// Wie hasFlaxenGene, aber nur reinerbig ("flfl") - für die separate
+// "flfl"-Filteroption.
+function hasFlaxenGeneDoubled(row) {
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  return genes.some((g) => g.locus === 'Flaxen' && /^flfl$/i.test(g.alleles));
 }
 
 // KIT ist ein Sammel-Locus für mehrere unabhängige Merkmale (Tobiano/
@@ -248,7 +266,9 @@ function hasKitTrait(row, code) {
 
 function matchesGenetikLocus(row, locusName) {
   if (locusName === '__pearl__') return hasPearlGene(row);
+  if (locusName === '__pearl_doubled__') return hasPearlGeneDoubled(row);
   if (locusName === '__flaxen__') return hasFlaxenGene(row);
+  if (locusName === '__flaxen_doubled__') return hasFlaxenGeneDoubled(row);
   if (locusName === '__kit_sb__') return hasKitTrait(row, 'sb');
   if (locusName === '__kit_rn__') return hasKitTrait(row, 'rn');
   if (locusName === '__kit_to__') return hasKitTrait(row, 'to');
