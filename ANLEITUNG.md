@@ -14,8 +14,9 @@ es gedacht ist und *wann* du es brauchst.
 6. [Verpaarungs-Log](#6-verpaarungs-log)
 7. [Verwaltung](#7-verwaltung)
 8. [Durchschnittsrechner](#8-durchschnittsrechner)
-9. [Zucht-/Turnierplaner](#9-zucht-turnierplaner)
-10. [Häufige Fragen](#10-häufige-fragen)
+9. [Einstellungen](#9-einstellungen)
+10. [Zucht-/Turnierplaner](#10-zucht-turnierplaner)
+11. [Häufige Fragen](#11-häufige-fragen)
 
 ---
 
@@ -66,9 +67,11 @@ Seite alle):
 - **💞 Verpaarungs-Log** – öffnet das Verpaarungs-Log (siehe
   [Abschnitt 6](#6-verpaarungs-log)).
 - **Zucht-/Turnierplaner ↗** – öffnet unser separates Zucht-Planungs-Tool
-  in einem neuen Tab (siehe [Abschnitt 9](#9-zucht-turnierplaner)).
+  in einem neuen Tab (siehe [Abschnitt 10](#10-zucht-turnierplaner)).
 - **📊 Durchschnitt** – öffnet den Durchschnittsrechner (siehe
   [Abschnitt 8](#8-durchschnittsrechner)).
+- **⚙️ Einstellungen** – persönliche Einstellungen (siehe
+  [Abschnitt 9](#9-einstellungen)).
 - **📖 Anleitung** – diese Seite hier.
 - **Verwaltung** – nur sichtbar, wenn du Verwaltungszugriff hast (siehe
   [Abschnitt 7](#7-verwaltung)).
@@ -111,7 +114,10 @@ einmal.
   Rolle.
 - **Besitzer**, **Geschlecht**, **Rasse** – Auswahllisten mit den
   tatsächlich vorkommenden Werten, standardmäßig auf „Alle“ gestellt;
-  „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse.
+  „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse. Hast du unter
+  [Einstellungen](#9-einstellungen) bevorzugte Rassen ausgewählt, zeigt
+  „Alle“ nur noch diese – „Alle (auch außerhalb meiner Auswahl)“ hebt
+  das für den Moment wieder auf.
 - **ZZL** (Zuchtzulassung) – „Ja“ zeigt nur zugelassene Pferde; „Nein“
   zeigt sowohl ausdrücklich nicht zugelassene als auch noch nicht
   entschiedene Pferde.
@@ -432,7 +438,26 @@ aus allen). „Zurücksetzen“ leert alle Filter wieder.
 
 ---
 
-## 9. Zucht-/Turnierplaner
+## 9. Einstellungen
+
+Persönliche Einstellungen, die nur für dein eigenes Konto gelten.
+
+**Sichtbare Rassen in der Übersicht**: Wähle per Kästchen aus, welche
+Rassen dir in der Übersicht ([Abschnitt 3](#3-übersicht-pferdeliste))
+standardmäßig angezeigt werden sollen. Keine Auswahl bedeutet „alle
+Rassen“ (Standard). „Speichern“ übernimmt die Auswahl sofort.
+
+Diese Auswahl wirkt sich **nur auf die Standardeinstellung „Alle“** des
+Rasse-Filters in der Übersicht aus – wählst du dort gezielt eine
+bestimmte Rasse (auch eine, die nicht in deiner Auswahl steht) oder die
+Option „Alle (auch außerhalb meiner Auswahl)“, wird deine Einstellung
+für diesen Moment übersteuert. Andere Nutzer*innen sind davon nicht
+betroffen; die Pferde selbst werden dadurch nicht verändert oder
+gelöscht, nur deine eigene Ansicht.
+
+---
+
+## 10. Zucht-/Turnierplaner
 
 Dieser Link führt zu unserem separaten Zucht-Planungs-Tool. Es greift
 auf dieselbe Pferdedatenbank zu, ist aber ein eigenständiges Werkzeug mit
@@ -440,7 +465,7 @@ eigener Bedienung – diese Anleitung deckt es nicht mit ab.
 
 ---
 
-## 10. Häufige Fragen
+## 11. Häufige Fragen
 
 **Warum sehe ich bei einem Pferd andere Werte als im Spiel?**
 GP, Ext, Ext% und Int werden nicht 1:1 aus dem Spiel übernommen, sondern

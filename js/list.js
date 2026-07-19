@@ -2,6 +2,12 @@ let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
 let lastRenderedRows = [];
 let pendingDeleteIds = [];
+// Bevorzugte Rassen aus den persönlichen Einstellungen (siehe
+// einstellungen.html) - null/leer = keine Einschränkung. Nur bei der
+// Standardauswahl "Alle" im Rasse-Filter wirksam (siehe
+// applyClientFilters), nicht bei "Alle (auch außerhalb meiner Auswahl)"
+// oder einer konkret gewählten einzelnen Rasse.
+let preferredBreeds = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -27,9 +33,22 @@ async function init() {
   wireDeleteModal();
   wireExportCsv();
   showFlashBanner();
+  await loadPreferredBreeds(session);
   await showMissingDataNotice(session);
   await populateFilterOptions();
   await loadHorses();
+}
+
+// Lädt die in einstellungen.html gewählten bevorzugten Rassen für das
+// eingeloggte Konto - fehlt die Zeile (noch nie gespeichert) oder ist sie
+// leer, bedeutet das "keine Einschränkung" (siehe migration_017).
+async function loadPreferredBreeds(session) {
+  const { data, error } = await supabaseClient
+    .from('user_settings')
+    .select('preferred_breeds')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -160,8 +179,13 @@ function buildQuery() {
   if (gender) q = q.eq('gender', gender);
   // "Rasselos" deckt zusätzlich Pferde ohne jeglichen Rasse-Eintrag mit ab
   // (null) - beides bedeutet praktisch dasselbe ("keine Rasse bekannt").
+  // "__unrestricted__" ("Alle (auch außerhalb meiner Auswahl)") und die
+  // Standardauswahl "" (Alle) bekommen serverseitig bewusst KEINE
+  // Rasse-Einschränkung - die bevorzugten Rassen aus den Einstellungen
+  // werden stattdessen nur bei "" clientseitig angewendet (siehe
+  // applyClientFilters), da sie keine eigene SQL-Bedingung sind.
   if (breed === 'Rasselos') q = q.or('breed.eq.Rasselos,breed.is.null');
-  else if (breed) q = q.eq('breed', breed);
+  else if (breed && breed !== '__unrestricted__') q = q.eq('breed', breed);
   // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
   // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,
   // zeigt sich in der Tabelle als "-") mit ein, da beides in der Praxis
@@ -320,6 +344,7 @@ function compareValue(value, op, targetStr) {
 }
 
 function applyClientFilters(rows) {
+  const breed = document.querySelector('#f-breed').value;
   const genetikSelected = getCheckDropdownSelected('f-genetik-drop');
   const ekhSelected = getCheckDropdownSelected('f-ekh-drop');
 
@@ -335,6 +360,14 @@ function applyClientFilters(rows) {
   return rows.filter((row) => {
     const d = computeDerived(row);
 
+    // Nur bei der Standardauswahl "Alle" (kein konkreter Rasse-Filter
+    // gewählt) wirken die bevorzugten Rassen aus den Einstellungen -
+    // "Alle (auch außerhalb meiner Auswahl)" (__unrestricted__) und eine
+    // konkret gewählte Rasse überstimmen sie bewusst.
+    if (breed === '' && preferredBreeds) {
+      const rowBreed = normalizeBreed(row.breed) || 'Rasselos';
+      if (!preferredBreeds.includes(rowBreed)) return false;
+    }
     if (genetikSelected.length && !genetikSelected.every((locus) => matchesGenetikLocus(row, locus))) return false;
     if (ekhSelected.length && !matchesEkh(row, ekhSelected)) return false;
     if (!compareValue(d.gp, gpOp, gpVal)) return false;
