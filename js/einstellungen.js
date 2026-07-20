@@ -34,26 +34,35 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds')
+    .select('preferred_breeds, verpaarung_enabled')
     .eq('user_id', currentUserId)
     .maybeSingle();
-  if (error || !data?.preferred_breeds?.length) return;
-  const selected = new Set(data.preferred_breeds);
-  document.querySelectorAll('#breed-checkboxes input[type="checkbox"]').forEach((cb) => {
-    cb.checked = selected.has(cb.value);
-  });
+  if (error || !data) return;
+  if (data.preferred_breeds?.length) {
+    const selected = new Set(data.preferred_breeds);
+    document.querySelectorAll('#breed-checkboxes input[type="checkbox"]').forEach((cb) => {
+      cb.checked = selected.has(cb.value);
+    });
+  }
+  // "verpaarung_enabled" fehlt in der Zeile nur, wenn noch nie gespeichert
+  // wurde (Spalte ist NOT NULL DEFAULT true) - dann bleibt die Checkbox
+  // bei ihrem HTML-Standard (checked).
+  if (data.verpaarung_enabled !== undefined && data.verpaarung_enabled !== null) {
+    document.getElementById('verpaarung-enabled-checkbox').checked = data.verpaarung_enabled;
+  }
 }
 
 async function onSave() {
   const statusEl = document.getElementById('settings-status');
   statusEl.textContent = 'Speichere…';
   const selected = [...document.querySelectorAll('#breed-checkboxes input[type="checkbox"]:checked')].map((cb) => cb.value);
-  // Leere Auswahl als NULL statt leerem Array speichern - beides bedeutet
-  // "keine Einschränkung", NULL ist aber eindeutiger als Zustand "bewusst
-  // nichts ausgewählt" vs. "Feld nie gesetzt".
+  const verpaarungEnabled = document.getElementById('verpaarung-enabled-checkbox').checked;
+  // Leere Rassen-Auswahl als NULL statt leerem Array speichern - beides
+  // bedeutet "keine Einschränkung", NULL ist aber eindeutiger als Zustand
+  // "bewusst nichts ausgewählt" vs. "Feld nie gesetzt".
   const { error } = await supabaseClient
     .from('user_settings')
-    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null });
+    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null, verpaarung_enabled: verpaarungEnabled });
   statusEl.textContent = error ? 'Speichern fehlgeschlagen: ' + error.message : 'Gespeichert.';
 }
 

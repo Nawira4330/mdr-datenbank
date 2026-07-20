@@ -319,6 +319,9 @@ create table if not exists public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
   -- NULL oder leeres Array = keine Einschraenkung (alle Rassen sichtbar).
   preferred_breeds text[],
+  -- Blendet den "Verpaarungs-Log"-Menuepunkt fuer dieses Konto aus, wenn
+  -- false (siehe migration_018_verpaarung_enabled.sql).
+  verpaarung_enabled boolean not null default true,
   updated_at timestamptz not null default now()
 );
 

@@ -38,22 +38,29 @@ async function init() {
   wireExportCsv();
   wireCompareAvg();
   showFlashBanner();
-  await loadPreferredBreeds(session);
+  await loadUserSettings(session);
   await showMissingDataNotice(session);
   await populateFilterOptions();
   await loadHorses();
 }
 
-// Lädt die in einstellungen.html gewählten bevorzugten Rassen für das
-// eingeloggte Konto - fehlt die Zeile (noch nie gespeichert) oder ist sie
-// leer, bedeutet das "keine Einschränkung" (siehe migration_017).
-async function loadPreferredBreeds(session) {
+// Lädt die in einstellungen.html gewählten persönlichen Einstellungen für
+// das eingeloggte Konto (siehe migration_017/018) und wendet sie an:
+// bevorzugte Rassen (preferredBreeds, siehe applyClientFilters) sowie
+// den "Verpaarungs-Log"-Menüpunkt aus-/einblenden. Fehlt die Zeile (noch
+// nie gespeichert), gelten beide Standardwerte (keine Einschränkung bzw.
+// Menüpunkt sichtbar).
+async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds')
+    .select('preferred_breeds, verpaarung_enabled')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
+  const verpaarungLink = document.querySelector('#verpaarung-link');
+  if (verpaarungLink && !error && data && data.verpaarung_enabled === false) {
+    verpaarungLink.hidden = true;
+  }
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden

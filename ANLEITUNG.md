@@ -465,6 +465,13 @@ für diesen Moment übersteuert. Andere Nutzer*innen sind davon nicht
 betroffen; die Pferde selbst werden dadurch nicht verändert oder
 gelöscht, nur deine eigene Ansicht.
 
+**💞 Verpaarungs-Log im Menü anzeigen**: Deaktivierst du diese Kästchen,
+verschwindet der Menüpunkt „💞 Verpaarungs-Log“ in der Kopfzeile nur für
+dein eigenes Konto – das Verpaarungs-Log selbst und alle darin
+enthaltenen Daten bleiben unverändert bestehen und sind über die Adresse
+`verpaarung.html` weiterhin direkt erreichbar, falls du es doch einmal
+brauchst.
+
 ---
 
 ## 10. Zucht-/Turnierplaner
