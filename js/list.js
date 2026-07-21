@@ -126,24 +126,28 @@ async function populateFilterOptions() {
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
-  // "American Paint Horse" und "Rasselos" stehen bereits fest im HTML
-  // (Standardauswahl bzw. feste Option) - hier nur um weitere tatsächlich
-  // vorkommende Rassen ergänzt. Kürzel wie "APH" werden zusätzlich auf den
-  // vollen Namen normalisiert (siehe normalizeBreed), falls noch nicht
-  // normalisierte Altdaten vorkommen.
+  // Kürzel wie "APH" werden zusätzlich auf den vollen Namen normalisiert
+  // (siehe normalizeBreed), falls noch nicht normalisierte Altdaten
+  // vorkommen. "Rasselos" gehört fest dazu, auch wenn keine Zeile den
+  // Wert wörtlich trägt (siehe buildQuery: deckt zusätzlich breed=null ab).
   const breeds = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
-  breeds.delete('American Paint Horse');
-  breeds.delete('Rasselos');
-  fillSelect('#f-breed', [...breeds].sort());
+  breeds.add('American Paint Horse');
+  breeds.add('Rasselos');
+  // Ist in den persönlichen Einstellungen (einstellungen.html) eine
+  // Rassen-Auswahl getroffen, zeigt der Filter selbst nur noch diese
+  // Rassen als Option an (statt aller vorkommenden) - "Alle (auch
+  // außerhalb meiner Auswahl)" bleibt als einzige Möglichkeit, Pferde
+  // außerhalb der Auswahl zu sehen.
+  const breedFilterOptions = preferredBreeds ? [...breeds].filter((b) => preferredBreeds.includes(b)) : [...breeds];
+  fillSelect('#f-breed', breedFilterOptions.sort());
 
   // Vergleichsbasis-Auswahl für den Ø-Vergleich (siehe wireCompareAvg) -
   // eigene Selects, unabhängig von den obigen Übersichts-Filtern, da sie
   // festlegen, welche Pferde in die Durchschnittsberechnung einfließen,
-  // nicht welche in der Tabelle angezeigt werden.
-  const allBreeds = new Set(breeds);
-  allBreeds.add('American Paint Horse');
-  allBreeds.add('Rasselos');
-  fillSelect('#cmp-breed', [...allBreeds].sort());
+  // nicht welche in der Tabelle angezeigt werden. Bewusst NICHT auf die
+  // bevorzugten Rassen eingeschränkt, da sie hier eine bewusste
+  // Vergleichsbasis festlegen, nicht die Standardanzeige.
+  fillSelect('#cmp-breed', [...breeds].sort());
   fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
 
   const diseaseLabels = new Set();

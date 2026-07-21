@@ -115,9 +115,10 @@ einmal.
 - **Besitzer**, **Geschlecht**, **Rasse** – Auswahllisten mit den
   tatsächlich vorkommenden Werten, standardmäßig auf „Alle“ gestellt;
   „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse. Hast du unter
-  [Einstellungen](#9-einstellungen) bevorzugte Rassen ausgewählt, zeigt
-  „Alle“ nur noch diese – „Alle (auch außerhalb meiner Auswahl)“ hebt
-  das für den Moment wieder auf.
+  [Einstellungen](#9-einstellungen) bevorzugte Rassen ausgewählt, listet
+  der Rasse-Filter nur noch diese als Optionen auf – „Alle (auch
+  außerhalb meiner Auswahl)“ hebt das für den Moment wieder auf und zeigt
+  alle Pferde unabhängig von deiner Auswahl.
 - **ZZL** (Zuchtzulassung) – „Ja“ zeigt nur zugelassene Pferde; „Nein“
   zeigt sowohl ausdrücklich nicht zugelassene als auch noch nicht
   entschiedene Pferde.
@@ -466,13 +467,13 @@ Rassen dir in der Übersicht ([Abschnitt 3](#3-übersicht-pferdeliste))
 standardmäßig angezeigt werden sollen. Keine Auswahl bedeutet „alle
 Rassen“ (Standard). „Speichern“ übernimmt die Auswahl sofort.
 
-Diese Auswahl wirkt sich **nur auf die Standardeinstellung „Alle“** des
-Rasse-Filters in der Übersicht aus – wählst du dort gezielt eine
-bestimmte Rasse (auch eine, die nicht in deiner Auswahl steht) oder die
-Option „Alle (auch außerhalb meiner Auswahl)“, wird deine Einstellung
-für diesen Moment übersteuert. Andere Nutzer*innen sind davon nicht
-betroffen; die Pferde selbst werden dadurch nicht verändert oder
-gelöscht, nur deine eigene Ansicht.
+Diese Auswahl wirkt sich auch auf den Rasse-Filter in der Übersicht
+selbst aus: dort stehen dann nur noch die hier ausgewählten Rassen als
+Filteroptionen zur Verfügung. Über die Option „Alle (auch außerhalb
+meiner Auswahl)“ lässt sich das für den Moment übersteuern und alle
+Pferde unabhängig von deiner Auswahl anzeigen. Andere Nutzer*innen sind
+davon nicht betroffen; die Pferde selbst werden dadurch nicht verändert
+oder gelöscht, nur deine eigene Ansicht.
 
 **💞 Verpaarungs-Log im Menü anzeigen**: Deaktivierst du diese Kästchen,
 verschwindet der Menüpunkt „💞 Verpaarungs-Log“ in der Kopfzeile nur für

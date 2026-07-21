@@ -44,6 +44,12 @@
 
 * { box-sizing: border-box; }
 
+/* Verkleinert die gesamte Seite (alle Einheiten, auch px) auf 80% - wirkt
+   wie der Browser-Zoom, im Gegensatz zu "html { font-size: 80% }" (das nur
+   rem-basierte Größen träfe) oder "transform: scale()" (das Layoutgröße
+   und Scrollbars nicht mitskaliert). */
+html { zoom: 0.8; }
+
 /* Ohne diese Regel gewinnt z.B. ".btn { display: inline-block }" gegen das
    Browser-Standardverhalten von [hidden], da beide dieselbe Spezifitaet
    haben und Autoren-CSS dabei die User-Agent-Regel schlaegt - Elemente mit
