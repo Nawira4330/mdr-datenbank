@@ -295,31 +295,36 @@ async function computeCompareBaseline() {
   };
 }
 
-// Klasse für eine einzelne Werte-Zelle (GP/Ext/Ext%/Int) - grün über,
-// rot unter der Vergleichsbasis, nichts bei fehlendem Wert auf einer der
-// beiden Seiten.
-function cmpClass(value, baseline) {
+// Klasse für eine einzelne Werte-Zelle (GP/Ext/Ext%/Int) - grün, wenn der
+// Wert im Vergleich zur Basis "besser" ist, rot wenn "schlechter". Bei GP
+// und Ext% ist ein höherer Wert besser; bei Ext und Int ist es dagegen ein
+// NIEDRIGERER Wert (Skala 1=exzellent...4/5=schlecht, siehe
+// scoreExteriorTerm/scoreTemperamentTerm) - daher "lowerIsBetter" je
+// Aufruf mitgeben. Nichts bei fehlendem Wert auf einer der beiden Seiten.
+function cmpClass(value, baseline, lowerIsBetter) {
   if (!compareBaseline || value == null || baseline == null) return '';
-  if (value > baseline) return 'cmp-above';
-  if (value < baseline) return 'cmp-below';
+  const better = lowerIsBetter ? value < baseline : value > baseline;
+  const worse = lowerIsBetter ? value > baseline : value < baseline;
+  if (better) return 'cmp-good';
+  if (worse) return 'cmp-bad';
   return '';
 }
 
 // Klasse für die Name-Zelle - Mehrheitsentscheid über die vier Werte
-// (mehr darüber als darunter -> grün, umgekehrt rot, sonst nichts).
+// (mehr "besser" als "schlechter" -> grün, umgekehrt rot, sonst nichts).
 function overallCmpClass(d) {
   if (!compareBaseline) return '';
   const pairs = [
-    [d.gp, compareBaseline.gp],
-    [d.extAvg, compareBaseline.ext],
-    [d.extPercent, compareBaseline.extPercent],
-    [d.intAvg, compareBaseline.int],
+    [d.gp, compareBaseline.gp, false],
+    [d.extAvg, compareBaseline.ext, true],
+    [d.extPercent, compareBaseline.extPercent, false],
+    [d.intAvg, compareBaseline.int, true],
   ].filter(([v, b]) => v != null && b != null);
   if (!pairs.length) return '';
-  const above = pairs.filter(([v, b]) => v > b).length;
-  const below = pairs.filter(([v, b]) => v < b).length;
-  if (above > below) return 'cmp-above';
-  if (below > above) return 'cmp-below';
+  const above = pairs.filter(([v, b, lowerIsBetter]) => (lowerIsBetter ? v < b : v > b)).length;
+  const below = pairs.filter(([v, b, lowerIsBetter]) => (lowerIsBetter ? v > b : v < b)).length;
+  if (above > below) return 'cmp-good';
+  if (below > above) return 'cmp-bad';
   return '';
 }
 
@@ -578,10 +583,10 @@ function rowHtml(h) {
     <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
-    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
+    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
+    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
+    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>

@@ -349,11 +349,12 @@ td.actions-cell .btn, td.actions-cell button { margin-right: 0.4rem; }
 td.actions-cell .btn:last-child, td.actions-cell button:last-child { margin-right: 0; }
 
 /* Ø-Vergleich (Checkbox "Ø-Vergleich anzeigen", siehe list.js/cmpClass) -
-   grün über, rot unter der gewählten Vergleichsbasis. */
-td.cmp-above { background: rgba(107, 157, 0, 0.16); }
-td.cmp-above, td.cmp-above a { color: var(--success); font-weight: 600; }
-td.cmp-below { background: rgba(200, 65, 73, 0.14); }
-td.cmp-below, td.cmp-below a { color: var(--danger); font-weight: 600; }
+   grün = besser, rot = schlechter als die gewählte Vergleichsbasis (bei
+   GP/Ext% ist ein höherer Wert besser, bei Ext/Int ein niedrigerer). */
+td.cmp-good { background: rgba(107, 157, 0, 0.16); }
+td.cmp-good, td.cmp-good a { color: var(--success); font-weight: 600; }
+td.cmp-bad { background: rgba(200, 65, 73, 0.14); }
+td.cmp-bad, td.cmp-bad a { color: var(--danger); font-weight: 600; }
 
 td.keep-foal-cell { white-space: nowrap; }
 .keep-foal-btn {

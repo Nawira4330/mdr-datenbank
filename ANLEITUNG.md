@@ -165,10 +165,13 @@ Auswahl-Leiste) ist **endgültig** und lässt sich nicht rückgängig
 machen.
 
 **Ø-Vergleich anzeigen**: Die Checkbox unterhalb der Trefferanzahl
-markiert bei jedem Pferd die Spalten GP, Ext, Ext% und Int grün (über
-Durchschnitt) oder rot (unter Durchschnitt) – der Name wird ebenfalls
-eingefärbt, je nachdem, bei mehr Werten das Pferd über oder unter dem
-Durchschnitt liegt. Beim Anhaken erscheint ein zusätzliches
+markiert bei jedem Pferd die Spalten GP, Ext, Ext% und Int grün (besser
+als Durchschnitt) oder rot (schlechter) – der Name wird ebenfalls
+eingefärbt, je nachdem, bei mehr Werten das Pferd besser oder schlechter
+als der Durchschnitt abschneidet. Bei **GP** und **Ext%** ist ein
+höherer Wert besser (grün = darüber); bei **Ext** und **Int** ist es
+umgekehrt ein **niedrigerer** Wert (Skala 1 = exzellent … 4/5 =
+schlecht, grün = darunter). Beim Anhaken erscheint ein zusätzliches
 Dropdown-Menü mit **Rasse**, **ZZL** und **Besitzer** (Basis) – damit
 legst du fest, welche Pferde in die Durchschnittsberechnung einfließen
 (unabhängig davon, welche Pferde die Filter oben gerade anzeigen). Ein
