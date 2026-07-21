@@ -343,3 +343,22 @@ drop trigger if exists user_settings_set_updated_at on public.user_settings;
 create trigger user_settings_set_updated_at
 before update on public.user_settings
 for each row execute function public.set_updated_at();
+
+-- Storage-Bucket fuer per Zwischenablage eingefuegte Bilder (Bild-URL-Feld
+-- in horse.html/verpaarung.html, siehe js/horseForm.js) - siehe
+-- migration_019_horse_images_storage.sql. Hochladen bleibt eingeloggten
+-- Konten vorbehalten, Lesen ist oeffentlich (die resultierende URL muss
+-- z.B. im Discord-Bot ohne Login funktionieren, analog zu horses selbst).
+insert into storage.buckets (id, name, public)
+values ('horse-images', 'horse-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "horse_images_insert_authenticated" on storage.objects;
+create policy "horse_images_insert_authenticated" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'horse-images');
+
+drop policy if exists "horse_images_select_public" on storage.objects;
+create policy "horse_images_select_public" on storage.objects
+  for select to public
+  using (bucket_id = 'horse-images');

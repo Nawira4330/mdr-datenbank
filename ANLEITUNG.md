@@ -226,7 +226,9 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   aktualisiert** statt versehentlich ein zweites angelegt.
 - **ID** – eine frei wählbare Nummer zur eigenen Zuordnung. Trägst du
   hier die Spiel-ID ein, entsteht daraus automatisch der 🔗-Link zur
-  Pferdeseite im Spiel (in der Übersicht und auf der Ansichtsseite).
+  Pferdeseite im Spiel (in der Übersicht und auf der Ansichtsseite). Du
+  kannst hier auch die komplette Spiel-Adresse (die ganze URL) einfügen –
+  beim Speichern wird automatisch nur die Nummer daraus übernommen.
 - **Geschlecht**.
 - **Rasse** – wird beim Eintippen wie beim automatischen Auslesen
   automatisch ausgeschrieben (z.B. wird aus dem Kürzel „APH“
@@ -251,7 +253,11 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
 - **Verwaltung**: Besitzer.
 - **Papiere & Zucht**: Zuchtzulassung, HLP/SLP, ICO.
 - **Sonstiges**: Notizen (fließen ebenfalls in die automatische
-  Gen-Erkennung ein), Bild-URL.
+  Gen-Erkennung ein), Bild-URL – hier kannst du entweder eine bestehende
+  Bild-Adresse eintippen, oder direkt ein Bild einfügen (z.B. per
+  Screenshot oder „Bild kopieren“ aus dem Browser, dann Strg+V in das
+  Feld) – es wird dann automatisch hochgeladen und die entstehende
+  Adresse ins Feld eingetragen.
 
 ### 4.4 Erkannte Daten ansehen
 

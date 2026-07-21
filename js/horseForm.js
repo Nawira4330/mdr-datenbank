@@ -50,6 +50,41 @@ document.addEventListener('click', (e) => {
   renderDetailTables(extraData);
 });
 
+// Erlaubt, ein Bild direkt aus der Zwischenablage einzufügen (Screenshot
+// oder per Rechtsklick "Bild kopieren" aus dem Browser) statt nur eine
+// externe Bild-URL einzutippen - wird in den Supabase-Storage-Bucket
+// "horse-images" hochgeladen (siehe migration_019_horse_images_storage.sql),
+// die resultierende öffentliche URL landet im Feld. Eine echte http(s)-URL
+// (statt z.B. einer data:-URL) wird u.a. für die Bild-Einbettung im
+// Discord-Bot gebraucht (embed.setImage() kann keine data:-URLs laden).
+// Enthält die Zwischenablage kein Bild (normaler Text/Link), passiert hier
+// nichts, der normale Text-Paste läuft unverändert weiter.
+const IMAGE_EXTENSION_BY_MIME_TYPE = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
+document.getElementById('image_url')?.addEventListener('paste', async (e) => {
+  const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/'));
+  if (!item) return;
+  e.preventDefault();
+  const file = item.getAsFile();
+  if (!file) return;
+
+  const input = e.target;
+  const previousValue = input.value;
+  input.value = 'Bild wird hochgeladen…';
+  input.disabled = true;
+
+  const ext = IMAGE_EXTENSION_BY_MIME_TYPE[file.type] || 'png';
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const { error } = await supabaseClient.storage.from('horse-images').upload(path, file, { contentType: file.type });
+
+  input.disabled = false;
+  if (error) {
+    input.value = previousValue;
+    alert('Bild-Upload fehlgeschlagen: ' + error.message);
+    return;
+  }
+  input.value = supabaseClient.storage.from('horse-images').getPublicUrl(path).data.publicUrl;
+});
+
 async function init() {
   // Wird dieses Skript auf einer anderen Seite geladen, um einzelne
   // Funktionen wiederzuverwenden (z.B. das Fohlen-Popup in
@@ -172,6 +207,15 @@ function updateBreedCompositionVisibility() {
   field.hidden = isKnownFullyPurebred;
 }
 
+// Extrahiert die reine numerische Spiel-ID aus einem kompletten Link wie
+// "https://www.morning-dust-ranch.de/index2.php?site=pferd&id=622070" ->
+// "622070". Enthält der Wert kein "id="-Muster (z.B. weil ohnehin schon
+// nur die reine ID eingetragen wurde), bleibt er unverändert.
+function normalizeExternalId(value) {
+  const m = value.match(/[?&]id=(\d+)/);
+  return m ? m[1] : value;
+}
+
 function collectForm() {
   const out = {};
   for (const id of TEXT_FIELDS.concat(DATE_FIELDS)) {
@@ -183,6 +227,12 @@ function collectForm() {
   // falls direkt ins Formular eingetragen statt per Text-Auslesen (dort
   // übernimmt das bereits parser.js) - siehe normalizeBreed.
   if (out.breed) out.breed = normalizeBreed(out.breed);
+  // Erlaubt, statt der reinen Spiel-ID auch den kompletten Link zur
+  // Pferdeseite einzufügen (z.B. aus der Browser-Adresszeile kopiert) -
+  // wird auf die reine ID reduziert, da an anderer Stelle (list.js,
+  // horseView.js, Discord-Bot) aus der gespeicherten ID der Link selbst
+  // neu gebaut wird.
+  if (out.external_id) out.external_id = normalizeExternalId(out.external_id);
   for (const id of NUMBER_FIELDS) {
     const el = document.getElementById(id);
     out[id] = el.value === '' ? null : Number(el.value);
