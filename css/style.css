@@ -23,6 +23,14 @@
      Tabellenkopfzeile gebraucht, damit beim Scrollen keine Zeilen
      durchscheinen. */
   --th-bg-solid: #f3f7eb;
+  /* Skalierungsfaktor der gesamten Seite (siehe "html { zoom: ... }"
+     weiter unten) - als Variable, damit vh-basierte Höhen (die vom
+     CSS-Zoom NICHT automatisch mitskaliert werden, da sie sich immer auf
+     die tatsächliche, ungezoomte Bildschirmhöhe beziehen) dennoch korrekt
+     die volle sichtbare Höhe ausfüllen: "calc(100vh / var(--zoom))" ergibt
+     nach dem Herunterskalieren durch den Zoom wieder genau 100vh auf dem
+     Bildschirm, statt nur 100vh * zoom (=80%) und ungenutztem Rand. */
+  --zoom: 0.8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,7 +56,7 @@
    wie der Browser-Zoom, im Gegensatz zu "html { font-size: 80% }" (das nur
    rem-basierte Größen träfe) oder "transform: scale()" (das Layoutgröße
    und Scrollbars nicht mitskaliert). */
-html { zoom: 0.8; }
+html { zoom: var(--zoom); }
 
 /* Ohne diese Regel gewinnt z.B. ".btn { display: inline-block }" gegen das
    Browser-Standardverhalten von [hidden], da beide dieselbe Spezifitaet
@@ -171,7 +179,7 @@ label {
 .small { font-size: 0.85rem; }
 
 /* --- Auth page --- */
-.auth-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh / var(--zoom)); }
 .auth-box {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -547,7 +555,7 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   padding: 1.5rem;
   width: 100%;
   max-width: 440px;
-  max-height: 80vh;
+  max-height: calc(80vh / var(--zoom));
   overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -655,7 +663,11 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
    abzuschneiden. */
 @media (min-width: 641px) {
   body.list-page {
-    height: 100vh;
+    /* siehe --zoom-Kommentar oben im :root - ohne die Korrektur würde
+       diese Box durch den Seiten-Zoom nur 80% der tatsächlichen
+       Bildschirmhöhe ausfüllen, wodurch der Tabellenbereich unnötig
+       gestaucht würde. */
+    height: calc(100vh / var(--zoom));
     display: flex;
     flex-direction: column;
     overflow: hidden;
