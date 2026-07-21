@@ -585,8 +585,8 @@ async function renderDetailTables(data) {
   if (data.colors?.length) {
     const notes = document.getElementById('notes').value;
     const horseName = document.getElementById('name').value;
-    const parentHints = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
-    genetikParts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides));
+    const { hints: parentHints, parentMightHavePearl } = await fetchParentColorHints(data.pedigree, data.coat_color, notes, horseName);
+    genetikParts.push(colorGeneticsHtml(data.colors, data.coat_color, notes, horseName, parentHints, data.color_gene_overrides, parentMightHavePearl));
   }
   if (data.exterior_genetics?.rows?.length) genetikParts.push(exteriorGeneticsHtml(data.exterior_genetics));
   if (data.exterior_descriptive?.length) {
@@ -754,12 +754,12 @@ function geneOverrideBadge(key, state, allelePrefix) {
 // eine manuelle Bestätigung/Ausschluss (overrides, per Klick-Button,
 // siehe geneOverrideBadge) hat dabei Vorrang vor diesen automatischen
 // Hinweisen.
-function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides) {
+function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl) {
   const ov = overrides || {};
   const hints = [
-    ...inferGeneticHintsFromPhenotype(coatColorName),
-    ...inferGeneticHintsFromPhenotype(notes),
-    ...inferGeneticHintsFromPhenotype(horseName),
+    ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl),
+    ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl),
+    ...inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl),
     ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, fromParent: true })),
   ];
   const hintsByLocus = {};
@@ -847,7 +847,7 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
 
   const nameLine = coatColorName ? `<p class="small muted">Name: <strong>${escapeHtml(coatColorName)}</strong></p>` : '';
 
-  const summary = presentGenesSummary(rows, coatColorName, notes, horseName, parentHints, overrides);
+  const summary = presentGenesSummary(rows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl);
   let summaryHtml = '';
   if (summary.length) {
     const text = summary.map((s) => {
@@ -940,12 +940,33 @@ function pintoParentHints(parents, coatColorName, notes, horseName) {
   return [...combined].map((allele) => ({ locus: PINTO_ALLELE_LOCUS[allele], alleles: allele }));
 }
 
+// Ob mindestens ein Elternteil überhaupt ein pl-Allel zeigt - einfach
+// (Träger) ODER reinerbig, egal ob getestet oder selbst schon abgeleitet
+// (z.B. aus "Apricot" im Namen). Anders als parentHomozygousLoci (nur
+// reinerbige Loci, für garantierte Vererbung) zählt hier bereits ein
+// einzelnes "pl". Wird für die "ambiguousCream"-Einträge in
+// PHENOTYPE_GENE_HINTS gebraucht (Cremello/Perlino/Smoky Cream/...): nur
+// wenn ein Elternteil nachweislich pl trägt, könnte das zweite "Cr" des
+// Fohlens tatsächlich ein "pl" sein (optisch nicht unterscheidbar) - sonst
+// bleibt es beim einfacheren Regelfall CrCr.
+function parentsMightHavePearl(parents) {
+  return parents.some((p) => {
+    const entry = (p.colors || []).find((c) => c.label === 'Cream');
+    if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
+    const genes = presentGenesSummary(p.colors, p.coat_color, p.notes, p.name, null, p.color_gene_overrides);
+    return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
+  });
+}
+
 async function fetchParentColorHints(pedigree, coatColorName, notes, horseName) {
   const parents = await fetchParentRecords(pedigree);
-  return [
-    ...parentColorHints(parents),
-    ...pintoParentHints(parents, coatColorName, notes, horseName),
-  ];
+  return {
+    hints: [
+      ...parentColorHints(parents),
+      ...pintoParentHints(parents, coatColorName, notes, horseName),
+    ],
+    parentMightHavePearl: parentsMightHavePearl(parents),
+  };
 }
 
 // GP (Gesamtpotenzial) und Begabung stehen im Text schon zusammen; die
