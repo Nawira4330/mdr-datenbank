@@ -50,6 +50,9 @@ async function loadCurrentSettings() {
   if (data.verpaarung_enabled !== undefined && data.verpaarung_enabled !== null) {
     document.getElementById('verpaarung-enabled-checkbox').checked = data.verpaarung_enabled;
   }
+  // "page_zoom" ist NULL, solange nie gespeichert wurde - dann bleibt die
+  // Auswahl beim App-Standard (80%, siehe --zoom in style.css).
+  document.getElementById('page-zoom-select').value = data.page_zoom || 80;
 }
 
 async function onSave() {
@@ -57,13 +60,18 @@ async function onSave() {
   statusEl.textContent = 'Speichere…';
   const selected = [...document.querySelectorAll('#breed-checkboxes input[type="checkbox"]:checked')].map((cb) => cb.value);
   const verpaarungEnabled = document.getElementById('verpaarung-enabled-checkbox').checked;
+  const pageZoom = Number(document.getElementById('page-zoom-select').value);
   // Leere Rassen-Auswahl als NULL statt leerem Array speichern - beides
   // bedeutet "keine Einschränkung", NULL ist aber eindeutiger als Zustand
   // "bewusst nichts ausgewählt" vs. "Feld nie gesetzt".
   const { error } = await supabaseClient
     .from('user_settings')
-    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null, verpaarung_enabled: verpaarungEnabled });
+    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null, verpaarung_enabled: verpaarungEnabled, page_zoom: pageZoom });
   statusEl.textContent = error ? 'Speichern fehlgeschlagen: ' + error.message : 'Gespeichert.';
+  // Sofort anwenden, ohne dass die Seite neu geladen werden muss (siehe
+  // applyPageZoom in auth.js - dieselbe Logik, die jede geschützte Seite
+  // nach requireSession() ausführt).
+  if (!error) document.documentElement.style.setProperty('--zoom', pageZoom / 100);
 }
 
 function escapeHtml(str) {

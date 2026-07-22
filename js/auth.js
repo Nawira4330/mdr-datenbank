@@ -30,7 +30,23 @@ async function requireSession() {
     window.location.href = 'login.html';
     return null;
   }
+  await applyPageZoom(session);
   return session;
+}
+
+// Persönliche Seitengröße (siehe einstellungen.html) - hier zentral statt
+// je Einzelseite angewendet, damit sie auf JEDER geschützten Seite gilt
+// (requireSession() läuft überall als Erstes). NULL/kein Eintrag = der in
+// css/style.css als --zoom hinterlegte App-Standard bleibt unverändert.
+async function applyPageZoom(session) {
+  const { data, error } = await supabaseClient
+    .from('user_settings')
+    .select('page_zoom')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  if (!error && data?.page_zoom) {
+    document.documentElement.style.setProperty('--zoom', data.page_zoom / 100);
+  }
 }
 
 function wireLogout(selector) {

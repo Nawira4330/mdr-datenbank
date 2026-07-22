@@ -322,6 +322,9 @@ create table if not exists public.user_settings (
   -- Blendet den "Verpaarungs-Log"-Menuepunkt fuer dieses Konto aus, wenn
   -- false (siehe migration_018_verpaarung_enabled.sql).
   verpaarung_enabled boolean not null default true,
+  -- Persoenliche Seitengroesse in % (z.B. 80). NULL = App-Standard (siehe
+  -- --zoom in css/style.css) - migration_020_page_zoom.sql.
+  page_zoom smallint,
   updated_at timestamptz not null default now()
 );
 

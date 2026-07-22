@@ -134,6 +134,34 @@
       </div>
     </form>
 
+    <div id="compare-avg-block" class="compare-avg-block">
+      <label class="compare-avg-toggle">
+        <input type="checkbox" id="compare-avg-toggle" />
+        <span class="compare-avg-toggle-text">
+          <strong>Ø-Vergleich anzeigen</strong>
+          <span class="muted small">Grün = besser, rot = schlechter als Durchschnitt – GP/Ext%: höher besser, Ext/Int: niedriger besser.</span>
+        </span>
+      </label>
+      <div id="compare-avg-panel" class="filter-bar" hidden>
+        <div class="field">
+          <label for="cmp-breed">Rasse (Basis)</label>
+          <select id="cmp-breed"><option value="">Alle</option></select>
+        </div>
+        <div class="field">
+          <label for="cmp-zzl">ZZL (Basis)</label>
+          <select id="cmp-zzl">
+            <option value="">Alle</option>
+            <option value="true">Ja</option>
+            <option value="false">Nein</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cmp-owner">Besitzer (Basis)</label>
+          <select id="cmp-owner"><option value="">Alle</option></select>
+        </div>
+      </div>
+    </div>
+
     <div class="list-header">
       <span id="result-count" class="muted small"></span>
       <button type="button" id="export-csv-btn" class="secondary small" title="Exportiert die ausgewählten Pferde (Kästchen) - ohne Auswahl alle aktuell gefilterten">📄 CSV exportieren</button>
@@ -165,31 +193,6 @@
       <div id="bulk-actions" hidden>
         <span id="selected-count" class="muted small"></span>
         <button type="button" id="bulk-delete-btn" class="danger small">Ausgewählte löschen</button>
-      </div>
-    </div>
-
-    <div id="compare-avg-block">
-      <label class="small" style="display: inline-flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-        <input type="checkbox" id="compare-avg-toggle" />
-        Ø-Vergleich anzeigen (grün = besser, rot = schlechter als Durchschnitt – GP/Ext%: höher besser, Ext/Int: niedriger besser)
-      </label>
-      <div id="compare-avg-panel" class="filter-bar" hidden>
-        <div class="field">
-          <label for="cmp-breed">Rasse (Basis)</label>
-          <select id="cmp-breed"><option value="">Alle</option></select>
-        </div>
-        <div class="field">
-          <label for="cmp-zzl">ZZL (Basis)</label>
-          <select id="cmp-zzl">
-            <option value="">Alle</option>
-            <option value="true">Ja</option>
-            <option value="false">Nein</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="cmp-owner">Besitzer (Basis)</label>
-          <select id="cmp-owner"><option value="">Alle</option></select>
-        </div>
       </div>
     </div>
 

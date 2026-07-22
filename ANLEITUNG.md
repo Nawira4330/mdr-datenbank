@@ -482,6 +482,11 @@ enthaltenen Daten bleiben unverändert bestehen und sind über die Adresse
 `verpaarung.html` weiterhin direkt erreichbar, falls du es doch einmal
 brauchst.
 
+**Seitengröße**: Legt fest, wie groß alle Seiten der Anwendung auf
+deinem Gerät angezeigt werden (70–150 %, Standard 80 %). Gilt nur für
+dein eigenes Konto und wird nach „Speichern“ sofort sowie bei jedem
+weiteren Login übernommen.
+
 ---
 
 ## 10. Zucht-/Turnierplaner
