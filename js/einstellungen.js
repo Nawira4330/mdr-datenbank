@@ -34,7 +34,7 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled')
+    .select('preferred_breeds, verpaarung_enabled, page_zoom')
     .eq('user_id', currentUserId)
     .maybeSingle();
   if (error || !data) return;
