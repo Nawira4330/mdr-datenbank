@@ -111,7 +111,15 @@ function showFlashBanner() {
   }
   const banner = document.querySelector('#flash-banner');
   const verb = flash.action === 'updated' ? 'aktualisiert' : 'neu angelegt';
-  banner.textContent = `„${flash.name}" wurde ${verb}.`;
+  let text = `„${flash.name}" wurde ${verb}.`;
+  // Nur beim Aktualisieren sinnvoll (bei einer Neuanlage ist ohnehin
+  // "alles neu") - zeigt, welche Felder sich durch diesen Speichervorgang
+  // gegenüber dem vorherigen Stand tatsächlich geändert haben (siehe
+  // computeChangedFields in horseForm.js).
+  if (flash.action === 'updated' && flash.changedFields?.length) {
+    text += ` Geändert: ${flash.changedFields.join(', ')}.`;
+  }
+  banner.textContent = text;
   banner.hidden = false;
 
   const dismiss = () => { banner.hidden = true; };

@@ -336,6 +336,17 @@ nichts, wird direkt gespeichert. Der ursprünglich eingefügte Spieltext
 selbst wird dabei **nicht** dauerhaft gespeichert – nur das daraus
 erkannte Ergebnis.
 
+Sind Ext%/Turnierwerte/Stammbaum bei einem bereits gespeicherten Pferd
+schon bekannt, verlangt ein erneutes „Automatisch auslesen“ sie nicht
+nochmal: fehlt ein Wert im diesmal eingefügten Text (z.B. weil nur ein
+Teil der Seite kopiert wurde), bleibt der bisherige, bereits bekannte
+Wert erhalten statt zu verschwinden – das Popup erscheint dann für diese
+Angabe nicht erneut.
+
+Beim Aktualisieren eines bestehenden Pferds zeigt der Banner in der
+Übersicht nach dem Speichern zusätzlich, welche Felder sich dabei
+tatsächlich geändert haben (z.B. „Geändert: ZZL, Bild, Turnierwerte“).
+
 **Dopplungs-Check beim Anlegen**: Trägst du ein vermeintlich neues Pferd
 ein und es gibt bereits einen Datensatz mit **gleicher Spiel-ID** oder
 **identischem GP, Ext, Ext% und Int**, öffnet sich vor dem Speichern ein

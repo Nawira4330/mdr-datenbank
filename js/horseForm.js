@@ -12,6 +12,11 @@ const JSONB_KEYS = [
 
 let extraData = {};
 let editingId = null;
+// Unveränderte Kopie des beim Laden vorgefundenen Datensatzes (siehe
+// loadHorse) - anders als extraData (wird bei jedem erneuten "Automatisch
+// auslesen" überschrieben) bleibt das der feste Vergleichspunkt für
+// computeChangedFields beim Speichern (siehe performSave).
+let originalRecord = null;
 // Benutzername (vor dem @) des eingeloggten Kontos - wird fuer die
 // Pfeil-Navigation (findAdjacentHorseId) gebraucht, damit dort nur durch
 // die eigenen Pferde geblaettert wird. Eigener Name (nicht "currentIdentity")
@@ -136,6 +141,7 @@ async function loadHorse(id) {
   }
   fillForm(data);
   extraData = data;
+  originalRecord = data;
   document.getElementById('raw-text').value = data.raw_text || '';
   await renderDetailTables(data);
 }
@@ -373,18 +379,85 @@ function isEmptyValue(key, value) {
 // nach Kategorie gruppiert (z.B. "Barock", "Western") - zeigt das Spiel
 // ohne aufgeklapptes "Alle Disziplinen anzeigen?" nur eine einzelne
 // Kategorie, würden die übrigen sonst als "neuer, vollständiger Wert"
-// gelten und verschwinden. Deshalb hier kategorienweise zusammenführen
-// statt alles-oder-nichts: neue Kategorien ergänzen/überschreiben, im
-// neuen Text fehlende Kategorien bleiben aus dem alten Wert erhalten.
-// Für alle anderen Felder gilt weiterhin: neuer Wert leer und alter
-// nicht -> alten Wert behalten, sonst neuen Wert übernehmen.
+// gelten und verschwinden. "tournament_potential" hat dasselbe Problem
+// mit seinen einzelnen benannten Werten (Gesamtpotenzial/Begabung/...):
+// enthält ein erneut eingefügter Text z.B. nur Gesamtpotenzial, aber
+// nicht Begabung, würde Begabung sonst durch das komplette Überschreiben
+// verschwinden - obwohl es im Datensatz bereits bekannt war (siehe
+// missingDataLabels/showSaveWarningModal, die genau das dann fälschlich
+// wieder als "fehlt" anmahnen würden). Deshalb hier bei allen dreien
+// feldweise zusammenführen statt alles-oder-nichts: neue Werte ergänzen/
+// überschreiben, im neuen Text fehlende Werte bleiben aus dem alten Wert
+// erhalten. Für alle anderen Felder gilt weiterhin: neuer Wert leer und
+// alter nicht -> alten Wert behalten, sonst neuen Wert übernehmen.
 function mergeFieldValue(key, oldValue, newValue) {
   if (newValue === undefined) return oldValue;
-  if (key === 'disciplines' || key === 'traits') {
+  if (key === 'disciplines' || key === 'traits' || key === 'tournament_potential') {
     return { ...(oldValue || {}), ...(newValue || {}) };
   }
   if (isEmptyValue(key, newValue) && !isEmptyValue(key, oldValue)) return oldValue;
   return newValue;
+}
+
+// Deutsche Kurz-Labels für den Änderungs-Hinweis im Flash-Banner (siehe
+// computeChangedFields/performSave sowie showFlashBanner in list.js) -
+// bewusst dieselben Bezeichnungen wie im Formular/der Übersicht (z.B.
+// "ZZL" statt "breeding_allowed", passend zur Tabellenspalte in list.js).
+const CHANGE_FIELD_LABELS = {
+  name: 'Name',
+  external_id: 'ID',
+  gender: 'Geschlecht',
+  breed: 'Rasse',
+  breed_composition: 'Rasseanteile',
+  coat_color: 'Fellfarbe',
+  owner: 'Besitzer',
+  hlp_slp: 'HLP/SLP',
+  notes: 'Notizen',
+  image_url: 'Bild',
+  purebred_pct: 'Reinrassigkeit',
+  ico: 'ICO',
+  disease_free: 'Erbkrankheitsfrei',
+  breeding_allowed: 'ZZL',
+  genetic_diseases: 'Erbkrankheiten (Diagnosen)',
+  colors: 'Farbgenetik',
+  exterior_genetics: 'Exterieur-Genetik',
+  exterior_descriptive: 'Körperbau',
+  temperament: 'Interieur',
+  disciplines: 'Disziplinen',
+  traits: 'Eigenschaften',
+  tournament_potential: 'Turnierwerte',
+  pedigree: 'Stammbaum',
+};
+
+// Ob sich ein einzelner Feldwert gegenüber dem vorherigen Datensatz
+// tatsächlich geändert hat - bei JSONB-Feldern (Objekte/Arrays) über
+// isEmptyValue normalisiert, damit z.B. "{}" und "null" nicht fälschlich
+// als Änderung gelten, sonst über einen simplen Wertevergleich (leere
+// Strings zählen wie null, siehe collectForm).
+function isFieldChanged(key, beforeValue, afterValue) {
+  const beforeIsObject = beforeValue !== null && typeof beforeValue === 'object';
+  const afterIsObject = afterValue !== null && typeof afterValue === 'object';
+  if (beforeIsObject || afterIsObject) {
+    if (isEmptyValue(key, beforeValue) && isEmptyValue(key, afterValue)) return false;
+    return JSON.stringify(beforeValue) !== JSON.stringify(afterValue);
+  }
+  const before = beforeValue == null || beforeValue === '' ? null : beforeValue;
+  const after = afterValue == null || afterValue === '' ? null : afterValue;
+  return before !== after;
+}
+
+// Liefert die deutschen Labels aller Felder, die sich zwischen dem vorher
+// geladenen Datensatz und dem zu speichernden Payload geändert haben -
+// wird im Flash-Banner der Übersicht angezeigt (siehe performSave/
+// showFlashBanner), damit beim Aktualisieren sofort ersichtlich ist, was
+// sich geändert hat, ohne den alten Stand extra vergleichen zu müssen.
+function computeChangedFields(before, after) {
+  if (!before) return [];
+  const changed = [];
+  for (const [key, label] of Object.entries(CHANGE_FIELD_LABELS)) {
+    if (isFieldChanged(key, before[key], after[key])) changed.push(label);
+  }
+  return changed;
 }
 
 // GP/Ext/Ext%/Int aus einem Pferde-Datensatz (Payload oder bestehender
@@ -446,6 +519,13 @@ function askIsDuplicateHorse(reasonParts, neu, alt) {
 async function performSave(formData, payload, session) {
   const errorEl = document.getElementById('form-error');
 
+  // Vergleichsgrundlage für computeChangedFields (Flash-Banner nach dem
+  // Speichern, siehe unten) - beim regulären Bearbeiten der beim Laden
+  // vorgefundene Datensatz, in den beiden anderen Fällen (Namens- bzw.
+  // Dopplungs-Treffer weiter unten) der dort jeweils geladene bestehende
+  // Datensatz. Bleibt bei einer echten Neuanlage null.
+  let beforeRecord = editingId ? originalRecord : null;
+
   // Wird ein neues Pferd mit einem Namen gespeichert, der bereits existiert
   // (Groß-/Kleinschreibung egal), wird statt einer neuen Dopplung einfach
   // der bestehende Datensatz aktualisiert. Beim Bearbeiten eines bereits
@@ -465,6 +545,7 @@ async function performSave(formData, payload, session) {
     }
     if (existing) {
       targetId = existing.id;
+      beforeRecord = existing;
       // Das Formular wurde hier als vermeintlich NEUES Pferd ausgefüllt
       // (kein loadHorse() zuvor, siehe init) - Felder, die in diesem
       // Durchgang gar nicht ausgefüllt/erkannt wurden, sollen den bereits
@@ -514,6 +595,7 @@ async function performSave(formData, payload, session) {
           );
           if (isSame) {
             targetId = fullCandidate.id;
+            beforeRecord = fullCandidate;
             for (const key of Object.keys(payload)) {
               payload[key] = mergeFieldValue(key, fullCandidate[key], payload[key]);
             }
@@ -547,6 +629,7 @@ async function performSave(formData, payload, session) {
     sessionStorage.setItem('mdr_flash', JSON.stringify({
       action: targetId ? 'updated' : 'created',
       name: formData.name,
+      changedFields: targetId ? computeChangedFields(beforeRecord, payload) : [],
     }));
   }
   window.location.href = saveRedirect;
