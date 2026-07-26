@@ -119,6 +119,15 @@ function showFlashBanner() {
   if (flash.action === 'updated' && flash.changedFields?.length) {
     text += ` Geändert: ${flash.changedFields.join(', ')}.`;
   }
+  // Siehe autoUpdateParentFlaxenCarriers in horseForm.js: automatische
+  // Flaxen-Trägerschaft bei den Eltern, wenn dieses Pferd sichtbar Flaxen
+  // ist.
+  if (flash.flaxenUpdated?.length) {
+    text += ` Elternteil${flash.flaxenUpdated.length > 1 ? 'e' : ''} automatisch als Flaxen-Träger markiert: ${flash.flaxenUpdated.join(', ')}.`;
+  }
+  if (flash.flaxenWarnings?.length) {
+    text += ` ⚠️ Widerspruch: ${flash.flaxenWarnings.join(', ')} ${flash.flaxenWarnings.length > 1 ? 'sind' : 'ist'} als "Flaxen nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
+  }
   banner.textContent = text;
   banner.hidden = false;
 

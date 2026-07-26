@@ -516,6 +516,58 @@ function askIsDuplicateHorse(reasonParts, neu, alt) {
   return new Promise((resolve) => { duplicateCheckResolve = resolve; });
 }
 
+// --- Automatische Flaxen-Trägerschaft bei den Eltern (Nutzerwunsch) ---
+//
+// Ist das gerade gespeicherte Pferd sichtbar Flaxen (reinerbig, "hom" -
+// zeigt sich als "flfl"), MÜSSEN beide Eltern zwingend mindestens eine
+// Kopie tragen (rezessives Merkmal) - wird hier automatisch als
+// Trägerschaft ("het", zeigt sich als "fl") bei den Eltern-Datensätzen
+// nachgetragen, falls dort noch nichts (Stärkeres) manuell eingetragen
+// ist. Ausgelöst durch BEIDES: automatische Text-Erkennung ("Flaxen" in
+// Fellfarbe/Notiz/Name) UND manuelle Bestätigung ("2x vorhanden") - beides
+// läuft über dieselbe presentGenesSummary()-Ableitung, die für die
+// Anzeige ohnehin schon passiert.
+//
+// Ein bereits vorhandenes "absent" (bewusst als "nicht vorhanden"
+// bestätigt) wird NICHT automatisch überschrieben, da das ein echter
+// Widerspruch wäre (kann eigentlich nicht vorkommen) - wird stattdessen
+// als Warnung zurückgegeben, die Person muss das manuell auflösen.
+async function autoUpdateParentFlaxenCarriers(payload) {
+  const genes = presentGenesSummary(
+    payload.colors, payload.coat_color, payload.notes, payload.name, null, payload.color_gene_overrides,
+  );
+  const isVisiblyFlaxen = genes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl');
+  if (!isVisiblyFlaxen) return { updated: [], warnings: [] };
+
+  const ancestors = Array.isArray(payload.pedigree) ? payload.pedigree.slice(1) : (payload.pedigree?.ancestors || []);
+  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  if (!parentNames.length) return { updated: [], warnings: [] };
+
+  const { data: parents, error } = await supabaseClient
+    .from('horses')
+    .select('id, name, color_gene_overrides')
+    .in('name', parentNames);
+  if (error || !parents?.length) return { updated: [], warnings: [] };
+
+  const updated = [];
+  const warnings = [];
+  for (const parent of parents) {
+    const overrides = parent.color_gene_overrides || {};
+    const current = overrides.Flaxen;
+    if (current === 'het' || current === 'hom') continue; // schon (mind.) Träger bestätigt
+    if (current === 'absent') {
+      warnings.push(parent.name);
+      continue;
+    }
+    const { error: updateError } = await supabaseClient
+      .from('horses')
+      .update({ color_gene_overrides: { ...overrides, Flaxen: 'het' } })
+      .eq('id', parent.id);
+    if (!updateError) updated.push(parent.name);
+  }
+  return { updated, warnings };
+}
+
 async function performSave(formData, payload, session) {
   const errorEl = document.getElementById('form-error');
 
@@ -618,6 +670,11 @@ async function performSave(formData, payload, session) {
     return;
   }
 
+  // Läuft nach dem eigentlichen Speichern, damit "payload" garantiert die
+  // endgültigen (u.a. gemergten) Werte enthält - siehe
+  // autoUpdateParentFlaxenCarriers weiter oben.
+  const flaxenResult = await autoUpdateParentFlaxenCarriers(payload);
+
   // Wird in der Übersicht nach der Weiterleitung als Banner angezeigt und
   // dort direkt wieder aus dem sessionStorage entfernt (siehe list.js) -
   // nur setzen, wenn es auch wirklich dorthin geht (bei den Pfeil-Buttons
@@ -630,6 +687,8 @@ async function performSave(formData, payload, session) {
       action: targetId ? 'updated' : 'created',
       name: formData.name,
       changedFields: targetId ? computeChangedFields(beforeRecord, payload) : [],
+      flaxenUpdated: flaxenResult.updated,
+      flaxenWarnings: flaxenResult.warnings,
     }));
   }
   window.location.href = saveRedirect;
