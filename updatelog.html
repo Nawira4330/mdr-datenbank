@@ -4,26 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>Anleitung – MDR Pferdedatenbank</title>
+  <title>Update-Log – MDR Pferdedatenbank</title>
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <h1>📖 Anleitung</h1>
+    <h1>🆕 Update-Log</h1>
     <nav>
       <a class="btn secondary" href="index.html">← Zur Übersicht</a>
-      <a class="btn secondary" href="durchschnitt.html">📊 Durchschnitt</a>
-      <a class="btn secondary" href="updatelog.html">🆕 Update-Log</a>
+      <a class="btn secondary" href="anleitung.html">📖 Anleitung</a>
       <a class="btn secondary" href="einstellungen.html" title="Einstellungen">⚙️</a>
       <button id="logout-btn" class="secondary">Abmelden</button>
     </nav>
   </header>
 
   <main class="container">
-    <div id="anleitung-content" class="markdown-content">
-      <p class="muted small">Anleitung wird geladen…</p>
+    <div id="updatelog-content" class="markdown-content">
+      <p class="muted small">Update-Log wird geladen…</p>
     </div>
   </main>
 
@@ -36,14 +35,14 @@
       if (!session) return;
       wireLogout();
 
-      const container = document.getElementById('anleitung-content');
+      const container = document.getElementById('updatelog-content');
       try {
-        const res = await fetch('ANLEITUNG.md');
+        const res = await fetch('UPDATELOG.md');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const markdown = await res.text();
         container.innerHTML = marked.parse(markdown);
       } catch (err) {
-        container.innerHTML = '<p class="error">Anleitung konnte nicht geladen werden: ' + err.message + '</p>';
+        container.innerHTML = '<p class="error">Update-Log konnte nicht geladen werden: ' + err.message + '</p>';
       }
     })();
   </script>
