@@ -90,6 +90,33 @@ document.getElementById('image_url')?.addEventListener('paste', async (e) => {
   input.value = supabaseClient.storage.from('horse-images').getPublicUrl(path).data.publicUrl;
 });
 
+// Kopiert man die komplette Pferdeseite aus dem Spiel (z.B. per Ctrl+A,
+// Ctrl+C auf der Seite selbst statt nur eines Textabschnitts), legt der
+// Browser neben dem reinen Text auch eine HTML-Fassung der Auswahl in die
+// Zwischenablage (clipboardData "text/html") - darin sind auch die Bilder
+// enthalten, u.a. das eigentliche Pferdebild (im Spiel-HTML eindeutig als
+// "id=pferdebild" markiert, nicht zu verwechseln mit Wetter-Icons, Logo
+// oder der Mützen-Überlagerung "id=muetze"). Der normale Text-Paste in
+// #raw-text läuft unverändert weiter (kein preventDefault) - hier wird nur
+// zusätzlich die Bild-URL herausgelesen und automatisch in Bild-URL
+// eingetragen, als Link (kein Hochladen/Zwischenspeichern der Bilddaten
+// selbst - anders als beim direkten Bild-Paste in #image_url oben, wo nur
+// die reinen Bilddaten ohne URL in der Zwischenablage liegen).
+document.getElementById('raw-text')?.addEventListener('paste', (e) => {
+  const html = e.clipboardData?.getData('text/html');
+  if (!html) return;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const img = doc.getElementById('pferdebild');
+  if (!img?.src) return;
+  // img.src ist bereits vom DOMParser gegen die Basis-URL des Dokuments
+  // aufgelöst - ohne <base>-Tag im Fragment bleibt ein rein relativer Pfad
+  // aus dem Spiel-HTML aber unaufgelöst, deshalb hier zusätzlich explizit
+  // gegen die Spiel-Domain auflösen (wie schon bei den Spiel-Links in
+  // horseView.js/list.js).
+  const resolved = new URL(img.getAttribute('src'), 'https://www.morning-dust-ranch.de/').href;
+  document.getElementById('image_url').value = resolved;
+});
+
 async function init() {
   // Wird dieses Skript auf einer anderen Seite geladen, um einzelne
   // Funktionen wiederzuverwenden (z.B. das Fohlen-Popup in
