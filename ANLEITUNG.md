@@ -219,9 +219,10 @@ unbenanntes Fohlen wird automatisch nach dem Muster
 Platzhalter-Namen bekommen und sich versehentlich überschreiben.
 
 Markierst und kopierst du dabei die **komplette** Seite (Strg+A statt nur
-einen Textabschnitt), wird beim Einfügen zusätzlich automatisch das
-Pferdebild erkannt und als Link ins Feld „Bild-URL“ eingetragen – ganz
-ohne eigenen Klick, direkt beim Einfügen in den Text-Kasten.
+einen Textabschnitt), werden beim Einfügen zusätzlich automatisch das
+Pferdebild (als Link ins Feld „Bild-URL“) und die Spiel-ID (aus dem
+Dateinamen des Bilds, ins Feld „ID“) erkannt – ganz ohne eigenen Klick,
+direkt beim Einfügen in den Text-Kasten.
 
 Dieser Einfügekasten ist einklappbar. Beim Bearbeiten eines bereits
 vorhandenen Pferds startet er automatisch eingeklappt (du brauchst ihn ja

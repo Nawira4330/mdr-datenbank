@@ -101,7 +101,10 @@ document.getElementById('image_url')?.addEventListener('paste', async (e) => {
 // zusätzlich die Bild-URL herausgelesen und automatisch in Bild-URL
 // eingetragen, als Link (kein Hochladen/Zwischenspeichern der Bilddaten
 // selbst - anders als beim direkten Bild-Paste in #image_url oben, wo nur
-// die reinen Bilddaten ohne URL in der Zwischenablage liegen).
+// die reinen Bilddaten ohne URL in der Zwischenablage liegen). Der
+// Dateiname des Bilds beginnt dabei mit der Spiel-ID des Pferds (z.B.
+// "864841_002.png") - wird deshalb hier gleich mit als ID übernommen,
+// spart bei komplett kopierten Seiten das manuelle Eintippen der ID.
 document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const html = e.clipboardData?.getData('text/html');
   if (!html) return;
@@ -113,8 +116,17 @@ document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   // aus dem Spiel-HTML aber unaufgelöst, deshalb hier zusätzlich explizit
   // gegen die Spiel-Domain auflösen (wie schon bei den Spiel-Links in
   // horseView.js/list.js).
-  const resolved = new URL(img.getAttribute('src'), 'https://www.morning-dust-ranch.de/').href;
+  const rawSrc = img.getAttribute('src');
+  const resolved = new URL(rawSrc, 'https://www.morning-dust-ranch.de/').href;
   document.getElementById('image_url').value = resolved;
+
+  // Der Dateiname selbst (letzter Pfadabschnitt, z.B. "864841_002.png")
+  // beginnt mit der Spiel-ID - alles danach (Bild-Variante, beim lokalen
+  // Speichern vom Browser angehängtes Suffix, Dateiendung) ist dafür
+  // unerheblich, es zählen nur die führenden Ziffern.
+  const filename = rawSrc.split(/[/\\]/).pop() || '';
+  const idMatch = filename.match(/^(\d+)/);
+  if (idMatch) document.getElementById('external_id').value = idMatch[1];
 });
 
 async function init() {
