@@ -6,8 +6,16 @@ drin.
 
 ---
 
+## 29.07.2026
+
+- Bekommt ein Pferd beim Aktualisieren neu die Zuchtzulassung (vorher
+  nicht „Ja“, jetzt „Ja“), weist der Banner nach dem Speichern zusätzlich
+  darauf hin, das Bild zu aktualisieren.
+- Icons bei „Anleitung“ und „Update-Log“ in der Navigation entfernt.
+
 ## 28.07.2026
 
+- Diese Update-Log-Seite hinzugefügt.
 - Beim Einfügen der **kompletten** Pferdeseite (Strg+A statt nur eines
   Textabschnitts) werden jetzt automatisch auch das **Pferdebild** (als
   Link ins Feld „Bild-URL“) und die **Spiel-ID** erkannt und eingetragen.

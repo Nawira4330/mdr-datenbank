@@ -128,6 +128,12 @@ function showFlashBanner() {
   if (flash.flaxenWarnings?.length) {
     text += ` ⚠️ Widerspruch: ${flash.flaxenWarnings.join(', ')} ${flash.flaxenWarnings.length > 1 ? 'sind' : 'ist'} als "Flaxen nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
   }
+  // Siehe zzlJustApproved in horseForm.js: die Zuchtzulassung wurde bei
+  // diesem Speichervorgang neu auf "Ja" gesetzt - im Spiel ändert sich
+  // dadurch meist auch das Pferdebild.
+  if (flash.zzlJustApproved) {
+    text += ` 🖼️ Zuchtzulassung wurde auf „Ja" gesetzt – bitte das Bild aktualisieren.`;
+  }
   banner.textContent = text;
   banner.hidden = false;
 

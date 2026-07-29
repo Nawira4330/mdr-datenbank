@@ -352,6 +352,11 @@ Angabe nicht erneut.
 Beim Aktualisieren eines bestehenden Pferds zeigt der Banner in der
 Übersicht nach dem Speichern zusätzlich, welche Felder sich dabei
 tatsächlich geändert haben (z.B. „Geändert: ZZL, Bild, Turnierwerte“).
+Bekommt ein Pferd bei diesem Speichervorgang neu die Zuchtzulassung
+(vorher nicht „Ja“, jetzt „Ja“), weist der Banner zusätzlich darauf hin,
+das Bild zu aktualisieren – ein einmaliger Hinweis genau bei dieser
+Änderung, nicht bei jedem weiteren Speichern eines bereits zugelassenen
+Pferds.
 
 **Dopplungs-Check beim Anlegen**: Trägst du ein vermeintlich neues Pferd
 ein und es gibt bereits einen Datensatz mit **gleicher Spiel-ID** oder
