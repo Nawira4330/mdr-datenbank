@@ -10,8 +10,49 @@ async function init() {
 
   await populateBreedCheckboxes();
   await loadCurrentSettings();
+  await loadFilterPresetsList();
 
   document.getElementById('save-settings-btn').addEventListener('click', onSave);
+}
+
+// Gespeicherte Filter-Vorlagen aus der Übersicht (siehe
+// migration_022_filter_presets.sql / js/list.js) - Löschen wirkt sofort,
+// unabhängig vom "Speichern"-Button unten (der betrifft nur die anderen
+// Einstellungen in dieser Datei).
+async function loadFilterPresetsList() {
+  const container = document.getElementById('filter-presets-list');
+  const { data, error } = await supabaseClient
+    .from('filter_presets')
+    .select('id, name')
+    .eq('user_id', currentUserId)
+    .order('name');
+  if (error) {
+    container.innerHTML = '<p class="error">Vorlagen konnten nicht geladen werden.</p>';
+    return;
+  }
+  if (!data.length) {
+    container.innerHTML = '<p class="muted small">Noch keine Filter-Vorlagen gespeichert.</p>';
+    return;
+  }
+  container.innerHTML = data.map((p) =>
+    `<div style="display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0;">
+      <span style="flex: 1;">${escapeHtml(p.name)}</span>
+      <button type="button" class="danger small" data-delete-preset="${p.id}">Löschen</button>
+    </div>`
+  ).join('');
+  container.querySelectorAll('[data-delete-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => onDeleteFilterPreset(btn.dataset.deletePreset));
+  });
+}
+
+async function onDeleteFilterPreset(id) {
+  if (!confirm('Diese Filter-Vorlage wirklich löschen?')) return;
+  const { error } = await supabaseClient.from('filter_presets').delete().eq('id', id);
+  if (error) {
+    alert('Löschen fehlgeschlagen: ' + error.message);
+    return;
+  }
+  await loadFilterPresetsList();
 }
 
 // Rassen-Liste aus den tatsächlich vorkommenden Werten ableiten (wie

@@ -348,6 +348,37 @@ create trigger user_settings_set_updated_at
 before update on public.user_settings
 for each row execute function public.set_updated_at();
 
+-- Gespeicherte Filter-/Sucheinstellungen je Konto ("Vorlagen" in der
+-- Uebersicht, siehe js/list.js) - eigene Tabelle statt Spalte in
+-- user_settings, da mehrere benannte Vorlagen pro Konto moeglich sind.
+-- Siehe migration_022_filter_presets.sql.
+create table if not exists public.filter_presets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  filters jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, name)
+);
+
+alter table public.filter_presets enable row level security;
+
+drop policy if exists "filter_presets_select_own" on public.filter_presets;
+create policy "filter_presets_select_own" on public.filter_presets
+  for select to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "filter_presets_insert_own" on public.filter_presets;
+create policy "filter_presets_insert_own" on public.filter_presets
+  for insert to authenticated with check (auth.uid() = user_id);
+
+drop policy if exists "filter_presets_update_own" on public.filter_presets;
+create policy "filter_presets_update_own" on public.filter_presets
+  for update to authenticated using (auth.uid() = user_id);
+
+drop policy if exists "filter_presets_delete_own" on public.filter_presets;
+create policy "filter_presets_delete_own" on public.filter_presets
+  for delete to authenticated using (auth.uid() = user_id);
+
 -- Storage-Bucket fuer per Zwischenablage eingefuegte Bilder (Bild-URL-Feld
 -- in horse.html/verpaarung.html, siehe js/horseForm.js) - siehe
 -- migration_019_horse_images_storage.sql. Hochladen bleibt eingeloggten

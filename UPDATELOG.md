@@ -8,6 +8,9 @@ drin.
 
 ## 04.08.2026
 
+- Neue **Filter-Vorlagen**: Filter-/Sucheinstellungen der Übersicht
+  lassen sich unter einem Namen speichern und später per Dropdown
+  wieder anwenden. Löschbar über Einstellungen.
 - Neue **Schlagwörter** für eigene Pferde: feste Auswahl (Verkauf,
   Reserviert, Bleibt, Zuchttier, Gnadenbrot) mit optionalem Zusatztext
   je Schlagwort, erscheinen als farbige Badges in der Übersicht neben

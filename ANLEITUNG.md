@@ -109,6 +109,15 @@ Es gibt drei Filter-Bereiche, die sich beliebig kombinieren lassen. Mit
 „Filtern“ wendest du sie an, mit „Zurücksetzen“ leerst du alle Felder auf
 einmal.
 
+**Filter-Vorlagen**: Häufig genutzte Filterkombinationen lassen sich
+als Vorlage speichern – „💾 Als Vorlage speichern“ fragt nach einem
+Namen und merkt sich den kompletten aktuellen Stand aller Filter-/
+Suchfelder (nicht die Ø-Vergleich-Vergleichsbasis) für dein Konto.
+Speicherst du erneut unter demselben Namen, wird die Vorlage
+überschrieben. Über das Dropdown „Vorlage laden…“ wendest du eine
+gespeicherte Vorlage sofort an. Löschen geht nur über
+[Einstellungen](#9-einstellungen), nicht direkt in der Übersicht.
+
 **Suche**
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
   Rolle.
@@ -527,6 +536,11 @@ brauchst.
 deinem Gerät angezeigt werden (70–150 %, Standard 80 %). Gilt nur für
 dein eigenes Konto und wird nach „Speichern“ sofort sowie bei jedem
 weiteren Login übernommen.
+
+**Filter-Vorlagen**: Liste deiner in der Übersicht gespeicherten
+Filter-Vorlagen (siehe [3.4](#34-filtern-und-suchen)). „Löschen“ wirkt
+sofort und unwiderruflich, unabhängig vom „Speichern“-Button für die
+anderen Einstellungen auf dieser Seite.
 
 ---
 

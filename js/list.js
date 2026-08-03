@@ -12,12 +12,16 @@ let preferredBreeds = null;
 // null = aus, sonst {gp, ext, extPercent, int} als Vergleichsbasis für
 // die Grün/Rot-Markierung in rowHtml.
 let compareBaseline = null;
+// Eingeloggtes Konto - wird u.a. von saveFilterPreset() gebraucht (siehe
+// wireFilterPresets), sonst nur lokal in init() gebraucht.
+let currentSession = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   const session = await requireSession();
   if (!session) return;
+  currentSession = session;
   wireLogout();
   const admin = isAdminSession(session);
   const displayIdentity = admin ? session.user.email : session.user.email.split('@')[0];
@@ -37,10 +41,12 @@ async function init() {
   wireDeleteModal();
   wireExportCsv();
   wireCompareAvg();
+  wireFilterPresets();
   showFlashBanner();
   await loadUserSettings(session);
   await showMissingDataNotice(session);
   await populateFilterOptions();
+  await loadFilterPresets();
   await loadHorses();
 }
 
@@ -817,6 +823,105 @@ function getCheckDropdownSelected(rootId) {
 function resetCheckDropdown(rootId) {
   document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
   updateCheckDropdownLabel(rootId);
+}
+
+function setCheckDropdownSelected(rootId, values) {
+  const wanted = new Set(values || []);
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => {
+    cb.checked = wanted.has(cb.value);
+  });
+  updateCheckDropdownLabel(rootId);
+}
+
+// --- Filter-Vorlagen (gespeicherte Filter-/Sucheinstellungen je Konto,
+// siehe migration_022_filter_presets.sql) ---
+
+// Liest den kompletten Zustand aller Filter-/Suchfelder aus (nicht die
+// Ø-Vergleich-Vergleichsbasis - eigenes, unabhängiges Feature).
+function collectFilterState() {
+  return {
+    name: document.querySelector('#f-name').value,
+    owner: document.querySelector('#f-owner').value,
+    gender: document.querySelector('#f-gender').value,
+    breed: document.querySelector('#f-breed').value,
+    zzl: document.querySelector('#f-zzl').value,
+    tags: getCheckDropdownSelected('f-tag-drop'),
+    genetik: getCheckDropdownSelected('f-genetik-drop'),
+    ekh: getCheckDropdownSelected('f-ekh-drop'),
+    gpOp: document.querySelector('#f-gp-op').value,
+    gpVal: document.querySelector('#f-gp-val').value,
+    extOp: document.querySelector('#f-ext-op').value,
+    extVal: document.querySelector('#f-ext-val').value,
+    extpctOp: document.querySelector('#f-extpct-op').value,
+    extpctVal: document.querySelector('#f-extpct-val').value,
+    intOp: document.querySelector('#f-int-op').value,
+    intVal: document.querySelector('#f-int-val').value,
+  };
+}
+
+// Setzt alle Filter-/Suchfelder auf einen gespeicherten Zustand und
+// wendet ihn direkt an. Werte, die in den Auswahllisten (Besitzer/Rasse/
+// Geschlecht) inzwischen nicht mehr vorkommen (z.B. Pferd umbenannt/
+// gelöscht), bleiben dabei einfach unwirksam - kein Fehler.
+function applyFilterState(state) {
+  document.querySelector('#f-name').value = state.name || '';
+  document.querySelector('#f-owner').value = state.owner || '';
+  document.querySelector('#f-gender').value = state.gender || '';
+  document.querySelector('#f-breed').value = state.breed || '';
+  document.querySelector('#f-zzl').value = state.zzl || '';
+  setCheckDropdownSelected('f-tag-drop', state.tags);
+  setCheckDropdownSelected('f-genetik-drop', state.genetik);
+  setCheckDropdownSelected('f-ekh-drop', state.ekh);
+  document.querySelector('#f-gp-op').value = state.gpOp || 'gt';
+  document.querySelector('#f-gp-val').value = state.gpVal || '';
+  document.querySelector('#f-ext-op').value = state.extOp || 'gt';
+  document.querySelector('#f-ext-val').value = state.extVal || '';
+  document.querySelector('#f-extpct-op').value = state.extpctOp || 'gt';
+  document.querySelector('#f-extpct-val').value = state.extpctVal || '';
+  document.querySelector('#f-int-op').value = state.intOp || 'gt';
+  document.querySelector('#f-int-val').value = state.intVal || '';
+  loadHorses();
+}
+
+async function loadFilterPresets() {
+  const select = document.querySelector('#filter-preset-select');
+  select.innerHTML = '<option value="">Vorlage laden…</option>';
+  if (!currentSession) return;
+  const { data, error } = await supabaseClient
+    .from('filter_presets')
+    .select('id, name, filters')
+    .eq('user_id', currentSession.user.id)
+    .order('name');
+  if (error || !data) return;
+  for (const preset of data) {
+    const opt = document.createElement('option');
+    opt.value = preset.id;
+    opt.textContent = preset.name;
+    opt.dataset.filters = JSON.stringify(preset.filters);
+    select.appendChild(opt);
+  }
+}
+
+function wireFilterPresets() {
+  document.querySelector('#filter-preset-select').addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (!opt.value) return;
+    applyFilterState(JSON.parse(opt.dataset.filters));
+  });
+  document.querySelector('#save-filter-preset-btn').addEventListener('click', saveFilterPreset);
+}
+
+async function saveFilterPreset() {
+  const name = prompt('Name für diese Filter-Vorlage:');
+  if (!name || !name.trim()) return;
+  const { error } = await supabaseClient
+    .from('filter_presets')
+    .upsert({ user_id: currentSession.user.id, name: name.trim(), filters: collectFilterState() }, { onConflict: 'user_id,name' });
+  if (error) {
+    alert('Vorlage konnte nicht gespeichert werden: ' + error.message);
+    return;
+  }
+  await loadFilterPresets();
 }
 
 // --- Mehrfachauswahl (Zeilen) ---
