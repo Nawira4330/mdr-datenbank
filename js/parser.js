@@ -1048,6 +1048,35 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
 }
 
+// Schlagwoerter fuers Kennzeichnen eigener Pferde (Verkaufsstatus etc.,
+// siehe horse.html "Schlagwörter"/list.js Filter+Anzeige) - bewusst eine
+// feste statt frei eintippbaren Liste, damit Farben/Filter eindeutig
+// bleiben. Jedes zugewiesene Schlagwort ({label, note}) kann zusätzlich
+// einen freien Zusatztext tragen (z.B. "Reserviert" + "für Lisa").
+const HORSE_TAG_OPTIONS = [
+  { label: 'Verkauf', color: 'var(--danger)' },
+  { label: 'Reserviert', color: 'var(--warning)' },
+  { label: 'Bleibt', color: 'var(--success)' },
+  { label: 'Zuchttier', color: 'var(--tag-blue)' },
+  { label: 'Gnadenbrot', color: 'var(--tag-purple)' },
+];
+
+function tagColor(label) {
+  return HORSE_TAG_OPTIONS.find((t) => t.label === label)?.color || 'var(--muted)';
+}
+
+// Rendert die zugewiesenen Schlagwörter eines Pferds als farbige Badges -
+// gemeinsam genutzt von list.js (Übersicht), horseView.js (Ansichtsseite)
+// und horseForm.js (Vorschau im Formular). "escapeHtml" wird erst beim
+// tatsächlichen Aufruf gebraucht (nicht beim Laden von parser.js selbst)
+// und ist dann bereits durch das jeweilige Seiten-Skript global definiert.
+function tagsBadgesHtml(tags) {
+  return (tags || []).map((tag) => {
+    const text = tag.note ? `${tag.label}: ${tag.note}` : tag.label;
+    return `<span class="horse-tag-badge" style="background:${tagColor(tag.label)}">${escapeHtml(text)}</span>`;
+  }).join('');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText };
+  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml };
 }

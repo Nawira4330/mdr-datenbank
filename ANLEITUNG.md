@@ -122,6 +122,9 @@ einmal.
 - **ZZL** (Zuchtzulassung) – „Ja“ zeigt nur zugelassene Pferde; „Nein“
   zeigt sowohl ausdrücklich nicht zugelassene als auch noch nicht
   entschiedene Pferde.
+- **Schlagwörter** – wähle ein oder mehrere Schlagwörter aus (siehe
+  [4.3](#43-weitere-angaben)); die Liste zeigt Pferde, die **mindestens
+  eines** der ausgewählten Schlagwörter tragen.
 
 **Genetik & Gesundheit**
 - **Genetik** – wähle ein oder mehrere Merkmale aus (z.B. Champagne,
@@ -139,7 +142,8 @@ einmal.
 
 Von links nach rechts: Auswahl-Kästchen, 🔗-Link (nur wenn eine
 Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
-(klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen)),
+(klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen))
+mit den zugewiesenen Schlagwörtern als farbige Badges direkt daneben,
 Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
 Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer und Aktionen
 (✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
@@ -148,11 +152,17 @@ Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer und Aktionen
 danach, ein weiterer Klick dreht die Richtung um. Auf dem Handy gibt es
 dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
 
-**Pferde auswählen**: Die Kästchen links dienen zwei Zwecken:
+**Pferde auswählen**: Die Kästchen links dienen drei Zwecken:
 - **CSV-Export** (siehe unten) – für alle nutzbar.
-- **Mehrere Pferde auf einmal löschen** – Kästchen anhaken (oder „Alle
-  auswählen“), es erscheint eine Leiste mit „Ausgewählte löschen“; dieser
-  Button ist nur mit Verwaltungszugriff sichtbar.
+- **Mehreren Pferden auf einmal ein Schlagwort zuweisen** – Kästchen
+  anhaken (oder „Alle auswählen“), es erscheint eine Leiste mit „🏷️
+  Schlagwort zuweisen“; öffnet ein Popup zur Auswahl, ergänzt die
+  gewählten Schlagwörter bei allen ausgewählten Pferden, ohne bereits
+  vorhandene zu entfernen. Ein Zusatztext (siehe [4.3](#43-weitere-angaben))
+  lässt sich dabei nicht mitgeben – dafür das Pferd einzeln bearbeiten.
+- **Mehrere Pferde auf einmal löschen** – über dieselbe Leiste,
+  „Ausgewählte löschen“; dieser Button ist nur mit Verwaltungszugriff
+  sichtbar.
 
 **CSV-Export**: Der Button „📄 CSV exportieren“ oberhalb der Tabelle
 speichert eine Excel-taugliche Datei mit Name, Geschlecht, Rasse (inkl.
@@ -268,6 +278,15 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   Screenshot oder „Bild kopieren“ aus dem Browser, dann Strg+V in das
   Feld) – es wird dann automatisch hochgeladen und die entstehende
   Adresse ins Feld eingetragen.
+- **Schlagwörter**: eine feste Liste (Verkauf, Reserviert, Bleibt,
+  Zuchttier, Gnadenbrot), kein freies Textfeld – haken an, was zutrifft,
+  mehrere gleichzeitig sind möglich. Zu jedem angehakten Schlagwort lässt
+  sich optional ein kurzer Zusatztext eintragen (z.B. bei „Reserviert“,
+  wer reserviert hat) – erscheint dann z.B. als „Reserviert: für Lisa“.
+  Die Schlagwörter erscheinen als farbige Badges in der Übersicht neben
+  dem Namen, lassen sich dort filtern (siehe [3.4](#34-filtern-und-suchen))
+  und auch für mehrere ausgewählte Pferde auf einmal zuweisen (siehe
+  [3.5](#35-die-tabelle)).
 
 ### 4.4 Erkannte Daten ansehen
 

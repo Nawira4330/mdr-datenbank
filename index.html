@@ -60,6 +60,13 @@
               <option value="false">Nein</option>
             </select>
           </div>
+          <div class="field">
+            <label>Schlagwörter</label>
+            <div class="checkdrop" id="f-tag-drop">
+              <button type="button" class="checkdrop-toggle">Alle</button>
+              <div class="checkdrop-panel" hidden></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -193,6 +200,7 @@
       </div>
       <div id="bulk-actions" hidden>
         <span id="selected-count" class="muted small"></span>
+        <button type="button" id="bulk-tag-btn" class="secondary small">🏷️ Schlagwort zuweisen</button>
         <button type="button" id="bulk-delete-btn" class="danger small">Ausgewählte löschen</button>
       </div>
     </div>
@@ -251,6 +259,23 @@
         <div class="modal-actions">
           <button type="button" id="delete-modal-cancel" class="secondary">Abbrechen</button>
           <button type="button" id="delete-modal-confirm" class="danger">Löschen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="bulk-tag-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2>Schlagwort zuweisen</h2>
+        <p id="bulk-tag-count" class="small muted"></p>
+        <p class="small muted">
+          Ausgewählte Schlagwörter werden ergänzt, bestehende bleiben
+          erhalten. Zusatztext (z.B. wer reserviert hat) lässt sich nur
+          einzeln je Pferd im Bearbeiten-Formular eintragen.
+        </p>
+        <div id="bulk-tag-checkboxes" class="tag-checkbox-list"></div>
+        <div class="modal-actions">
+          <button type="button" id="bulk-tag-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="bulk-tag-confirm">Zuweisen</button>
         </div>
       </div>
     </div>

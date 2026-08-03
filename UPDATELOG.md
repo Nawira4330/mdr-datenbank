@@ -6,6 +6,14 @@ drin.
 
 ---
 
+## 04.08.2026
+
+- Neue **Schlagwörter** für eigene Pferde: feste Auswahl (Verkauf,
+  Reserviert, Bleibt, Zuchttier, Gnadenbrot) mit optionalem Zusatztext
+  je Schlagwort, erscheinen als farbige Badges in der Übersicht neben
+  dem Namen. Lassen sich in der Übersicht filtern und auch für mehrere
+  ausgewählte Pferde auf einmal zuweisen.
+
 ## 29.07.2026
 
 - Bekommt ein Pferd beim Aktualisieren neu die Zuchtzulassung (vorher

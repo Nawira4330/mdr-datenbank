@@ -202,6 +202,12 @@ async function populateFilterOptions() {
       { value: '__kit_to__', label: 'Tobiano' },
     ],
   });
+
+  // Feste Liste statt aus vorhandenen Daten abgeleitet (siehe
+  // HORSE_TAG_OPTIONS in parser.js) - alle Schlagwörter sollen als
+  // Filteroption wählbar sein, auch wenn sie aktuell bei keinem Pferd
+  // vergeben sind.
+  populateCheckDropdown('f-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label));
 }
 
 function fillSelect(selector, values) {
@@ -482,6 +488,7 @@ function applyClientFilters(rows) {
   const breed = document.querySelector('#f-breed').value;
   const genetikSelected = getCheckDropdownSelected('f-genetik-drop');
   const ekhSelected = getCheckDropdownSelected('f-ekh-drop');
+  const tagSelected = getCheckDropdownSelected('f-tag-drop');
 
   const gpOp = document.querySelector('#f-gp-op').value;
   const gpVal = document.querySelector('#f-gp-val').value;
@@ -505,6 +512,10 @@ function applyClientFilters(rows) {
     }
     if (genetikSelected.length && !genetikSelected.every((locus) => matchesGenetikLocus(row, locus))) return false;
     if (ekhSelected.length && !matchesEkh(row, ekhSelected)) return false;
+    // Wie beim EKH-Filter: "einer der ausgewählten Schlagwörter" (ODER),
+    // nicht "alle gleichzeitig" (UND) - sonst ließe sich z.B. "Verkauf"
+    // + "Reserviert" nicht kombiniert als "eins von beiden" filtern.
+    if (tagSelected.length && !(row.tags || []).some((t) => tagSelected.includes(t.label))) return false;
     if (!compareValue(d.gp, gpOp, gpVal)) return false;
     if (!compareValue(d.extAvg, extOp, extVal)) return false;
     if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
@@ -596,7 +607,9 @@ function rowHtml(h) {
   // Name öffnet die reine Ansichtsseite (view.html) - Bearbeiten passiert
   // über den eigenen Stift-Button in der Aktionen-Spalte, der externe
   // Spiel-Link über den eigenen 🔗-Button (nur falls external_id gesetzt).
-  const nameCell = `<a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>`;
+  // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) direkt daneben,
+  // statt einer eigenen Spalte - die Tabelle ist ohnehin schon sehr breit.
+  const nameCell = `<a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${tagsBadgesHtml(h.tags)}`;
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
@@ -700,6 +713,7 @@ function wireFilterForm() {
     document.querySelector('#filter-form').reset();
     resetCheckDropdown('f-ekh-drop');
     resetCheckDropdown('f-genetik-drop');
+    resetCheckDropdown('f-tag-drop');
     loadHorses();
   });
 }
@@ -824,6 +838,8 @@ function wireSelection() {
     });
   });
   document.querySelector('#bulk-delete-btn').addEventListener('click', onBulkDelete);
+  document.querySelector('#bulk-tag-btn').addEventListener('click', onBulkTag);
+  wireBulkTagModal();
 }
 
 function onRowSelect(id, checked, refreshBar = true) {
@@ -847,6 +863,55 @@ function onBulkDelete() {
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   if (!rows.length) return;
   openDeleteModal(rows);
+}
+
+// --- Schlagwörter für mehrere ausgewählte Pferde auf einmal (siehe
+// HORSE_TAG_OPTIONS in parser.js) - ergänzt nur (fügt ausgewählte
+// Schlagwörter hinzu, ohne bestehende zu entfernen oder Zusatztexte
+// anzufassen); ein bereits vorhandenes Schlagwort wird nicht doppelt
+// hinzugefügt. Einzelne Schlagwörter entfernen oder mit Zusatztext
+// versehen bleibt dem Formular in horse.html vorbehalten.
+function renderBulkTagCheckboxes() {
+  const container = document.querySelector('#bulk-tag-checkboxes');
+  container.innerHTML = HORSE_TAG_OPTIONS.map(({ label, color }) => `
+    <label class="tag-checkbox-row">
+      <input type="checkbox" data-bulk-tag-checkbox="${escapeHtml(label)}" />
+      <span class="tag-dot" style="background:${color}"></span>
+      ${escapeHtml(label)}
+    </label>
+  `).join('');
+}
+
+function wireBulkTagModal() {
+  renderBulkTagCheckboxes();
+  document.querySelector('#bulk-tag-cancel').addEventListener('click', () => {
+    document.querySelector('#bulk-tag-modal').hidden = true;
+  });
+  document.querySelector('#bulk-tag-confirm').addEventListener('click', confirmBulkTag);
+}
+
+function onBulkTag() {
+  const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
+  if (!rows.length) return;
+  document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]').forEach((cb) => { cb.checked = false; });
+  document.querySelector('#bulk-tag-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
+  document.querySelector('#bulk-tag-modal').hidden = false;
+}
+
+async function confirmBulkTag() {
+  const toAdd = [...document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]:checked')].map((cb) => cb.dataset.bulkTagCheckbox);
+  document.querySelector('#bulk-tag-modal').hidden = true;
+  if (!toAdd.length) return;
+
+  const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
+  const results = await Promise.all(rows.map((row) => {
+    const existingLabels = new Set((row.tags || []).map((t) => t.label));
+    const newTags = [...(row.tags || []), ...toAdd.filter((label) => !existingLabels.has(label)).map((label) => ({ label }))];
+    return supabaseClient.from('horses').update({ tags: newTags }).eq('id', row.id);
+  }));
+  const failed = results.filter((r) => r.error);
+  if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].error.message}`);
+  await loadHorses();
 }
 
 // --- CSV-Export ---

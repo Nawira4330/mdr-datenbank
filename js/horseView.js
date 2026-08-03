@@ -27,6 +27,7 @@ async function initView() {
   wireTabs();
 
   await loadHorse(viewHorseId);
+  document.getElementById('tag-badges').innerHTML = tagsBadgesHtml(extraData.tags);
 
   const name = document.getElementById('name').value;
   document.getElementById('page-heading').textContent = '🐴 ' + (name || '(ohne Name)');

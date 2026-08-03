@@ -7,7 +7,7 @@ const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
   'genetic_diseases', 'colors', 'exterior_genetics', 'exterior_descriptive',
   'temperament', 'disciplines', 'traits', 'tournament_potential', 'pedigree',
-  'color_gene_overrides', 'disease_gene_overrides',
+  'color_gene_overrides', 'disease_gene_overrides', 'tags',
 ];
 
 let extraData = {};
@@ -153,6 +153,7 @@ async function init() {
   wireSaveWarningModal();
   wireDuplicateCheckModal();
   wireTabs();
+  renderTagCheckboxes();
 
   if (editingId) {
     document.getElementById('page-title').textContent = '🐴 Pferd bearbeiten';
@@ -181,6 +182,7 @@ async function loadHorse(id) {
   fillForm(data);
   extraData = data;
   originalRecord = data;
+  fillTagCheckboxes(data.tags);
   document.getElementById('raw-text').value = data.raw_text || '';
   await renderDetailTables(data);
 }
@@ -236,6 +238,60 @@ function fillForm(data) {
   const breedEl = document.getElementById('breed');
   if (breedEl && !breedEl.value.trim()) breedEl.value = 'Rasselos';
   updateBreedCompositionVisibility();
+}
+
+// Baut die Checkbox-Liste der Schlagwörter einmalig aus HORSE_TAG_OPTIONS
+// auf (siehe parser.js) - je Zeile Checkbox + Farbpunkt + optionales
+// Zusatztext-Feld. Änderungen aktualisieren extraData.tags direkt (wie
+// die Gen-Bestätigungs-Buttons weiter oben), da JSONB_KEYS-Werte beim
+// Speichern aus extraData statt aus eigenen Formularfeldern gelesen
+// werden (siehe runSaveFlow).
+function renderTagCheckboxes() {
+  const container = document.getElementById('tag-checkboxes');
+  if (!container) return;
+  container.innerHTML = HORSE_TAG_OPTIONS.map(({ label, color }) => `
+    <label class="tag-checkbox-row">
+      <input type="checkbox" data-tag-checkbox="${escapeHtml(label)}" />
+      <span class="tag-dot" style="background:${color}"></span>
+      ${escapeHtml(label)}
+      <input type="text" class="tag-note-input" data-tag-note="${escapeHtml(label)}" placeholder="Zusatz (optional)" disabled />
+    </label>
+  `).join('');
+  container.addEventListener('change', (e) => {
+    if (e.target.matches('[data-tag-checkbox]')) {
+      const noteInput = container.querySelector(`[data-tag-note="${CSS.escape(e.target.dataset.tagCheckbox)}"]`);
+      noteInput.disabled = !e.target.checked;
+      if (!e.target.checked) noteInput.value = '';
+    }
+    syncTagsFromCheckboxes();
+  });
+  container.addEventListener('input', (e) => {
+    if (e.target.matches('[data-tag-note]')) syncTagsFromCheckboxes();
+  });
+}
+
+function fillTagCheckboxes(tags) {
+  const container = document.getElementById('tag-checkboxes');
+  if (!container) return;
+  const byLabel = new Map((tags || []).map((t) => [t.label, t.note || '']));
+  container.querySelectorAll('[data-tag-checkbox]').forEach((cb) => {
+    const has = byLabel.has(cb.dataset.tagCheckbox);
+    cb.checked = has;
+    const noteInput = container.querySelector(`[data-tag-note="${CSS.escape(cb.dataset.tagCheckbox)}"]`);
+    noteInput.disabled = !has;
+    noteInput.value = has ? byLabel.get(cb.dataset.tagCheckbox) : '';
+  });
+}
+
+function syncTagsFromCheckboxes() {
+  const container = document.getElementById('tag-checkboxes');
+  if (!container) return;
+  const tags = [...container.querySelectorAll('[data-tag-checkbox]:checked')].map((cb) => {
+    const noteInput = container.querySelector(`[data-tag-note="${CSS.escape(cb.dataset.tagCheckbox)}"]`);
+    const note = noteInput.value.trim();
+    return note ? { label: cb.dataset.tagCheckbox, note } : { label: cb.dataset.tagCheckbox };
+  });
+  extraData.tags = tags;
 }
 
 // Das Rasseanteile-Feld ist nur relevant, wenn das Pferd NICHT sicher zu
@@ -466,6 +522,7 @@ const CHANGE_FIELD_LABELS = {
   traits: 'Eigenschaften',
   tournament_potential: 'Turnierwerte',
   pedigree: 'Stammbaum',
+  tags: 'Schlagwörter',
 };
 
 // Ob sich ein einzelner Feldwert gegenüber dem vorherigen Datensatz

@@ -40,6 +40,7 @@ create table if not exists public.horses (
   raw_text text,                -- Original eingefügter Text (Fallback / Re-Parsing)
   notes text,
   image_url text,
+  tags jsonb not null default '[]'::jsonb, -- Schlagwoerter, {label, note}[] - siehe HORSE_TAG_OPTIONS in js/parser.js
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
