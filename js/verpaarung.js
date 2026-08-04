@@ -11,11 +11,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   const session = await requireSession();
   if (!session) return;
-  wireLogout();
-
-  const admin = isAdminSession(session);
-  const displayIdentity = admin ? session.user.email : session.user.email.split('@')[0];
-  document.querySelector('#session-email').textContent = `Angemeldet als: ${displayIdentity}`;
+  await renderSharedNav(session);
   currentIdentity = session.user.email.split('@')[0];
   document.querySelector('#p-owner').value = currentIdentity;
 

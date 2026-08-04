@@ -26,13 +26,8 @@ async function init() {
   if (!session) return;
   currentSession = session;
   currentIdentity = session.user.email.split('@')[0];
-  wireLogout();
-  const admin = isAdminSession(session);
-  const displayIdentity = admin ? session.user.email : session.user.email.split('@')[0];
-  document.querySelector('#session-email').textContent = `Angemeldet als: ${displayIdentity}`;
-  if (admin) {
-    document.querySelector('#verwaltung-link').hidden = false;
-  } else {
+  await renderSharedNav(session);
+  if (!isAdminSession(session)) {
     // Löschen (einzeln wie mehrfach) bleibt in der Übersicht dem Admin
     // vorbehalten - versteckt per CSS (siehe style.css), damit rowHtml()
     // nicht zwei verschiedene Markup-Varianten pflegen muss.
@@ -56,22 +51,18 @@ async function init() {
 }
 
 // Lädt die in einstellungen.html gewählten persönlichen Einstellungen für
-// das eingeloggte Konto (siehe migration_017/018) und wendet sie an:
-// bevorzugte Rassen (preferredBreeds, siehe applyClientFilters) sowie
-// den "Verpaarungs-Log"-Menüpunkt aus-/einblenden. Fehlt die Zeile (noch
-// nie gespeichert), gelten beide Standardwerte (keine Einschränkung bzw.
-// Menüpunkt sichtbar).
+// das eingeloggte Konto (siehe migration_017/018) und wendet die
+// bevorzugten Rassen an (preferredBreeds, siehe applyClientFilters). Das
+// Aus-/Einblenden des "Verpaarungs-Log"-Menüpunkts übernimmt zentral
+// renderSharedNav() (js/nav.js), da das jetzt auf jeder Seite gilt, nicht
+// nur hier.
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled')
+    .select('preferred_breeds')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
-  const verpaarungLink = document.querySelector('#verpaarung-link');
-  if (verpaarungLink && !error && data && data.verpaarung_enabled === false) {
-    verpaarungLink.hidden = true;
-  }
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -104,24 +95,26 @@ async function showMissingDataNotice(session) {
 }
 
 // Vorgeschlagene Schlagwörter (Staging-Tabelle "tag_suggestions", siehe
-// migration_023_tag_suggestions.sql) - z.B. vom MDR-Planer ohne eigenen
-// Login eingetragen. Wirken sich NICHT sofort auf horses.tags aus,
-// sondern erscheinen hier zum manuellen Übernehmen oder Verwerfen, für
-// alle Konten sichtbar (kein "nur eigene Pferde"-Filter wie beim
-// Datenlücken-Hinweis, da ein Vorschlag jedes Pferd betreffen kann und
-// jedes Konto jedes Pferd bearbeiten darf).
+// migration_023_tag_suggestions.sql) - z.B. vom MDR-Planer eingetragen.
+// Wirken sich NICHT sofort auf horses.tags aus, sondern erscheinen hier
+// zum manuellen Übernehmen oder Verwerfen. Nutzerwunsch: nur für das
+// eigene Pferd sichtbar (horses.owner === currentIdentity, case-
+// insensitiv wie bei onOnlyMyHorses), nicht für alle Konten - andere
+// Vorschläge existieren zwar weiter in der Tabelle, werden hier aber
+// ausgefiltert.
 async function loadTagSuggestions() {
   const notice = document.querySelector('#tag-suggestions-notice');
   const { data, error } = await supabaseClient
     .from('tag_suggestions')
-    .select('id, horse_id, label, note, source, horses(name)')
+    .select('id, horse_id, label, note, source, horses(name, owner)')
     .order('created_at');
-  if (error || !data?.length) {
+  const own = (data || []).filter((s) => (s.horses?.owner || '').toLowerCase() === currentIdentity.toLowerCase());
+  if (error || !own.length) {
     notice.hidden = true;
     return;
   }
 
-  const list = data.map((s) => {
+  const list = own.map((s) => {
     const horseName = s.horses?.name || '(unbekanntes Pferd)';
     const badgeText = s.note ? `${s.label}: ${s.note}` : s.label;
     const sourceText = s.source ? ` <span class="muted small">(aus ${escapeHtml(s.source)})</span>` : '';
@@ -133,7 +126,7 @@ async function loadTagSuggestions() {
     </li>`;
   }).join('');
 
-  notice.innerHTML = `<summary><strong>Hinweis:</strong> ${data.length} vorgeschlagene${data.length === 1 ? 's' : ''} Schlagwort${data.length === 1 ? '' : 'e'} aus dem MDR-Planer</summary><ul>${list}</ul>`;
+  notice.innerHTML = `<summary><strong>Hinweis:</strong> ${own.length} vorgeschlagene${own.length === 1 ? 's' : ''} Schlagwort${own.length === 1 ? '' : 'e'} aus dem MDR-Planer</summary><ul>${list}</ul>`;
   notice.hidden = false;
 
   notice.querySelectorAll('[data-accept-suggestion]').forEach((btn) => {

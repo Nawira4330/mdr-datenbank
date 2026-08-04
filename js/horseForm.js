@@ -139,7 +139,7 @@ async function init() {
 
   const session = await requireSession();
   if (!session) return;
-  wireLogout();
+  await renderSharedNav(session);
   formIdentity = session.user.email.split('@')[0];
 
   const params = new URLSearchParams(window.location.search);

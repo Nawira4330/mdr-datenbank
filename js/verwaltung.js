@@ -5,5 +5,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = 'index.html';
     return;
   }
-  wireLogout();
+  await renderSharedNav(session);
 });

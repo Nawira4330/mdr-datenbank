@@ -5,7 +5,7 @@ let currentUserId = null;
 async function init() {
   const session = await requireSession();
   if (!session) return;
-  wireLogout();
+  await renderSharedNav(session);
   currentUserId = session.user.id;
 
   await populateBreedCheckboxes();
@@ -112,7 +112,14 @@ async function onSave() {
   // Sofort anwenden, ohne dass die Seite neu geladen werden muss (siehe
   // applyPageZoom in auth.js - dieselbe Logik, die jede geschützte Seite
   // nach requireSession() ausführt).
-  if (!error) document.documentElement.style.setProperty('--zoom', pageZoom / 100);
+  if (!error) {
+    document.documentElement.style.setProperty('--zoom', pageZoom / 100);
+    // Verpaarungs-Log-Menüpunkt im MDR-DB-Dropdown (siehe renderSharedNav
+    // in js/nav.js) direkt aktualisieren, ohne die Seite neu laden zu
+    // müssen.
+    const verpaarungLink = document.getElementById('verpaarung-link');
+    if (verpaarungLink) verpaarungLink.hidden = !verpaarungEnabled;
+  }
 }
 
 function escapeHtml(str) {

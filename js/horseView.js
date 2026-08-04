@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', initView);
 async function initView() {
   const session = await requireSession();
   if (!session) return;
-  wireLogout();
+  await renderSharedNav(session);
 
   const params = new URLSearchParams(window.location.search);
   viewHorseId = params.get('id');

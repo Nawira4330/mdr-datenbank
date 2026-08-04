@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   const session = await requireSession();
   if (!session) return;
-  wireLogout();
+  await renderSharedNav(session);
   wireForm();
   await populateFilterOptions();
   await calculate();

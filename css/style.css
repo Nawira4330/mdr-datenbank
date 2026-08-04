@@ -330,6 +330,44 @@ label {
 .checkdrop-item input { width: auto; }
 .checkdrop-empty { padding: 0.3rem; font-size: 0.85rem; color: var(--muted); }
 
+/* --- Nav-Dropdowns in der Kopfzeile (MDR-Planer/MDR-DB/Konto, siehe
+   js/nav.js) - selbes Grundmuster wie .checkdrop oben, aber als
+   Menü-Liste aus Links/Buttons statt Checkboxen. */
+.nav-dropdown { position: relative; }
+.nav-dropdown-menu {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+.nav-dropdown-menu a,
+.nav-dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--text);
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-dropdown-menu a:hover,
+.nav-dropdown-menu button:hover { background: rgba(107, 157, 0, 0.12); }
+.nav-dropdown-menu hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0; }
+
 .list-header {
   display: flex;
   flex-wrap: wrap;
@@ -627,6 +665,7 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
      rechten Rand hinausragen. */
   .checkdrop-panel { max-width: calc(100vw - 3rem); }
   .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
+  .nav-dropdown-menu { max-width: calc(100vw - 3rem); }
 
   .mobile-select-all { display: inline-flex; }
   .mobile-sort { display: inline-flex; }

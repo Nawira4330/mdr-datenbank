@@ -59,23 +59,24 @@ auszuwählen.
 
 ### 3.1 Kopfzeile
 
-Oben rechts findest du überall folgende Schaltflächen (nicht auf jeder
-Seite alle):
+Oben rechts findest du auf jeder Seite dieselben drei Menüs zum
+Aufklappen (Klick auf den Namen), dazu links den jeweils
+seitenpassenden ersten Knopf (z.B. „+ Neues Pferd“ auf der Übersicht,
+sonst „← Zur Übersicht“):
 
-- **+ Neues Pferd** – öffnet ein leeres Formular, um ein neues Pferd
-  anzulegen.
-- **💞 Verpaarungs-Log** – öffnet das Verpaarungs-Log (siehe
-  [Abschnitt 6](#6-verpaarungs-log)).
-- **Zucht-/Turnierplaner ↗** – öffnet unser separates Zucht-Planungs-Tool
-  in einem neuen Tab (siehe [Abschnitt 10](#10-zucht-turnierplaner)).
-- **📊 Durchschnitt** – öffnet den Durchschnittsrechner (siehe
-  [Abschnitt 8](#8-durchschnittsrechner)).
-- **📖 Anleitung** – diese Seite hier.
-- **Verwaltung** – nur sichtbar, wenn du Verwaltungszugriff hast (siehe
-  [Abschnitt 7](#7-verwaltung)).
-- **⚙️** – persönliche Einstellungen (nur als Symbol, direkt neben
-  „Abmelden“, siehe [Abschnitt 9](#9-einstellungen)).
-- **Abmelden**.
+- **MDR-Planer** – Links zu unserem separaten Zucht-Planungs-Tool
+  (öffnen jeweils in einem neuen Tab, siehe
+  [Abschnitt 10](#10-zucht-turnierplaner)): alle Tools, Zuchtplaner,
+  Turnierplaner, Zuchtbuch, Fohlen-Tracker, Verwandtschaftsmatrix.
+- **MDR-DB** – Anleitung (diese Seite), Update-Log sowie 💞
+  Verpaarungs-Log (siehe [Abschnitt 6](#6-verpaarungs-log)) – Letzteres
+  nur, wenn du es nicht unter [Einstellungen](#9-einstellungen)
+  ausgeblendet hast.
+- **Dein Benutzername** – ⚙️ Einstellungen (siehe
+  [Abschnitt 9](#9-einstellungen)), 📊 Durchschnitt (siehe
+  [Abschnitt 8](#8-durchschnittsrechner)), 🛠️ Verwaltung (nur mit
+  Verwaltungszugriff, siehe [Abschnitt 7](#7-verwaltung)) sowie
+  „Abmelden“.
 
 ### 3.2 Hinweis auf fehlende Daten
 
@@ -570,8 +571,10 @@ anderen Einstellungen auf dieser Seite.
 
 ## 10. Zucht-/Turnierplaner
 
-Dieser Link führt zu unserem separaten Zucht-Planungs-Tool. Es greift
-auf dieselbe Pferdedatenbank zu, ist aber ein eigenständiges Werkzeug mit
+Die Links unter „MDR-Planer“ in der Kopfzeile führen zu unserem
+separaten Zucht-Planungs-Tool (alle Tools, Zuchtplaner, Turnierplaner,
+Zuchtbuch, Fohlen-Tracker, Verwandtschaftsmatrix). Es greift auf
+dieselbe Pferdedatenbank zu, ist aber ein eigenständiges Werkzeug mit
 eigener Bedienung – diese Anleitung deckt es nicht mit ab.
 
 ---

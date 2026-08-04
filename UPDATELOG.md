@@ -8,6 +8,10 @@ drin.
 
 ## 04.08.2026
 
+- **Kopfzeile neu geordnet**: statt vieler einzelner Buttons jetzt drei
+  aufklappbare Menüs – „MDR-Planer“ (alle Tools des Zucht-Planers),
+  „MDR-DB“ (Anleitung, Update-Log, Verpaarungs-Log) und der eigene
+  Benutzername (Einstellungen, Durchschnitt, Verwaltung, Abmelden).
 - Neue Staging-Tabelle für **vorgeschlagene Schlagwörter**: der
   Zucht-/Turnierplaner kann (ohne eigenen Login) ein Schlagwort für ein
   Pferd vorschlagen; es erscheint als Hinweis in der Übersicht und wird
