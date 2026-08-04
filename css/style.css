@@ -656,25 +656,27 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 .modal-box li { margin: 0.2rem 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
 
-@media (max-width: 640px) {
-  main.container { padding: 0.75rem; }
-  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
-  .topbar h1 { font-size: 1.3rem; }
-
-  /* Checkbox-Dropdown-Panel darf auf schmalen Bildschirmen nicht über den
-     rechten Rand hinausragen. */
+/* Gilt für Tablet UND Handy (siehe max-width unten) - die Tabelle mit
+   ihren 16 Spalten wird auch auf Tablet-Breite (z.B. 768px, Hochformat)
+   ohne diesen Umbau unleserlich gestaucht, deshalb ein deutlich
+   breiterer Umbruch als der reine Handy-Breakpoint weiter unten. Erst ab
+   echter Desktop-/Tablet-Querformat-Breite bleibt die normale
+   Tabellenansicht. */
+@media (max-width: 900px) {
+  /* Dropdown-Panels (Checkbox-Filter, Nav-Menüs "MDR-Planer"/"MDR-DB"/
+     Konto) dürfen auch auf Tablet-Breite nicht über den rechten Rand
+     hinausragen. */
   .checkdrop-panel { max-width: calc(100vw - 3rem); }
-  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
   .nav-dropdown-menu { max-width: calc(100vw - 3rem); }
 
   .mobile-select-all { display: inline-flex; }
   .mobile-sort { display: inline-flex; }
 
   /* --- Übersicht: Tabelle -> Liste ---
-     12 Spalten passen auf einem Handybildschirm auch mit Umbruch nicht
-     lesbar nebeneinander (siehe table-layout:fixed weiter oben, das ist
-     für Tablet/Desktop gedacht). Stattdessen wird jede Zeile zu einem
-     Listeneintrag "Label: Wert" je Feld - das Label kommt aus dem
+     16 Spalten passen auf Tablet/Handy auch mit Umbruch nicht lesbar
+     nebeneinander (siehe table-layout:fixed weiter oben, das ist nur
+     für echte Desktop-Breite gedacht). Stattdessen wird jede Zeile zu
+     einem Listeneintrag "Label: Wert" je Feld - das Label kommt aus dem
      data-label-Attribut (siehe rowHtml in list.js), da <thead> hier
      ausgeblendet wird (Sortieren stattdessen über .mobile-sort oben).
      Alle Einträge bilden zusammen eine durchgehende Liste (ein Rahmen um
@@ -734,6 +736,13 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   #horse-table td[data-label="Aktionen"]::before { content: none; }
   #horse-table td[data-label="Aktionen"] button { width: 100%; }
   #horse-table td.small { font-size: 0.85rem; }
+}
+
+@media (max-width: 640px) {
+  main.container { padding: 0.75rem; }
+  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
+  .topbar h1 { font-size: 1.3rem; }
+  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
 
   /* --- Formular (horse.html) --- */
   .form-actions { flex-direction: column; }
@@ -744,11 +753,11 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
-   Nur ab einer gewissen Breite, damit auf sehr kleinen Bildschirmen (wo
-   der Filterbereich selbst schon mehr als die Viewport-Höhe einnehmen
-   kann) weiterhin die ganze Seite normal scrollt statt Inhalte
-   abzuschneiden. */
-@media (min-width: 641px) {
+   Nur ab einer gewissen Breite (passend zum Tabelle->Liste-Umbau oben),
+   damit auf sehr kleinen Bildschirmen (wo der Filterbereich selbst schon
+   mehr als die Viewport-Höhe einnehmen kann) weiterhin die ganze Seite
+   normal scrollt statt Inhalte abzuschneiden. */
+@media (min-width: 901px) {
   body.list-page {
     /* siehe --zoom-Kommentar oben im :root - ohne die Korrektur würde
        diese Box durch den Seiten-Zoom nur 80% der tatsächlichen

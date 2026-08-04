@@ -8,6 +8,10 @@ drin.
 
 ## 04.08.2026
 
+- **Tablet-Ansicht verbessert**: die Übersichtstabelle wechselt jetzt
+  schon ab Tablet-Breite (statt erst auf dem Handy) in die übersichtliche
+  Listenansicht - vorher waren die Spalten auf einem Tablet stark
+  gestaucht und schlecht lesbar.
 - **Kopfzeile neu geordnet**: statt vieler einzelner Buttons jetzt drei
   aufklappbare Menüs – „MDR-Planer“ (alle Tools des Zucht-Planers),
   „MDR-DB“ (Anleitung, Update-Log, Verpaarungs-Log) und der eigene
