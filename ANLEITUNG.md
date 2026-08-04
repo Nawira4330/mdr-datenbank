@@ -112,18 +112,21 @@ einmal.
 **Filter-Vorlagen**: Häufig genutzte Filterkombinationen lassen sich
 als Vorlage speichern – „💾 Als Vorlage speichern“ fragt nach einem
 Namen und merkt sich den kompletten aktuellen Stand aller Filter-/
-Suchfelder (nicht die Ø-Vergleich-Vergleichsbasis) für dein Konto.
-Speicherst du erneut unter demselben Namen, wird die Vorlage
-überschrieben. Über das Dropdown „Vorlage laden…“ wendest du eine
-gespeicherte Vorlage sofort an. Löschen geht nur über
-[Einstellungen](#9-einstellungen), nicht direkt in der Übersicht.
+Suchfelder, der Sortierung sowie des Ø-Vergleichs (An/Aus und
+Vergleichsbasis) für dein Konto. Speicherst du erneut unter demselben
+Namen, wird die Vorlage überschrieben. Über das Dropdown „Vorlage
+laden…“ wendest du eine gespeicherte Vorlage sofort an. Löschen geht
+nur über [Einstellungen](#9-einstellungen), nicht direkt in der
+Übersicht.
 
 **Suche**
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
   Rolle.
 - **Besitzer**, **Geschlecht**, **Rasse** – Auswahllisten mit den
   tatsächlich vorkommenden Werten, standardmäßig auf „Alle“ gestellt;
-  „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse. Hast du unter
+  „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse. Der Button
+  „Nur meine“ neben Besitzer setzt den Filter direkt auf dein eigenes
+  Konto. Hast du unter
   [Einstellungen](#9-einstellungen) bevorzugte Rassen ausgewählt, listet
   der Rasse-Filter nur noch diese als Optionen auf – „Alle (auch
   außerhalb meiner Auswahl)“ hebt das für den Moment wieder auf und zeigt
@@ -163,22 +166,26 @@ dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
 
 **Pferde auswählen**: Die Kästchen links dienen drei Zwecken:
 - **CSV-Export** (siehe unten) – für alle nutzbar.
-- **Mehreren Pferden auf einmal ein Schlagwort zuweisen** – Kästchen
-  anhaken (oder „Alle auswählen“), es erscheint eine Leiste mit „🏷️
-  Schlagwort zuweisen“; öffnet ein Popup zur Auswahl, ergänzt die
-  gewählten Schlagwörter bei allen ausgewählten Pferden, ohne bereits
-  vorhandene zu entfernen. Ein Zusatztext (siehe [4.3](#43-weitere-angaben))
-  lässt sich dabei nicht mitgeben – dafür das Pferd einzeln bearbeiten.
+- **Mehreren Pferden auf einmal Schlagwörter zuweisen oder entfernen** –
+  Kästchen anhaken (oder „Alle auswählen“), es erscheint eine Leiste mit
+  „🏷️ Schlagwort zuweisen“ und „🏷️ Schlagwort entfernen“; beide öffnen
+  ein Popup zur Auswahl. „Zuweisen“ ergänzt die gewählten Schlagwörter
+  bei allen ausgewählten Pferden, ohne bereits vorhandene zu entfernen;
+  „Entfernen“ löscht die gewählten Schlagwörter dort, wo sie vorkommen,
+  andere Schlagwörter bleiben unangetastet. Ein Zusatztext (siehe
+  [4.3](#43-weitere-angaben)) lässt sich dabei nicht mitgeben – dafür das
+  Pferd einzeln bearbeiten.
 - **Mehrere Pferde auf einmal löschen** – über dieselbe Leiste,
   „Ausgewählte löschen“; dieser Button ist nur mit Verwaltungszugriff
   sichtbar.
 
 **CSV-Export**: Der Button „📄 CSV exportieren“ oberhalb der Tabelle
 speichert eine Excel-taugliche Datei mit Name, Geschlecht, Rasse (inkl.
-Rasseanteile), Farbe/Genetik, GP, Ext, Ext%, Int, Besitzer und dem
-vollständigen Spiel-Link. Sind über die Kästchen einzelne Pferde
-ausgewählt, werden nur diese exportiert – ohne Auswahl exportiert der
-Button stattdessen alle gerade sichtbaren (gefilterten) Pferde.
+Rasseanteile), Farbe/Genetik, GP, Ext, Ext%, Int, Besitzer,
+Schlagwörtern (inkl. Zusatztext) und dem vollständigen Spiel-Link. Sind
+über die Kästchen einzelne Pferde ausgewählt, werden nur diese
+exportiert – ohne Auswahl exportiert der Button stattdessen alle gerade
+sichtbaren (gefilterten) Pferde.
 
 **Wichtig**: Löschen (einzeln über ✗ oder mehrfach über die
 Auswahl-Leiste) ist **endgültig** und lässt sich nicht rückgängig
@@ -397,6 +404,13 @@ anzulegen – nützlich z.B. bei einem Fohlen, das zuerst automatisch als
 „Fohlen_Mutter X Vater“ angelegt und jetzt unter seinem echten Namen
 erneut eingetragen wird. „Nein, neu anlegen“ legt wie gewohnt einen
 neuen, separaten Datensatz an.
+
+Hat der gefundene, bereits vorhandene Datensatz dabei Schlagwörter, die
+im gerade ausgefüllten Formular nicht angehakt sind (weil du ja nicht
+wissen konntest, dass es das Pferd schon gibt), fragt ein zusätzliches
+Popup nach: „OK“ behält die bereits vorhandenen Schlagwörter und ergänzt
+die neu angehakten dazu, „Abbrechen“ entfernt die nicht angehakten und
+übernimmt nur die aus dem aktuellen Formular.
 
 ---
 

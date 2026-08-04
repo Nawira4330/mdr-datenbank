@@ -8,6 +8,18 @@ drin.
 
 ## 04.08.2026
 
+- Ist beim Anlegen eines vermeintlich neuen Pferds, das sich als
+  Dopplung herausstellt (Namensgleichheit/ID-Match), zufällig ein
+  Schlagwort angehakt, fragt ein Popup jetzt nach, statt die bereits
+  vorhandenen Schlagwörter des gefundenen Datensatzes stillschweigend
+  zu überschreiben.
+- Neue Mehrfachauswahl-Aktion „🏷️ Schlagwort entfernen“ neben „🏷️
+  Schlagwort zuweisen“.
+- Schlagwörter (inkl. Zusatztext) jetzt auch im CSV-Export enthalten.
+- Filter-Vorlagen speichern jetzt zusätzlich die Sortierung und den
+  Ø-Vergleich (An/Aus und Vergleichsbasis) mit.
+- Neuer Schnellfilter „Nur meine“ neben dem Besitzer-Filter.
+
 - Neue **Filter-Vorlagen**: Filter-/Sucheinstellungen der Übersicht
   lassen sich unter einem Namen speichern und später per Dropdown
   wieder anwenden. Löschbar über Einstellungen.

@@ -39,7 +39,10 @@
           </div>
           <div class="field">
             <label for="f-owner">Besitzer</label>
-            <select id="f-owner"><option value="">Alle</option></select>
+            <div style="display: flex; gap: 0.4rem;">
+              <select id="f-owner" style="flex: 1;"><option value="">Alle</option></select>
+              <button type="button" id="only-my-horses-btn" class="secondary small" title="Besitzer auf mich selbst setzen">Nur meine</button>
+            </div>
           </div>
           <div class="field">
             <label for="f-gender">Geschlecht</label>
@@ -205,6 +208,7 @@
       <div id="bulk-actions" hidden>
         <span id="selected-count" class="muted small"></span>
         <button type="button" id="bulk-tag-btn" class="secondary small">🏷️ Schlagwort zuweisen</button>
+        <button type="button" id="bulk-tag-remove-btn" class="secondary small">🏷️ Schlagwort entfernen</button>
         <button type="button" id="bulk-delete-btn" class="danger small">Ausgewählte löschen</button>
       </div>
     </div>
@@ -269,13 +273,9 @@
 
     <div id="bulk-tag-modal" class="modal-overlay" hidden>
       <div class="modal-box">
-        <h2>Schlagwort zuweisen</h2>
+        <h2 id="bulk-tag-modal-title">Schlagwort zuweisen</h2>
         <p id="bulk-tag-count" class="small muted"></p>
-        <p class="small muted">
-          Ausgewählte Schlagwörter werden ergänzt, bestehende bleiben
-          erhalten. Zusatztext (z.B. wer reserviert hat) lässt sich nur
-          einzeln je Pferd im Bearbeiten-Formular eintragen.
-        </p>
+        <p id="bulk-tag-hint" class="small muted"></p>
         <div id="bulk-tag-checkboxes" class="tag-checkbox-list"></div>
         <div class="modal-actions">
           <button type="button" id="bulk-tag-cancel" class="secondary">Abbrechen</button>

@@ -15,6 +15,9 @@ let compareBaseline = null;
 // Eingeloggtes Konto - wird u.a. von saveFilterPreset() gebraucht (siehe
 // wireFilterPresets), sonst nur lokal in init() gebraucht.
 let currentSession = null;
+// Benutzername (vor dem @) des eingeloggten Kontos - fuer den
+// "Nur meine"-Schnellfilter beim Besitzer (siehe onOnlyMyHorses).
+let currentIdentity = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -22,6 +25,7 @@ async function init() {
   const session = await requireSession();
   if (!session) return;
   currentSession = session;
+  currentIdentity = session.user.email.split('@')[0];
   wireLogout();
   const admin = isAdminSession(session);
   const displayIdentity = admin ? session.user.email : session.user.email.split('@')[0];
@@ -722,6 +726,18 @@ function wireFilterForm() {
     resetCheckDropdown('f-tag-drop');
     loadHorses();
   });
+  document.querySelector('#only-my-horses-btn').addEventListener('click', onOnlyMyHorses);
+}
+
+// Setzt den Besitzer-Filter auf das eigene Konto - Groß-/Kleinschreibung
+// im "Besitzer"-Feld ist nicht garantiert einheitlich mit dem
+// Benutzernamen, deshalb hier case-insensitiv die passende Option in der
+// bereits befüllten Auswahlliste suchen statt den Wert direkt zu setzen.
+function onOnlyMyHorses() {
+  const select = document.querySelector('#f-owner');
+  const match = [...select.options].find((o) => o.value.toLowerCase() === currentIdentity.toLowerCase());
+  if (match) select.value = match.value;
+  loadHorses();
 }
 
 function wireSortableHeaders() {
@@ -856,6 +872,12 @@ function collectFilterState() {
     extpctVal: document.querySelector('#f-extpct-val').value,
     intOp: document.querySelector('#f-int-op').value,
     intVal: document.querySelector('#f-int-val').value,
+    sortField: currentSort.field,
+    sortDir: currentSort.dir,
+    compareAvgEnabled: document.querySelector('#compare-avg-toggle').checked,
+    cmpBreed: document.querySelector('#cmp-breed').value,
+    cmpZzl: document.querySelector('#cmp-zzl').value,
+    cmpOwner: document.querySelector('#cmp-owner').value,
   };
 }
 
@@ -863,7 +885,7 @@ function collectFilterState() {
 // wendet ihn direkt an. Werte, die in den Auswahllisten (Besitzer/Rasse/
 // Geschlecht) inzwischen nicht mehr vorkommen (z.B. Pferd umbenannt/
 // gelöscht), bleiben dabei einfach unwirksam - kein Fehler.
-function applyFilterState(state) {
+async function applyFilterState(state) {
   document.querySelector('#f-name').value = state.name || '';
   document.querySelector('#f-owner').value = state.owner || '';
   document.querySelector('#f-gender').value = state.gender || '';
@@ -880,6 +902,21 @@ function applyFilterState(state) {
   document.querySelector('#f-extpct-val').value = state.extpctVal || '';
   document.querySelector('#f-int-op').value = state.intOp || 'gt';
   document.querySelector('#f-int-val').value = state.intVal || '';
+
+  currentSort = { field: state.sortField || 'name', dir: state.sortDir || 'asc' };
+  syncMobileSortControls();
+
+  // Ø-Vergleich-Vergleichsbasis (eigenes Feature, siehe wireCompareAvg) -
+  // mit in der Vorlage gespeichert, damit "Vorlage laden" wirklich den
+  // kompletten zuletzt gesehenen Zustand wiederherstellt.
+  const toggle = document.querySelector('#compare-avg-toggle');
+  toggle.checked = Boolean(state.compareAvgEnabled);
+  document.querySelector('#compare-avg-panel').hidden = !toggle.checked;
+  document.querySelector('#cmp-breed').value = state.cmpBreed || '';
+  document.querySelector('#cmp-zzl').value = state.cmpZzl || '';
+  document.querySelector('#cmp-owner').value = state.cmpOwner || '';
+  compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
+
   loadHorses();
 }
 
@@ -903,10 +940,10 @@ async function loadFilterPresets() {
 }
 
 function wireFilterPresets() {
-  document.querySelector('#filter-preset-select').addEventListener('change', (e) => {
+  document.querySelector('#filter-preset-select').addEventListener('change', async (e) => {
     const opt = e.target.selectedOptions[0];
     if (!opt.value) return;
-    applyFilterState(JSON.parse(opt.dataset.filters));
+    await applyFilterState(JSON.parse(opt.dataset.filters));
   });
   document.querySelector('#save-filter-preset-btn').addEventListener('click', saveFilterPreset);
 }
@@ -943,7 +980,8 @@ function wireSelection() {
     });
   });
   document.querySelector('#bulk-delete-btn').addEventListener('click', onBulkDelete);
-  document.querySelector('#bulk-tag-btn').addEventListener('click', onBulkTag);
+  document.querySelector('#bulk-tag-btn').addEventListener('click', () => onBulkTag('add'));
+  document.querySelector('#bulk-tag-remove-btn').addEventListener('click', () => onBulkTag('remove'));
   wireBulkTagModal();
 }
 
@@ -971,11 +1009,12 @@ function onBulkDelete() {
 }
 
 // --- Schlagwörter für mehrere ausgewählte Pferde auf einmal (siehe
-// HORSE_TAG_OPTIONS in parser.js) - ergänzt nur (fügt ausgewählte
-// Schlagwörter hinzu, ohne bestehende zu entfernen oder Zusatztexte
-// anzufassen); ein bereits vorhandenes Schlagwort wird nicht doppelt
-// hinzugefügt. Einzelne Schlagwörter entfernen oder mit Zusatztext
-// versehen bleibt dem Formular in horse.html vorbehalten.
+// HORSE_TAG_OPTIONS in parser.js) - je nach Modus entweder Hinzufügen
+// (ergänzt nur, lässt bestehende Schlagwörter und deren Zusatztexte
+// unangetastet) oder Entfernen (löscht die angehakten, falls vorhanden).
+// Zusatztext einzeln setzen bleibt dem Formular in horse.html vorbehalten.
+let bulkTagMode = 'add';
+
 function renderBulkTagCheckboxes() {
   const container = document.querySelector('#bulk-tag-checkboxes');
   container.innerHTML = HORSE_TAG_OPTIONS.map(({ label, color }) => `
@@ -995,23 +1034,34 @@ function wireBulkTagModal() {
   document.querySelector('#bulk-tag-confirm').addEventListener('click', confirmBulkTag);
 }
 
-function onBulkTag() {
+function onBulkTag(mode) {
+  bulkTagMode = mode;
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   if (!rows.length) return;
   document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]').forEach((cb) => { cb.checked = false; });
   document.querySelector('#bulk-tag-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
+  document.querySelector('#bulk-tag-modal-title').textContent = mode === 'add' ? 'Schlagwort zuweisen' : 'Schlagwort entfernen';
+  document.querySelector('#bulk-tag-hint').textContent = mode === 'add'
+    ? 'Ausgewählte Schlagwörter werden ergänzt, bestehende bleiben erhalten. Zusatztext (z.B. wer reserviert hat) lässt sich nur einzeln je Pferd im Bearbeiten-Formular eintragen.'
+    : 'Ausgewählte Schlagwörter werden bei allen ausgewählten Pferden entfernt, falls vorhanden - andere Schlagwörter bleiben erhalten.';
+  document.querySelector('#bulk-tag-confirm').textContent = mode === 'add' ? 'Zuweisen' : 'Entfernen';
   document.querySelector('#bulk-tag-modal').hidden = false;
 }
 
 async function confirmBulkTag() {
-  const toAdd = [...document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]:checked')].map((cb) => cb.dataset.bulkTagCheckbox);
+  const chosen = [...document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]:checked')].map((cb) => cb.dataset.bulkTagCheckbox);
   document.querySelector('#bulk-tag-modal').hidden = true;
-  if (!toAdd.length) return;
+  if (!chosen.length) return;
 
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   const results = await Promise.all(rows.map((row) => {
-    const existingLabels = new Set((row.tags || []).map((t) => t.label));
-    const newTags = [...(row.tags || []), ...toAdd.filter((label) => !existingLabels.has(label)).map((label) => ({ label }))];
+    let newTags;
+    if (bulkTagMode === 'remove') {
+      newTags = (row.tags || []).filter((t) => !chosen.includes(t.label));
+    } else {
+      const existingLabels = new Set((row.tags || []).map((t) => t.label));
+      newTags = [...(row.tags || []), ...chosen.filter((label) => !existingLabels.has(label)).map((label) => ({ label }))];
+    }
     return supabaseClient.from('horses').update({ tags: newTags }).eq('id', row.id);
   }));
   const failed = results.filter((r) => r.error);
@@ -1021,7 +1071,7 @@ async function confirmBulkTag() {
 
 // --- CSV-Export ---
 
-const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse - Rasseanteile', 'Farbe Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'Besitzer', 'MDR-Link'];
+const CSV_COLUMNS = ['Name', 'Geschlecht', 'Rasse - Rasseanteile', 'Farbe Genetik', 'GP', 'Ext', 'Ext%', 'Int', 'Besitzer', 'Schlagwörter', 'MDR-Link'];
 
 // Semikolon statt Komma als Trennzeichen, da deutsches Excel Kommas als
 // Dezimaltrennzeichen liest und eine mit Komma getrennte CSV-Datei sonst
@@ -1046,6 +1096,7 @@ function csvRowOf(h) {
   const mdrLink = h.external_id
     ? `https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}`
     : '';
+  const tagsCell = (h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label).join(', ');
   return [
     h.name || '',
     h.gender || '',
@@ -1056,6 +1107,7 @@ function csvRowOf(h) {
     d.extPercent != null ? deDecimal(d.extPercent) + '%' : '',
     d.intAvg != null ? deDecimal(d.intAvg.toFixed(2)) : '',
     h.owner || '',
+    tagsCell,
     mdrLink,
   ];
 }

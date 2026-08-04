@@ -490,8 +490,48 @@ function mergeFieldValue(key, oldValue, newValue) {
   if (key === 'disciplines' || key === 'traits' || key === 'tournament_potential') {
     return { ...(oldValue || {}), ...(newValue || {}) };
   }
+  // "tags": ähnliches Problem, nur als Array statt Objekt - wird das
+  // Formular als vermeintlich neues Pferd ausgefüllt und dabei (ohne die
+  // bereits vorhandenen Schlagwörter zu sehen, siehe fillTagCheckboxes/
+  // loadHorse) z.B. nur "Verkauf" angehakt, würde ein alles-oder-nichts-
+  // Ersetzen alle anderen, bereits vorhandenen Schlagwörter des
+  // gefundenen Datensatzes stillschweigend löschen. Statt das automatisch
+  // zu entscheiden, wird beim Speichern nachgefragt (siehe
+  // decideTagsMerge) - aber nur, wenn es dabei wirklich etwas zu
+  // entscheiden gibt.
+  if (key === 'tags') return decideTagsMerge(oldValue, newValue);
   if (isEmptyValue(key, newValue) && !isEmptyValue(key, oldValue)) return oldValue;
   return newValue;
+}
+
+function mergeTagsUnion(oldTags, newTags) {
+  const merged = new Map((oldTags || []).map((t) => [t.label, t]));
+  for (const t of (newTags || [])) merged.set(t.label, t);
+  return [...merged.values()];
+}
+
+// Wird nur in den beiden Dopplungs-Merge-Zweigen von performSave gebraucht
+// (Namensgleichheit / Dopplungs-Check-Bestätigung) - dort wurde das
+// Formular als vermeintlich neues Pferd ausgefüllt, checkt der Nutzer
+// dabei ein Schlagwort an, weiß er nichts von eventuell bereits
+// vorhandenen Schlagwörtern des gefundenen Datensatzes (die
+// Checkbox-Liste wurde nie mit dessen Werten befüllt, siehe
+// fillTagCheckboxes/loadHorse). Nur wenn der bestehende Datensatz
+// Schlagwörter hat, die im neuen Formular NICHT angehakt sind, gibt es
+// überhaupt etwas zu entscheiden - sonst einfach zusammenführen, ohne zu
+// fragen.
+function decideTagsMerge(oldTags, newTags) {
+  const old = oldTags || [];
+  const fresh = newTags || [];
+  const freshLabels = new Set(fresh.map((t) => t.label));
+  const extraOld = old.filter((t) => !freshLabels.has(t.label));
+  if (!extraOld.length) return mergeTagsUnion(old, fresh);
+  const keepBoth = confirm(
+    `Das gefundene Pferd hat bereits folgende Schlagwörter: ${extraOld.map((t) => t.label).join(', ')}.\n\n` +
+    `OK = behalten und mit den neu angehakten zusammenführen.\n` +
+    `Abbrechen = entfernen, nur die im Formular angehakten Schlagwörter übernehmen.`
+  );
+  return keepBoth ? mergeTagsUnion(old, fresh) : fresh;
 }
 
 // Deutsche Kurz-Labels für den Änderungs-Hinweis im Flash-Banner (siehe
