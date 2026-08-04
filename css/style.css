@@ -265,6 +265,7 @@ label {
 .filter-bar .actions {
   flex-basis: 100%;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   justify-content: flex-end;
 }
@@ -378,6 +379,7 @@ label {
 }
 #bulk-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
 }
@@ -533,7 +535,7 @@ legend {
 .tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
 
 .paste-box textarea { min-height: 160px; font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; }
-.paste-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
+.paste-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.5rem; align-items: center; }
 
 /* Einklappbare Variante des Paste-Kastens (horse.html beim Bearbeiten
    bestehender Pferde, siehe horseForm.js init) - <details>/<summary>
@@ -654,7 +656,7 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 }
 .modal-box ul { margin: 0.5rem 0; padding-left: 1.2rem; }
 .modal-box li { margin: 0.2rem 0; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
+.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
 
 /* Gilt für Tablet UND Handy (siehe max-width unten) - die Tabelle mit
    ihren 16 Spalten wird auch auf Tablet-Breite (z.B. 768px, Hochformat)

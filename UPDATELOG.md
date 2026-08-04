@@ -8,6 +8,13 @@ drin.
 
 ## 04.08.2026
 
+- **Button-Zeilen brechen auf schmalen Handys jetzt um**: die
+  Filtern-Leiste (Vorlage laden/Als Vorlage speichern/Zurücksetzen/
+  Filtern) sowie die Mehrfachauswahl-Leiste (Schlagwort zuweisen/
+  entfernen/Löschen) konnten auf sehr schmalen Bildschirmen (z.B.
+  Samsung Galaxy S24 Ultra) über den rechten Rand hinausragen, sodass
+  „Filtern“ nicht mehr erreichbar war - brechen jetzt sauber in mehrere
+  Zeilen um.
 - **Tablet-Ansicht verbessert**: die Übersichtstabelle wechselt jetzt
   schon ab Tablet-Breite (statt erst auf dem Handy) in die übersichtliche
   Listenansicht - vorher waren die Spalten auf einem Tablet stark
