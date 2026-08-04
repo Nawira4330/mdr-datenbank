@@ -49,6 +49,7 @@ async function init() {
   showFlashBanner();
   await loadUserSettings(session);
   await showMissingDataNotice(session);
+  await loadTagSuggestions();
   await populateFilterOptions();
   await loadFilterPresets();
   await loadHorses();
@@ -100,6 +101,88 @@ async function showMissingDataNotice(session) {
   const notice = document.querySelector('#missing-data-notice');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
   notice.hidden = false;
+}
+
+// Vorgeschlagene Schlagwörter (Staging-Tabelle "tag_suggestions", siehe
+// migration_023_tag_suggestions.sql) - z.B. vom MDR-Planer ohne eigenen
+// Login eingetragen. Wirken sich NICHT sofort auf horses.tags aus,
+// sondern erscheinen hier zum manuellen Übernehmen oder Verwerfen, für
+// alle Konten sichtbar (kein "nur eigene Pferde"-Filter wie beim
+// Datenlücken-Hinweis, da ein Vorschlag jedes Pferd betreffen kann und
+// jedes Konto jedes Pferd bearbeiten darf).
+async function loadTagSuggestions() {
+  const notice = document.querySelector('#tag-suggestions-notice');
+  const { data, error } = await supabaseClient
+    .from('tag_suggestions')
+    .select('id, horse_id, label, note, source, horses(name)')
+    .order('created_at');
+  if (error || !data?.length) {
+    notice.hidden = true;
+    return;
+  }
+
+  const list = data.map((s) => {
+    const horseName = s.horses?.name || '(unbekanntes Pferd)';
+    const badgeText = s.note ? `${s.label}: ${s.note}` : s.label;
+    const sourceText = s.source ? ` <span class="muted small">(aus ${escapeHtml(s.source)})</span>` : '';
+    return `<li>
+      <span class="horse-tag-badge" style="background:${tagColor(s.label)}">${escapeHtml(badgeText)}</span>
+      für <a href="horse.html?id=${s.horse_id}">${escapeHtml(horseName)}</a>${sourceText}
+      <button type="button" class="secondary icon-btn" data-accept-suggestion="${s.id}" title="Übernehmen">✓</button>
+      <button type="button" class="secondary icon-btn" data-discard-suggestion="${s.id}" title="Verwerfen">✗</button>
+    </li>`;
+  }).join('');
+
+  notice.innerHTML = `<summary><strong>Hinweis:</strong> ${data.length} vorgeschlagene${data.length === 1 ? 's' : ''} Schlagwort${data.length === 1 ? '' : 'e'} aus dem MDR-Planer</summary><ul>${list}</ul>`;
+  notice.hidden = false;
+
+  notice.querySelectorAll('[data-accept-suggestion]').forEach((btn) => {
+    btn.addEventListener('click', () => onAcceptTagSuggestion(btn.dataset.acceptSuggestion));
+  });
+  notice.querySelectorAll('[data-discard-suggestion]').forEach((btn) => {
+    btn.addEventListener('click', () => onDiscardTagSuggestion(btn.dataset.discardSuggestion));
+  });
+}
+
+// Übernimmt einen Vorschlag ins eigentliche horses.tags (nach Label
+// zusammengeführt - ein gleichlautendes bereits vorhandenes Schlagwort
+// wird durch den Vorschlag samt seinem Zusatztext ersetzt, andere
+// bleiben erhalten) und entfernt ihn danach aus der Staging-Tabelle.
+async function onAcceptTagSuggestion(id) {
+  const { data: suggestion, error: fetchError } = await supabaseClient
+    .from('tag_suggestions')
+    .select('horse_id, label, note')
+    .eq('id', id)
+    .single();
+  if (fetchError || !suggestion) return;
+
+  const { data: horse, error: horseError } = await supabaseClient
+    .from('horses')
+    .select('tags')
+    .eq('id', suggestion.horse_id)
+    .single();
+  if (horseError || !horse) return;
+
+  const newTag = suggestion.note ? { label: suggestion.label, note: suggestion.note } : { label: suggestion.label };
+  const merged = new Map((horse.tags || []).map((t) => [t.label, t]));
+  merged.set(newTag.label, newTag);
+
+  const { error: updateError } = await supabaseClient
+    .from('horses')
+    .update({ tags: [...merged.values()] })
+    .eq('id', suggestion.horse_id);
+  if (updateError) {
+    alert('Übernehmen fehlgeschlagen: ' + updateError.message);
+    return;
+  }
+  await supabaseClient.from('tag_suggestions').delete().eq('id', id);
+  await loadTagSuggestions();
+  await loadHorses();
+}
+
+async function onDiscardTagSuggestion(id) {
+  await supabaseClient.from('tag_suggestions').delete().eq('id', id);
+  await loadTagSuggestions();
 }
 
 // Zeigt nach dem Anlegen/Aktualisieren eines Pferds (siehe horseForm.js)

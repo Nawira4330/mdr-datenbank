@@ -96,6 +96,16 @@ um die Lücke zu schließen. Der Hinweiskasten lässt sich einklappen (Klick
 auf die Überschrift), ist beim Öffnen der Seite aber immer erst
 aufgeklappt.
 
+**Vorgeschlagene Schlagwörter**: Darunter kann ein ähnlicher Hinweiskasten
+erscheinen, wenn z.B. der [Zucht-/Turnierplaner](#10-zucht-turnierplaner)
+ein Schlagwort für ein Pferd vorschlägt (aus Zuchtbuch, Fohlen-Tracker
+oder Verwandtschaftsmatrix). Diese Vorschläge werden **nicht automatisch**
+übernommen, sondern nur zwischengespeichert – du siehst pro Vorschlag das
+Schlagwort, das betroffene Pferd und optional woher der Vorschlag kommt,
+und entscheidest per ✓ (übernehmen, ins Pferd eintragen) oder ✗ (verwerfen,
+ohne Wirkung löschen). Dieser Kasten ist für alle Konten sichtbar, nicht
+nur für die eigenen Pferde.
+
 ### 3.3 Meldung nach dem Speichern
 
 Nachdem du ein Pferd angelegt oder gespeichert hast, siehst du beim

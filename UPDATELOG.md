@@ -8,6 +8,11 @@ drin.
 
 ## 04.08.2026
 
+- Neue Staging-Tabelle für **vorgeschlagene Schlagwörter**: der
+  Zucht-/Turnierplaner kann (ohne eigenen Login) ein Schlagwort für ein
+  Pferd vorschlagen; es erscheint als Hinweis in der Übersicht und wird
+  erst per Klick auf ✓ übernommen oder per ✗ verworfen, statt sich
+  sofort auf das Pferd auszuwirken.
 - Ist beim Anlegen eines vermeintlich neuen Pferds, das sich als
   Dopplung herausstellt (Namensgleichheit/ID-Match), zufällig ein
   Schlagwort angehakt, fragt ein Popup jetzt nach, statt die bereits

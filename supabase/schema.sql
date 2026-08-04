@@ -379,6 +379,35 @@ drop policy if exists "filter_presets_delete_own" on public.filter_presets;
 create policy "filter_presets_delete_own" on public.filter_presets
   for delete to authenticated using (auth.uid() = user_id);
 
+-- Vorgeschlagene Schlagwoerter (Staging-Tabelle, analog zu pairings) -
+-- der MDR-Planer (anderes Repo) kann hier ohne eigenen Login Vorschlaege
+-- eintragen, die erst in der Uebersicht manuell uebernommen/verworfen
+-- werden (siehe js/list.js). Siehe migration_023_tag_suggestions.sql.
+create table if not exists public.tag_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  horse_id uuid not null references public.horses(id) on delete cascade,
+  label text not null,
+  note text,
+  source text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.tag_suggestions enable row level security;
+
+drop policy if exists "tag_suggestions_select_authenticated" on public.tag_suggestions;
+create policy "tag_suggestions_select_authenticated" on public.tag_suggestions
+  for select to authenticated using (true);
+
+drop policy if exists "tag_suggestions_delete_authenticated" on public.tag_suggestions;
+create policy "tag_suggestions_delete_authenticated" on public.tag_suggestions
+  for delete to authenticated using (true);
+
+grant insert on public.tag_suggestions to anon;
+
+drop policy if exists "tag_suggestions_insert_public" on public.tag_suggestions;
+create policy "tag_suggestions_insert_public" on public.tag_suggestions
+  for insert to anon with check (true);
+
 -- Storage-Bucket fuer per Zwischenablage eingefuegte Bilder (Bild-URL-Feld
 -- in horse.html/verpaarung.html, siehe js/horseForm.js) - siehe
 -- migration_019_horse_images_storage.sql. Hochladen bleibt eingeloggten
