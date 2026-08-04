@@ -33,7 +33,10 @@ async function renderSharedNav(session) {
   if (!nav) return;
 
   const admin = isAdminSession(session);
-  const identity = admin ? session.user.email : session.user.email.split('@')[0];
+  // Nutzerwunsch: immer nur der Benutzername vor dem "@" (auch für Admin-
+  // Konten) - vorher zeigte der Admin-Fall die volle synthetische
+  // Login-E-Mail (z.B. "nawira13@benutzer.mdr-datenbank.local").
+  const identity = session.user.email.split('@')[0];
 
   const mdrPlanerItems = MDR_PLANER_LINKS
     .map(({ label, url }) => `<a href="${url}" target="_blank" rel="noopener">${navEscapeHtml(label)} ↗</a>`)
