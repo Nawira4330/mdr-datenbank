@@ -6,6 +6,14 @@ drin.
 
 ---
 
+## 08.08.2026 (3)
+
+- **Mini-Bild in der Übersicht**: Pferde mit hinterlegter Bild-URL zeigen
+  jetzt ein kleines Vorschaubild ganz links in der Tabelle (Klick öffnet
+  die Ansichtsseite).
+
+---
+
 ## 08.08.2026 (2)
 
 - **Schlagwort „Gnadenbrot" in „GBH" umbenannt** – gilt auch für bereits

@@ -679,14 +679,14 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="18">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="19">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="18" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="19" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
@@ -694,7 +694,7 @@ async function loadHorses() {
   const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="18">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="19">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -728,10 +728,14 @@ function rowHtml(h) {
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
+  const imageCell = h.image_url
+    ? `<a href="view.html?id=${h.id}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
+    : '';
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
+    <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="${nameCls}">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>

@@ -150,6 +150,15 @@ main.container {
   margin-bottom: 0.8rem;
 }
 
+/* Mini-Vorschaubild in der Übersichtstabelle (siehe rowHtml in list.js). */
+.table-thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
 button, .btn {
   font: inherit;
   padding: 0.5rem 0.9rem;
@@ -759,6 +768,13 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
     border-bottom: 1px solid var(--border);
   }
   #horse-table td[data-label="Auswählen"]::before { content: none; }
+  #horse-table td[data-label="Bild"] {
+    order: -1;
+    flex: 0 0 auto;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Bild"]::before { content: none; }
   #horse-table td[data-label="Name"] {
     order: -1;
     flex: 1 1 auto;

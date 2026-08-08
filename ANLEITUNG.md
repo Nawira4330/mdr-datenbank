@@ -164,8 +164,10 @@ nur über [Einstellungen](#9-einstellungen), nicht direkt in der
 
 ### 3.5 Die Tabelle
 
-Von links nach rechts: Auswahl-Kästchen, 🔗-Link (nur wenn eine
-Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
+Von links nach rechts: Auswahl-Kästchen, Mini-Bild (nur wenn eine
+Bild-URL hinterlegt ist – Klick öffnet die Ansichtsseite), 🔗-Link (nur
+wenn eine Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im
+Spiel), Name
 (klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen))
 mit den zugewiesenen Schlagwörtern als farbige Badges direkt daneben,
 Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
