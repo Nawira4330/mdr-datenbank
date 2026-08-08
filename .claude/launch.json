@@ -5,7 +5,15 @@
       "name": "static-server",
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude/serve.ps1"],
-      "port": 8080
+      "port": 8080,
+      "autoPort": true
+    },
+    {
+      "name": "mdr-planer",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\lisa-\\AppData\\Local\\Temp\\claude\\C--Users-lisa--OneDrive-MDR-Datenbank\\339bf739-5bdc-47a6-9978-ee83a7b246e1\\scratchpad\\serve-planer.ps1"],
+      "port": 8090,
+      "autoPort": true
     }
   ]
 }

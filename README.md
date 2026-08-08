@@ -18,6 +18,9 @@ neue Pferde anlegen, bearbeiten, löschen, filtern und alle bestehenden Einträg
   Geschlecht, Farbe, Stammbaum, Exterieur, Interieur, Disziplin- und Eigenschaftswerte
   usw.) werden ins Formular übernommen und können vor dem Speichern geprüft/korrigiert
   werden
+- **Zuchtplaner & Turnierplaner**: eigenes, separates Repository
+  [mdr-planer](https://github.com/Nawira4330/mdr-planer) – rein lesend, ohne
+  Login, greift auf dieselbe Datenbank zu (siehe Abschnitt 5 unten)
 
 ## 1. Supabase-Projekt einrichten
 
@@ -87,6 +90,22 @@ powershell -File .claude/serve.ps1
 ```
 
 Danach `http://localhost:8080` im Browser öffnen.
+
+## 5. Lesezugriff ohne Login freischalten (für Zuchtplaner & Turnierplaner)
+
+Zuchtplaner und Turnierplaner sind zwei rein lesende Werkzeuge in einem
+**separaten Repository** ([mdr-planer](https://github.com/Nawira4330/mdr-planer)),
+die ohne Login auf diese Datenbank zugreifen. Damit sie funktionieren, muss
+einmalig im Supabase-Dashboard unter **SQL Editor** der Inhalt von
+[`supabase/migration_005_public_read_access.sql`](supabase/migration_005_public_read_access.sql)
+eingefügt und ausgeführt werden – das erlaubt lesenden Zugriff (nur `select`,
+kein `insert`/`update`/`delete`) auch ohne eingeloggte Session.
+
+Hinweis: Der `anon`-Key steht ohnehin öffentlich im Frontend-Code (GitHub
+Pages). Nach dieser Migration sind die Pferdedaten damit lesend für jede*n
+mit diesem (bereits öffentlichen) Key abrufbar, nicht nur über mdr-planer.
+Schreibzugriff bleibt weiterhin ausschließlich eingeloggten Konten in diesem
+Repository vorbehalten.
 
 ## Benutzung
 

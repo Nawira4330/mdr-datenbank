@@ -1,4 +1,4 @@
-param([int]$Port = 8080)
+param([int]$Port = $(if ($env:PORT) { [int]$env:PORT } else { 8080 }))
 $root = Split-Path -Parent $PSScriptRoot
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:$Port/")
