@@ -1,0 +1,17 @@
+{
+  "name": "mdr-datenbank-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord-Bot fuer die MDR Pferdedatenbank (/mdrdb Slash-Command)",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}
