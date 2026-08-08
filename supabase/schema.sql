@@ -14,6 +14,7 @@ create table if not exists public.horses (
   breed_composition text,       -- Rasseanteile (Zusammensetzung), falls rasselos und nicht 100% reinrassig
   coat_color text,
   disease_free boolean,
+  birthdate date,                -- Geburtsdatum, fuer Altersanzeige (siehe formatAge in js/parser.js). Siehe migration_024_horse_birthdate.sql.
 
   -- Verwaltung
   owner text,

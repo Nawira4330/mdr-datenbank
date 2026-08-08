@@ -1,7 +1,7 @@
 const TEXT_FIELDS = [
   'name', 'external_id', 'gender', 'breed', 'breed_composition', 'coat_color', 'owner', 'hlp_slp', 'notes', 'image_url',
 ];
-const DATE_FIELDS = [];
+const DATE_FIELDS = ['birthdate'];
 const NUMBER_FIELDS = ['purebred_pct', 'ico'];
 const BOOLEAN_FIELDS = ['disease_free', 'breeding_allowed'];
 const JSONB_KEYS = [
@@ -238,7 +238,27 @@ function fillForm(data) {
   const breedEl = document.getElementById('breed');
   if (breedEl && !breedEl.value.trim()) breedEl.value = 'Rasselos';
   updateBreedCompositionVisibility();
+  updateImagePreview();
 }
+
+// Zeigt das Pferdebild (Bild-URL-Feld) direkt an statt nur den reinen
+// Link - sowohl bei horse.html (kleine Vorschau neben dem Feld) als auch
+// bei view.html (grosse Anzeige, siehe .view-mode .image-preview in
+// style.css). Wird bei jedem fillForm() (Laden/Auslesen) aufgerufen sowie
+// live beim manuellen Tippen/Einfuegen der URL.
+function updateImagePreview() {
+  const img = document.getElementById('image-preview');
+  if (!img) return;
+  const url = document.getElementById('image_url')?.value.trim();
+  if (url) {
+    img.src = url;
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+    img.removeAttribute('src');
+  }
+}
+document.getElementById('image_url')?.addEventListener('input', updateImagePreview);
 
 // Baut die Checkbox-Liste der Schlagwörter einmalig aus HORSE_TAG_OPTIONS
 // auf (siehe parser.js) - je Zeile Checkbox + Farbpunkt + optionales

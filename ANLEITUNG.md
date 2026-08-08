@@ -147,7 +147,8 @@ nur über [Einstellungen](#9-einstellungen), nicht direkt in der
   entschiedene Pferde.
 - **Schlagwörter** – wähle ein oder mehrere Schlagwörter aus (siehe
   [4.3](#43-weitere-angaben)); die Liste zeigt Pferde, die **mindestens
-  eines** der ausgewählten Schlagwörter tragen.
+  eines** der ausgewählten Schlagwörter tragen. „Kein Schlagwort“ zeigt
+  stattdessen gezielt Pferde ganz ohne Schlagwort.
 
 **Genetik & Gesundheit**
 - **Genetik** – wähle ein oder mehrere Merkmale aus (z.B. Champagne,
@@ -168,12 +169,17 @@ Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
 (klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen))
 mit den zugewiesenen Schlagwörtern als farbige Badges direkt daneben,
 Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
-Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer und Aktionen
+Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer, Alter (berechnet
+aus dem Geburtsdatum, siehe [4.2](#42-stammdaten) – 30 reale Tage
+entsprechen dabei 1 Spieljahr) und Zuletzt bearbeitet, sowie Aktionen
 (✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
 
 **Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste
 danach, ein weiterer Klick dreht die Richtung um. Auf dem Handy gibt es
 dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
+
+**Nach oben**: Sobald du in einer langen Liste gescrollt hast, erscheint
+unten rechts ein ↑-Button, der dich direkt wieder an den Anfang bringt.
 
 **Pferde auswählen**: Die Kästchen links dienen drei Zwecken:
 - **CSV-Export** (siehe unten) – für alle nutzbar.
@@ -210,7 +216,8 @@ als der Durchschnitt abschneidet. Bei **GP** und **Ext%** ist ein
 höherer Wert besser (grün = darüber); bei **Ext** und **Int** ist es
 umgekehrt ein **niedrigerer** Wert (Skala 1 = exzellent … 4/5 =
 schlecht, grün = darunter). Beim Anhaken erscheint ein zusätzliches
-Dropdown-Menü mit **Rasse**, **ZZL** und **Besitzer** (Basis) – damit
+Dropdown-Menü mit **Rasse**, **ZZL**, **Besitzer** und **Geschlecht**
+(Basis) – damit
 legst du fest, welche Pferde in die Durchschnittsberechnung einfließen
 (unabhängig davon, welche Pferde die Filter oben gerade anzeigen). Ein
 leerer Wert (Fehlanzeige) bei GP/Ext/Ext%/Int bleibt unmarkiert.
@@ -291,6 +298,11 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   schon eine Hauptrasse eingetragen ist.
 - **Fellfarbe** – wird auch benutzt, um automatisch auf mögliche Gene zu
   schließen (z.B. deutet „Palomino“ auf das Cream-Gen hin).
+- **Geburtsdatum** – wird beim automatischen Auslesen aus der
+  „Geburtstag:“-Zeile im kopierten Spieltext übernommen, lässt sich aber
+  auch von Hand eintragen/ändern. Daraus berechnen Übersicht und
+  Ansichtsseite automatisch das Alter in Spieljahren (30 reale Tage =
+  1 Spieljahr, genau wie im Spiel selbst).
 - **Erbkrankheiten** (Auswahl frei/vorhanden/unbekannt) – ein grober
   Gesamtstatus, unabhängig von der ausführlichen Krankheiten-Tabelle
   weiter unten.
@@ -304,9 +316,10 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   Bild-Adresse eintippen, oder direkt ein Bild einfügen (z.B. per
   Screenshot oder „Bild kopieren“ aus dem Browser, dann Strg+V in das
   Feld) – es wird dann automatisch hochgeladen und die entstehende
-  Adresse ins Feld eingetragen.
+  Adresse ins Feld eingetragen. Direkt darunter erscheint eine kleine
+  Bildvorschau, sobald eine Adresse eingetragen ist.
 - **Schlagwörter**: eine feste Liste (Verkauf, Reserviert, Bleibt,
-  Zuchttier, Gnadenbrot), kein freies Textfeld – haken an, was zutrifft,
+  Zuchttier, GBH), kein freies Textfeld – haken an, was zutrifft,
   mehrere gleichzeitig sind möglich. Zu jedem angehakten Schlagwort lässt
   sich optional ein kurzer Zusatztext eintragen (z.B. bei „Reserviert“,
   wer reserviert hat) – erscheint dann z.B. als „Reserviert: für Lisa“.
@@ -429,7 +442,10 @@ die neu angehakten dazu, „Abbrechen“ entfernt die nicht angehakten und
 
 Klickst du in der Übersicht auf den Namen eines Pferds, öffnet sich eine
 reine Ansichtsseite – alle Felder sind hier nur zum Lesen, nichts lässt
-sich versehentlich verändern. Dieselben 4 Reiter wie beim Bearbeiten
+sich versehentlich verändern. Ist ein Bild hinterlegt, erscheint es groß
+oben auf der Seite; darunter stehen, wann das Pferd zuletzt bearbeitet
+wurde und (bei eingetragenem Geburtsdatum) sein Alter in Spieljahren.
+Dieselben 4 Reiter wie beim Bearbeiten
 (siehe [Abschnitt 4](#4-pferd-anlegen-oder-bearbeiten)) gliedern auch
 hier die Ansicht.
 
@@ -520,7 +536,9 @@ Passwörter zurücksetzt.
 Berechnet Durchschnittswerte (GP, Ext, Ext%, Int) über alle Pferde, die
 zu den gewählten Filtern passen.
 
-1. **Besitzer**, **Rasse**, **Geschlecht**, **ZZL** einzeln oder
+1. **Besitzer**, **Rasse**, **Geschlecht**, **ZZL**, **Schlagwörter**
+   (Mehrfachauswahl, „mindestens eines der ausgewählten“, „Kein
+   Schlagwort“ findet Pferde ganz ohne Schlagwort) einzeln oder
    kombiniert einschränken – jeder leere Filter („Alle“) bezieht alle
    Pferde mit ein.
 2. „Berechnen“ klicken.

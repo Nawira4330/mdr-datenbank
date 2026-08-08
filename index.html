@@ -166,6 +166,10 @@
           <label for="cmp-owner">Besitzer (Basis)</label>
           <select id="cmp-owner"><option value="">Alle</option></select>
         </div>
+        <div class="field">
+          <label for="cmp-gender">Geschlecht (Basis)</label>
+          <select id="cmp-gender"><option value="">Alle</option></select>
+        </div>
       </div>
     </div>
 
@@ -191,6 +195,8 @@
           <option value="hlpslp">HLP/SLP</option>
           <option value="zzl">ZZL</option>
           <option value="owner">Besitzer</option>
+          <option value="birthdate">Alter</option>
+          <option value="updated_at">Zuletzt bearbeitet</option>
         </select>
         <select id="f-sort-dir">
           <option value="asc">aufsteigend</option>
@@ -223,6 +229,8 @@
           <col style="width: 5%" />
           <col style="width: 6%" />
           <col style="width: 6%" />
+          <col style="width: 6%" />
+          <col style="width: 8%" />
           <col style="width: 11%" />
         </colgroup>
         <thead>
@@ -242,11 +250,13 @@
             <th data-sort="zzl">ZZL</th>
             <th>EKH</th>
             <th data-sort="owner">Besitzer</th>
+            <th data-sort="birthdate">Alter</th>
+            <th data-sort="updated_at">Zuletzt bearbeitet</th>
             <th>Aktionen</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="16">Lade…</td></tr>
+          <tr><td colspan="18">Lade…</td></tr>
         </tbody>
       </table>
     </div>
@@ -275,6 +285,8 @@
         </div>
       </div>
     </div>
+
+    <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 
   <script src="js/config.js"></script>

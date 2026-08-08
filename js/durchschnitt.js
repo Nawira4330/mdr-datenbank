@@ -5,6 +5,8 @@ async function init() {
   if (!session) return;
   await renderSharedNav(session);
   wireForm();
+  wireCheckDropdowns();
+  populateCheckDropdown('d-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label), { noneOption: 'Kein Schlagwort' });
   await populateFilterOptions();
   await calculate();
 }
@@ -33,7 +35,7 @@ function fillSelect(selector, values) {
 function buildQuery() {
   let q = supabaseClient
     .from('horses')
-    .select('tournament_potential, exterior_descriptive, exterior_genetics, temperament, owner, breed, gender, breeding_allowed');
+    .select('tournament_potential, exterior_descriptive, exterior_genetics, temperament, owner, breed, gender, breeding_allowed, tags');
 
   const owner = document.querySelector('#d-owner').value;
   const gender = document.querySelector('#d-gender').value;
@@ -86,11 +88,17 @@ async function calculate() {
   const resultEl = document.querySelector('#avg-result');
   resultEl.innerHTML = '<p class="muted small">Lade…</p>';
 
-  const { data, error } = await buildQuery();
+  const { data: allData, error } = await buildQuery();
   if (error) {
     resultEl.innerHTML = `<p class="error">Fehler beim Laden: ${escapeHtml(error.message)}</p>`;
     return;
   }
+
+  // Schlagwörter lassen sich nicht direkt in der Supabase-Abfrage
+  // filtern (jsonb-Array) - deshalb erst clientseitig eingrenzen, wie
+  // beim Schlagwort-Filter in der Übersicht (siehe matchesTags/list.js).
+  const tagSelected = getCheckDropdownSelected('d-tag-drop');
+  const data = tagSelected.length ? allData.filter((h) => matchesTags(h, tagSelected)) : allData;
 
   if (!data.length) {
     resultEl.innerHTML = '<p>Keine Pferde gefunden.</p>';
@@ -130,6 +138,7 @@ function wireForm() {
   });
   document.querySelector('#avg-reset').addEventListener('click', () => {
     document.querySelector('#avg-filter-form').reset();
+    resetCheckDropdown('d-tag-drop');
     calculate();
   });
 }

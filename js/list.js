@@ -41,6 +41,7 @@ async function init() {
   wireExportCsv();
   wireCompareAvg();
   wireFilterPresets();
+  wireScrollTop();
   showFlashBanner();
   await loadUserSettings(session);
   await showMissingDataNotice(session);
@@ -258,6 +259,7 @@ async function populateFilterOptions() {
   // Vergleichsbasis festlegen, nicht die Standardanzeige.
   fillSelect('#cmp-breed', [...breeds].sort());
   fillSelect('#cmp-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
+  fillSelect('#cmp-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
 
   const diseaseLabels = new Set();
   const locusLabels = new Set();
@@ -293,7 +295,7 @@ async function populateFilterOptions() {
   // HORSE_TAG_OPTIONS in parser.js) - alle Schlagwörter sollen als
   // Filteroption wählbar sein, auch wenn sie aktuell bei keinem Pferd
   // vergeben sind.
-  populateCheckDropdown('f-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label));
+  populateCheckDropdown('f-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label), { noneOption: 'Kein Schlagwort' });
 }
 
 function fillSelect(selector, values) {
@@ -376,25 +378,49 @@ function wireCompareAvg() {
     compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
     await loadHorses();
   });
-  ['#cmp-breed', '#cmp-zzl', '#cmp-owner'].forEach((sel) => {
+  ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
     document.querySelector(sel).addEventListener('change', recompute);
   });
 }
 
-// Durchschnitt von GP/Ext/Ext%/Int über die per Rasse/ZZL/Besitzer
-// eingeschränkte Vergleichsbasis (eigene Auswahl, unabhängig von den
-// Übersichts-Filtern) - wie durchschnitt.js, aber nur die vier hier
-// gebrauchten Werte statt der vollen Ergebnis-Tabelle.
+// "Nach oben"-Pfeil (siehe .scroll-top-btn in style.css) - je nach
+// Bildschirmbreite scrollt entweder nur die Tabelle selbst (Desktop, "nur
+// die Tabelle scrollt"-Layout weiter unten) oder die ganze Seite
+// (Tablet/Handy) - deshalb auf beide möglichen Scroll-Quellen hören und
+// bei Klick beide zurücksetzen (das jeweils nicht betroffene scrollTo ist
+// dann einfach wirkungslos).
+function wireScrollTop() {
+  const btn = document.querySelector('#scroll-top-btn');
+  const tableWrap = document.querySelector('.table-wrap');
+  const threshold = 400;
+  const updateVisibility = () => {
+    const scrolled = window.scrollY > threshold || tableWrap.scrollTop > threshold;
+    btn.hidden = !scrolled;
+  };
+  window.addEventListener('scroll', updateVisibility);
+  tableWrap.addEventListener('scroll', updateVisibility);
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    tableWrap.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+// Durchschnitt von GP/Ext/Ext%/Int über die per Rasse/ZZL/Besitzer/
+// Geschlecht eingeschränkte Vergleichsbasis (eigene Auswahl, unabhängig
+// von den Übersichts-Filtern) - wie durchschnitt.js, aber nur die vier
+// hier gebrauchten Werte statt der vollen Ergebnis-Tabelle.
 async function computeCompareBaseline() {
   let q = supabaseClient.from('horses').select('tournament_potential, exterior_descriptive, exterior_genetics, temperament');
   const breed = document.querySelector('#cmp-breed').value;
   const zzl = document.querySelector('#cmp-zzl').value;
   const owner = document.querySelector('#cmp-owner').value;
+  const gender = document.querySelector('#cmp-gender').value;
   if (breed === 'Rasselos') q = q.or('breed.eq.Rasselos,breed.is.null');
   else if (breed) q = q.eq('breed', breed);
   if (zzl === 'true') q = q.eq('breeding_allowed', true);
   else if (zzl === 'false') q = q.or('breeding_allowed.eq.false,breeding_allowed.is.null');
   if (owner) q = q.eq('owner', owner);
+  if (gender) q = q.eq('gender', gender);
 
   const { data, error } = await q;
   if (error || !data || !data.length) return null;
@@ -601,7 +627,8 @@ function applyClientFilters(rows) {
     // Wie beim EKH-Filter: "einer der ausgewählten Schlagwörter" (ODER),
     // nicht "alle gleichzeitig" (UND) - sonst ließe sich z.B. "Verkauf"
     // + "Reserviert" nicht kombiniert als "eins von beiden" filtern.
-    if (tagSelected.length && !(row.tags || []).some((t) => tagSelected.includes(t.label))) return false;
+    // "Keine" (__none__) findet Pferde ganz ohne Schlagwort.
+    if (tagSelected.length && !matchesTags(row, tagSelected)) return false;
     if (!compareValue(d.gp, gpOp, gpVal)) return false;
     if (!compareValue(d.extAvg, extOp, extVal)) return false;
     if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
@@ -627,6 +654,8 @@ function sortValue(row, field) {
       return Number.isNaN(n) ? null : n;
     }
     case 'zzl': return row.breeding_allowed == null ? null : (row.breeding_allowed ? 1 : 0);
+    case 'birthdate': return row.birthdate || null;
+    case 'updated_at': return row.updated_at || null;
     default: return null;
   }
 }
@@ -650,14 +679,14 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="16">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="18">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="16" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="18" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
@@ -665,7 +694,7 @@ async function loadHorses() {
   const filtered = applySort(applyClientFilters(data));
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="16">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -717,6 +746,8 @@ function rowHtml(h) {
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
     <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
+    <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
+    <td data-label="Zuletzt bearbeitet">${h.updated_at ? escapeHtml(formatTimestamp(h.updated_at)) : ''}</td>
     <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
@@ -850,81 +881,6 @@ function syncMobileSortControls() {
   dirSel.value = currentSort.dir;
 }
 
-// --- Checkbox-Dropdowns (Genetik, EKH) ---
-
-function wireCheckDropdowns() {
-  document.querySelectorAll('.checkdrop').forEach((root) => {
-    const toggle = root.querySelector('.checkdrop-toggle');
-    toggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const panel = root.querySelector('.checkdrop-panel');
-      const wasOpen = !panel.hidden;
-      closeAllCheckDropdowns();
-      panel.hidden = wasOpen;
-    });
-  });
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.checkdrop')) closeAllCheckDropdowns();
-  });
-}
-
-function closeAllCheckDropdowns() {
-  document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
-}
-
-function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
-  const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
-  panel.innerHTML = '';
-
-  if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
-  for (const v of values) panel.appendChild(checkDropdownItem(v, v));
-  for (const { value, label } of extra || []) panel.appendChild(checkDropdownItem(value, label));
-
-  if (!noneOption && !values.length && !(extra || []).length) {
-    const empty = document.createElement('div');
-    empty.className = 'checkdrop-empty';
-    empty.textContent = 'Keine Werte vorhanden';
-    panel.appendChild(empty);
-  }
-
-  panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
-}
-
-function checkDropdownItem(value, label) {
-  const wrap = document.createElement('label');
-  wrap.className = 'checkdrop-item';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.value = value;
-  wrap.appendChild(cb);
-  wrap.appendChild(document.createTextNode(label));
-  return wrap;
-}
-
-function updateCheckDropdownLabel(rootId) {
-  const root = document.getElementById(rootId);
-  const toggle = root.querySelector('.checkdrop-toggle');
-  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked');
-  toggle.textContent = checked.length ? `${checked.length} ausgewählt` : 'Alle';
-}
-
-function getCheckDropdownSelected(rootId) {
-  return [...document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]:checked`)].map((cb) => cb.value);
-}
-
-function resetCheckDropdown(rootId) {
-  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
-  updateCheckDropdownLabel(rootId);
-}
-
-function setCheckDropdownSelected(rootId, values) {
-  const wanted = new Set(values || []);
-  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => {
-    cb.checked = wanted.has(cb.value);
-  });
-  updateCheckDropdownLabel(rootId);
-}
-
 // --- Filter-Vorlagen (gespeicherte Filter-/Sucheinstellungen je Konto,
 // siehe migration_022_filter_presets.sql) ---
 
@@ -954,6 +910,7 @@ function collectFilterState() {
     cmpBreed: document.querySelector('#cmp-breed').value,
     cmpZzl: document.querySelector('#cmp-zzl').value,
     cmpOwner: document.querySelector('#cmp-owner').value,
+    cmpGender: document.querySelector('#cmp-gender').value,
   };
 }
 
@@ -991,6 +948,7 @@ async function applyFilterState(state) {
   document.querySelector('#cmp-breed').value = state.cmpBreed || '';
   document.querySelector('#cmp-zzl').value = state.cmpZzl || '';
   document.querySelector('#cmp-owner').value = state.cmpOwner || '';
+  document.querySelector('#cmp-gender').value = state.cmpGender || '';
   compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
 
   loadHorses();

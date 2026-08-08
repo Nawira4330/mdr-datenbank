@@ -68,6 +68,7 @@ function parseHorseText(rawText) {
   // --- Einfache "Label: Wert" Zeilen ---
   setIf(result, 'coat_color', findValueForLabel(nonEmpty, 'Fellfarbe'));
   setIf(result, 'owner', findValueForLabel(nonEmpty, 'Besitzer'));
+  setIf(result, 'birthdate', parseGameDate(findValueForLabel(nonEmpty, 'Geburtstag')));
 
   const erbkrankheitStatus =
     findValueForLabel(nonEmpty, 'Testergebnis') || findValueForLabel(nonEmpty, 'Erbkrankheit');
@@ -144,6 +145,17 @@ function parseHorseText(rawText) {
 
 function setIf(obj, key, value) {
   if (value !== null && value !== undefined && value !== '') obj[key] = value;
+}
+
+// Wandelt ein Datum im Spiel-Format "TT.MM.JJJJ" (z.B. bei "Geburtstag:
+// 13.07.2024") in das ISO-Format "JJJJ-MM-TT" um, das die date-Spalte
+// (horses.birthdate) sowie das <input type="date"> Formularfeld erwarten.
+function parseGameDate(value) {
+  if (!value) return null;
+  const m = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (!m) return null;
+  const [, day, month, year] = m;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 function escapeRegex(s) {
@@ -1058,7 +1070,7 @@ const HORSE_TAG_OPTIONS = [
   { label: 'Reserviert', color: 'var(--warning)' },
   { label: 'Bleibt', color: 'var(--success)' },
   { label: 'Zuchttier', color: 'var(--tag-blue)' },
-  { label: 'Gnadenbrot', color: 'var(--tag-purple)' },
+  { label: 'GBH', color: 'var(--tag-purple)' },
 ];
 
 function tagColor(label) {
@@ -1077,6 +1089,127 @@ function tagsBadgesHtml(tags) {
   }).join('');
 }
 
+// Formatiert einen ISO-Zeitstempel (z.B. horses.updated_at) im deutschen
+// Format "TT.MM.JJJJ, HH:MM" - wird u.a. für "Zuletzt bearbeitet" auf der
+// Ansichtsseite gebraucht (siehe horseView.js).
+function formatTimestamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Formatiert ein Geburtsdatum (horses.birthdate, "JJJJ-MM-TT") als Alter
+// in Spieljahren ("X Jahre, Y Monate") - im Spiel entsprechen 30 reale
+// Tage einem Spieljahr (also 2,5 reale Tage einem Spielmonat), nicht die
+// reale Kalenderzeit. Referenzdatum ist immer "heute", das Alter wird
+// also bei jedem Aufruf neu berechnet statt gespeichert.
+const REAL_DAYS_PER_GAME_YEAR = 30;
+function formatAge(birthdateIso) {
+  if (!birthdateIso) return '';
+  const birth = new Date(birthdateIso);
+  if (Number.isNaN(birth.getTime())) return '';
+  const daysSinceBirth = Math.floor((Date.now() - birth.getTime()) / 86400000);
+  if (daysSinceBirth < 0) return '';
+  const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
+  const remainderDays = daysSinceBirth % REAL_DAYS_PER_GAME_YEAR;
+  const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
+  const parts = [];
+  if (years > 0) parts.push(`${years} Jahr${years === 1 ? '' : 'e'}`);
+  if (months > 0 || !years) parts.push(`${months} Monat${months === 1 ? '' : 'e'}`);
+  return parts.join(', ');
+}
+
+// Prüft, ob ein Pferd mindestens eines der ausgewählten Schlagwörter
+// trägt (ODER-Verknüpfung) - "__none__" findet Pferde ganz ohne
+// Schlagwort. Von list.js (Übersicht-Filter) und durchschnitt.js
+// (Ø-Filter) genutzt.
+function matchesTags(row, selectedLabels) {
+  return selectedLabels.some((label) => {
+    if (label === '__none__') return !(row.tags || []).length;
+    return (row.tags || []).some((t) => t.label === label);
+  });
+}
+
+// --- Checkbox-Dropdowns (Schlagwörter, Genetik, EKH, ...) ---
+// Generisches Mehrfachauswahl-Dropdown (Markup: .checkdrop > .checkdrop-
+// toggle + .checkdrop-panel, siehe css/style.css) - von list.js und
+// durchschnitt.js genutzt.
+
+function wireCheckDropdowns() {
+  document.querySelectorAll('.checkdrop').forEach((root) => {
+    const toggle = root.querySelector('.checkdrop-toggle');
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = root.querySelector('.checkdrop-panel');
+      const wasOpen = !panel.hidden;
+      closeAllCheckDropdowns();
+      panel.hidden = wasOpen;
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.checkdrop')) closeAllCheckDropdowns();
+  });
+}
+
+function closeAllCheckDropdowns() {
+  document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
+}
+
+function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
+  const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
+  panel.innerHTML = '';
+
+  if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
+  for (const v of values) panel.appendChild(checkDropdownItem(v, v));
+  for (const { value, label } of extra || []) panel.appendChild(checkDropdownItem(value, label));
+
+  if (!noneOption && !values.length && !(extra || []).length) {
+    const empty = document.createElement('div');
+    empty.className = 'checkdrop-empty';
+    empty.textContent = 'Keine Werte vorhanden';
+    panel.appendChild(empty);
+  }
+
+  panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
+}
+
+function checkDropdownItem(value, label) {
+  const wrap = document.createElement('label');
+  wrap.className = 'checkdrop-item';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = value;
+  wrap.appendChild(cb);
+  wrap.appendChild(document.createTextNode(label));
+  return wrap;
+}
+
+function updateCheckDropdownLabel(rootId) {
+  const root = document.getElementById(rootId);
+  const toggle = root.querySelector('.checkdrop-toggle');
+  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked');
+  toggle.textContent = checked.length ? `${checked.length} ausgewählt` : 'Alle';
+}
+
+function getCheckDropdownSelected(rootId) {
+  return [...document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]:checked`)].map((cb) => cb.value);
+}
+
+function resetCheckDropdown(rootId) {
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
+  updateCheckDropdownLabel(rootId);
+}
+
+function setCheckDropdownSelected(rootId, values) {
+  const wanted = new Set(values || []);
+  document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => {
+    cb.checked = wanted.has(cb.value);
+  });
+  updateCheckDropdownLabel(rootId);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml };
+  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, matchesTags };
 }

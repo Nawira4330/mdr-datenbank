@@ -63,6 +63,7 @@
               <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" step="0.01" /></div>
               <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" placeholder="z.B. 50% Araber, 50% Vollblut" /></div>
               <div><label for="coat_color">Fellfarbe</label><input id="coat_color" /></div>
+              <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" /></div>
               <div><label for="disease_free">Erbkrankheiten</label>
                 <select id="disease_free">
                   <option value="">unbekannt</option>
@@ -101,7 +102,9 @@
           <legend>Sonstiges</legend>
           <div class="form-grid">
             <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3"></textarea></div>
-            <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" /></div>
+            <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" />
+              <img id="image-preview" class="image-preview" hidden alt="Bildvorschau" />
+            </div>
           </div>
         </fieldset>
 

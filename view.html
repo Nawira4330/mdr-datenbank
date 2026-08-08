@@ -23,7 +23,10 @@
       <button type="button" id="delete-btn" class="danger">🗑️ Löschen</button>
     </div>
 
+    <img id="image-preview" class="image-preview" hidden alt="Bild des Pferdes" />
+
     <div id="tag-badges" style="margin-bottom: 0.8rem;"></div>
+    <p id="last-edited" class="muted small" style="margin: -0.4rem 0 0.8rem;"></p>
 
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="stammdaten">Stammdaten</button>
@@ -54,6 +57,9 @@
             <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" readonly /></div>
             <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" readonly /></div>
             <div><label for="coat_color">Fellfarbe</label><input id="coat_color" readonly /></div>
+            <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" readonly />
+              <p id="horse-age" class="muted small" style="margin: 0.2rem 0 0;"></p>
+            </div>
             <div><label for="disease_free">Erbkrankheiten</label>
               <select id="disease_free" disabled>
                 <option value="">unbekannt</option>

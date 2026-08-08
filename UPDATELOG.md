@@ -6,6 +6,41 @@ drin.
 
 ---
 
+## 08.08.2026 (2)
+
+- **Schlagwort „Gnadenbrot" in „GBH" umbenannt** – gilt auch für bereits
+  vergebene Schlagwörter (per Migration nachträglich umbenannt) sowie
+  für den Discord-Bot.
+
+---
+
+## 08.08.2026
+
+- **Pferdebild wird jetzt angezeigt**: auf der Ansichtsseite groß über
+  den Stammdaten, im Bearbeiten-Formular als kleine Vorschau direkt unter
+  dem Bild-URL-Feld - vorher stand dort nur der reine Link.
+- **Zuletzt bearbeitet**: neue Spalte in der Übersicht (auch als
+  Sortieroption) sowie Anzeige auf der Ansichtsseite, wann ein Pferd
+  zuletzt geändert wurde.
+- **Alter / Geburtsdatum**: neues Feld „Geburtsdatum“ im
+  Bearbeiten-Formular, wird beim automatischen Auslesen aus dem
+  kopierten Spieltext direkt mit übernommen. Übersicht und Ansichtsseite
+  berechnen und zeigen daraus automatisch das Alter in Spieljahren
+  (30 reale Tage = 1 Spieljahr im Spiel).
+- **Schlagwort-Filter „Kein Schlagwort“**: findet jetzt auch Pferde ganz
+  ohne Schlagwort, nicht nur Pferde mit einem bestimmten Schlagwort.
+- **„Nach oben“-Pfeil** in der Übersicht, erscheint sobald gescrollt
+  wurde.
+- **Ø-Vergleich nach Geschlecht**: die Vergleichsbasis für den
+  Ø-Vergleich in der Übersicht lässt sich jetzt zusätzlich nach
+  Geschlecht einschränken (wie bereits bei Rasse/ZZL/Besitzer).
+- **Durchschnittsrechner nach Schlagwörtern**: der Durchschnittsrechner
+  lässt sich jetzt zusätzlich nach Schlagwörtern filtern (Mehrfachauswahl,
+  „Kein Schlagwort“ inklusive) – wie beim Schlagwort-Filter in der
+  Übersicht.
+
+---
+
 ## 04.08.2026
 
 - **Button-Zeilen brechen auf schmalen Handys jetzt um**: die

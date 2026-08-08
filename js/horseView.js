@@ -28,6 +28,12 @@ async function initView() {
 
   await loadHorse(viewHorseId);
   document.getElementById('tag-badges').innerHTML = tagsBadgesHtml(extraData.tags);
+  document.getElementById('last-edited').textContent = extraData.updated_at
+    ? `Zuletzt bearbeitet: ${formatTimestamp(extraData.updated_at)}`
+    : '';
+  document.getElementById('horse-age').textContent = extraData.birthdate
+    ? `Alter: ${formatAge(extraData.birthdate)}`
+    : '';
 
   const name = document.getElementById('name').value;
   document.getElementById('page-heading').textContent = '🐴 ' + (name || '(ohne Name)');
