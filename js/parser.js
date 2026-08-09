@@ -1100,18 +1100,31 @@ function formatTimestamp(iso) {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Formatiert ein Geburtsdatum (horses.birthdate, "JJJJ-MM-TT") als Alter
-// in Spieljahren ("X Jahre, Y Monate") - im Spiel entsprechen 30 reale
-// Tage einem Spieljahr (also 2,5 reale Tage einem Spielmonat), nicht die
-// reale Kalenderzeit. Referenzdatum ist immer "heute", das Alter wird
-// also bei jedem Aufruf neu berechnet statt gespeichert.
+// Geburtsdatum (horses.birthdate, "JJJJ-MM-TT") -> Alter in vollen
+// Spieljahren (abgerundet) - im Spiel entsprechen 30 reale Tage einem
+// Spieljahr, nicht die reale Kalenderzeit. Referenzdatum ist immer
+// "heute", das Alter wird also bei jedem Aufruf neu berechnet statt
+// gespeichert. Gibt null zurueck, wenn kein/ein ungueltiges Datum
+// vorliegt. Von formatAge sowie von den Alters-Hinweisen in list.js
+// (checkAgeNotices) genutzt.
 const REAL_DAYS_PER_GAME_YEAR = 30;
-function formatAge(birthdateIso) {
-  if (!birthdateIso) return '';
+function gameAgeDays(birthdateIso) {
+  if (!birthdateIso) return null;
   const birth = new Date(birthdateIso);
-  if (Number.isNaN(birth.getTime())) return '';
+  if (Number.isNaN(birth.getTime())) return null;
   const daysSinceBirth = Math.floor((Date.now() - birth.getTime()) / 86400000);
-  if (daysSinceBirth < 0) return '';
+  return daysSinceBirth < 0 ? null : daysSinceBirth;
+}
+function gameAgeYears(birthdateIso) {
+  const days = gameAgeDays(birthdateIso);
+  return days == null ? null : Math.floor(days / REAL_DAYS_PER_GAME_YEAR);
+}
+
+// Formatiert ein Geburtsdatum als Alter in Spieljahren ("X Jahre, Y
+// Monate").
+function formatAge(birthdateIso) {
+  const daysSinceBirth = gameAgeDays(birthdateIso);
+  if (daysSinceBirth == null) return '';
   const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
   const remainderDays = daysSinceBirth % REAL_DAYS_PER_GAME_YEAR;
   const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
@@ -1211,5 +1224,5 @@ function setCheckDropdownSelected(rootId, values) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, matchesTags };
+  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, matchesTags };
 }

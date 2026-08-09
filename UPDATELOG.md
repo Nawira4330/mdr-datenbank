@@ -6,6 +6,16 @@ drin.
 
 ---
 
+## 09.08.2026
+
+- **Alters-Hinweise in der Übersicht**: neuer Hinweiskasten für Pferde,
+  die 3 Jahre alt geworden sind (Erinnerung, das Pferdebild zu
+  aktualisieren, da sich das im Spiel meist ändert). Pferde über 25
+  Jahren bekommen zusätzlich automatisch das Schlagwort „GBH“ zugewiesen
+  und werden dazu ebenfalls als Hinweis aufgelistet.
+
+---
+
 ## 08.08.2026 (3)
 
 - **Mini-Bild in der Übersicht**: Pferde mit hinterlegter Bild-URL zeigen

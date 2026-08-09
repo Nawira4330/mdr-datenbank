@@ -107,6 +107,18 @@ und entscheidest per ✓ (übernehmen, ins Pferd eintragen) oder ✗ (verwerfen,
 ohne Wirkung löschen). Dieser Kasten ist für alle Konten sichtbar, nicht
 nur für die eigenen Pferde.
 
+**Alters-Hinweise**: Zwei weitere Hinweiskästen, ebenfalls nur für deine
+eigenen Pferde und auf dem [Geburtsdatum](#42-stammdaten) basierend:
+
+- **„X Pferd(e) ist/sind 3 Jahre alt geworden“** – im Spiel ändert sich
+  das Pferdebild meist mit 3 Jahren, dieser Hinweis erinnert daran, das
+  Bild zu prüfen und ggf. zu aktualisieren. Er verschwindet von selbst
+  wieder, sobald das Pferd 4 wird.
+- **„X Pferd(e) über 25 Jahre – automatisch mit „GBH“ markiert“** –
+  Pferde über 25 Jahren bekommen automatisch das Schlagwort „GBH“
+  zugewiesen (falls noch nicht vorhanden), dieser Kasten listet sie zur
+  Bestätigung auf.
+
 ### 3.3 Meldung nach dem Speichern
 
 Nachdem du ein Pferd angelegt oder gespeichert hast, siehst du beim

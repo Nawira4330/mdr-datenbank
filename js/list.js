@@ -45,6 +45,7 @@ async function init() {
   showFlashBanner();
   await loadUserSettings(session);
   await showMissingDataNotice(session);
+  await checkAgeNotices(session);
   await loadTagSuggestions();
   await populateFilterOptions();
   await loadFilterPresets();
@@ -92,6 +93,63 @@ async function showMissingDataNotice(session) {
     .join('');
   const notice = document.querySelector('#missing-data-notice');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
+  notice.hidden = false;
+}
+
+// Zwei Alters-Hinweise (Geburtsdatum -> Spieljahre, siehe gameAgeYears in
+// parser.js), wie showMissingDataNotice nur für die eigenen Pferde:
+// - Pferde, die genau 3 Spieljahre alt sind (ihr viertes Spieljahr läuft
+//   gerade) - im Spiel ändert sich das Pferdebild meist mit 3 Jahren,
+//   der Hinweis verschwindet von selbst wieder, sobald das Pferd 4 wird.
+// - Pferde über 25 Spieljahre - bekommen automatisch das Schlagwort
+//   "GBH" zugewiesen, falls noch nicht vorhanden, und werden hier als
+//   Bestätigung aufgelistet.
+async function checkAgeNotices(session) {
+  const identity = session.user.email.split('@')[0];
+  const { data, error } = await supabaseClient
+    .from('horses')
+    .select('id, name, birthdate, tags')
+    .ilike('owner', identity);
+  if (error || !data) return;
+
+  const withAge = data
+    .map((h) => ({ ...h, years: gameAgeYears(h.birthdate) }))
+    .filter((h) => h.years != null);
+
+  const turningThree = withAge.filter((h) => h.years === 3);
+  renderAgeNotice(
+    '#age3-notice',
+    turningThree,
+    `${turningThree.length} Pferd${turningThree.length === 1 ? '' : 'e'} ${turningThree.length === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`,
+    '<p>Im Spiel ändert sich das Pferdebild meist mit 3 Jahren - bitte prüfen und ggf. aktualisieren:</p>',
+  );
+
+  const over25 = withAge.filter((h) => h.years > 25);
+  for (const h of over25) {
+    if (!(h.tags || []).some((t) => t.label === 'GBH')) {
+      const merged = [...(h.tags || []), { label: 'GBH' }];
+      const { error: updateError } = await supabaseClient.from('horses').update({ tags: merged }).eq('id', h.id);
+      if (!updateError) h.tags = merged;
+    }
+  }
+  renderAgeNotice(
+    '#age25-notice',
+    over25,
+    `${over25.length} Pferd${over25.length === 1 ? '' : 'e'} über 25 Jahre - automatisch mit „GBH" markiert`,
+    '<p>Pferde über 25 Jahren gelten als zu alt für Zucht/Turnier und wurden deshalb automatisch mit dem Schlagwort „GBH" (Gnadenbrot) markiert:</p>',
+  );
+}
+
+function renderAgeNotice(selector, horses, summaryText, introHtml) {
+  const notice = document.querySelector(selector);
+  if (!horses.length) {
+    notice.hidden = true;
+    return;
+  }
+  const list = horses
+    .map((h) => `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)}</li>`)
+    .join('');
+  notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
 }
 
