@@ -150,12 +150,16 @@ main.container {
   margin-bottom: 0.8rem;
 }
 
-/* Mini-Vorschaubild in der Übersichtstabelle (siehe rowHtml in list.js). */
+/* Mini-Vorschaubild in der Übersichtstabelle (siehe rowHtml in list.js) -
+   "contain" statt "cover", damit das ganze Pferd sichtbar bleibt statt an
+   den Seiten beschnitten zu werden (Pferdebilder sind meist breiter als
+   hoch, das 40x40-Quadrat würde bei "cover" sonst Kopf/Hinterteil
+   abschneiden). */
 .table-thumb {
   display: block;
   width: 40px;
   height: 40px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: var(--radius);
 }
 
@@ -463,7 +467,12 @@ body.hide-delete #bulk-delete-btn {
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; }
-th { background: var(--th-bg-solid); cursor: pointer; user-select: none; }
+/* overflow-wrap:break-word (oben) wuerde bei sehr schmalen Spalten
+   (z.B. "Bild", "Geschlecht") einzelne Woerter mitten im Wort umbrechen
+   ("Bil"/"d") statt nur an Wortgrenzen - fuer Kopfzeilen unerwuenscht,
+   die duerfen bei Bedarf lieber auf 2 Zeilen umbrechen (white-space:
+   normal reicht dafuer bei mehrteiligen Namen wie "Zuletzt bearbeitet"). */
+th { background: var(--th-bg-solid); cursor: pointer; user-select: none; overflow-wrap: normal; word-break: normal; }
 tr:hover td { background: rgba(107, 157, 0, 0.05); }
 /* Bewusst KEIN "display: flex" auf <td> selbst - das entzieht die
    Zelle dem normalen Tabellenzeilen-Layout (border-collapse berechnet

@@ -13,6 +13,18 @@ drin.
   aktualisieren, da sich das im Spiel meist ändert). Pferde über 25
   Jahren bekommen zusätzlich automatisch das Schlagwort „GBH“ zugewiesen
   und werden dazu ebenfalls als Hinweis aufgelistet.
+- **Fehler beim Alter junger Fohlen behoben**: durch eine zu frühe
+  Rundung in der Altersberechnung wurde ein Fohlen in den ersten Tagen
+  fälschlich mit „0 Monate“ statt „1 Monat“ angezeigt.
+- **Spaltenüberschriften der Übersicht brechen nicht mehr mitten im Wort
+  um**: bei schmaleren Bildschirmbreiten (z.B. „Bild“, „Geschlecht“)
+  wurden Wörter teils mitten im Buchstaben getrennt statt ordentlich zu
+  umbrechen.
+- **Mini-Bild in der Übersicht zeigt jetzt das ganze Pferd**: vorher
+  wurde es im 40x40-Quadrat an den Seiten beschnitten, jetzt bleibt das
+  komplette Bild sichtbar (ggf. mit etwas Rand statt Beschnitt).
+- **Neuer Hinweis „X Fohlen ist/sind 6 Monate alt“**: erinnert daran,
+  dass Fohlen ab 6 Monaten einen eigenen Stall brauchen.
 
 ---
 

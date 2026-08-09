@@ -107,9 +107,12 @@ und entscheidest per ✓ (übernehmen, ins Pferd eintragen) oder ✗ (verwerfen,
 ohne Wirkung löschen). Dieser Kasten ist für alle Konten sichtbar, nicht
 nur für die eigenen Pferde.
 
-**Alters-Hinweise**: Zwei weitere Hinweiskästen, ebenfalls nur für deine
+**Alters-Hinweise**: Drei weitere Hinweiskästen, ebenfalls nur für deine
 eigenen Pferde und auf dem [Geburtsdatum](#42-stammdaten) basierend:
 
+- **„X Fohlen ist/sind 6 Monate alt“** – Fohlen brauchen ab 6 Monaten
+  einen eigenen Stall, dieser Hinweis erinnert daran. Verschwindet von
+  selbst wieder, sobald das Fohlen 7 Monate alt wird.
 - **„X Pferd(e) ist/sind 3 Jahre alt geworden“** – im Spiel ändert sich
   das Pferdebild meist mit 3 Jahren, dieser Hinweis erinnert daran, das
   Bild zu prüfen und ggf. zu aktualisieren. Er verschwindet von selbst

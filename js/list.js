@@ -96,8 +96,12 @@ async function showMissingDataNotice(session) {
   notice.hidden = false;
 }
 
-// Zwei Alters-Hinweise (Geburtsdatum -> Spieljahre, siehe gameAgeYears in
-// parser.js), wie showMissingDataNotice nur für die eigenen Pferde:
+// Drei Alters-Hinweise (Geburtsdatum -> Spieljahre/-monate, siehe
+// gameAgeYearsMonths in parser.js), wie showMissingDataNotice nur für
+// die eigenen Pferde:
+// - Fohlen, die genau 6 Spielmonate alt sind (noch im 1. Spieljahr) -
+//   Erinnerung, dass sie einen Stall brauchen, verschwindet von selbst
+//   wieder mit 7 Monaten.
 // - Pferde, die genau 3 Spieljahre alt sind (ihr viertes Spieljahr läuft
 //   gerade) - im Spiel ändert sich das Pferdebild meist mit 3 Jahren,
 //   der Hinweis verschwindet von selbst wieder, sobald das Pferd 4 wird.
@@ -113,10 +117,18 @@ async function checkAgeNotices(session) {
   if (error || !data) return;
 
   const withAge = data
-    .map((h) => ({ ...h, years: gameAgeYears(h.birthdate) }))
-    .filter((h) => h.years != null);
+    .map((h) => ({ ...h, age: gameAgeYearsMonths(h.birthdate) }))
+    .filter((h) => h.age != null);
 
-  const turningThree = withAge.filter((h) => h.years === 3);
+  const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6);
+  renderAgeNotice(
+    '#foal-stall-notice',
+    needsStall,
+    `${needsStall.length} Fohlen ${needsStall.length === 1 ? 'ist' : 'sind'} 6 Monate alt`,
+    '<p>Fohlen brauchen ab 6 Monaten einen eigenen Stall:</p>',
+  );
+
+  const turningThree = withAge.filter((h) => h.age.years === 3);
   renderAgeNotice(
     '#age3-notice',
     turningThree,
@@ -124,7 +136,7 @@ async function checkAgeNotices(session) {
     '<p>Im Spiel ändert sich das Pferdebild meist mit 3 Jahren - bitte prüfen und ggf. aktualisieren:</p>',
   );
 
-  const over25 = withAge.filter((h) => h.years > 25);
+  const over25 = withAge.filter((h) => h.age.years > 25);
   for (const h of over25) {
     if (!(h.tags || []).some((t) => t.label === 'GBH')) {
       const merged = [...(h.tags || []), { label: 'GBH' }];

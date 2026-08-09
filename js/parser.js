@@ -1113,12 +1113,20 @@ function formatTimestamp(iso) {
 // gespeichert. Gibt null zurueck, wenn kein/ein ungueltiges Datum
 // vorliegt. Von formatAge sowie von den Alters-Hinweisen in list.js
 // (checkAgeNotices) genutzt.
+//
+// WICHTIG: gibt die exakte (nicht gerundete) Anzahl Tage zurueck - ein
+// vorzeitiges Abrunden hier wuerde bei jungen Fohlen den bereits
+// vergangenen Stundenanteil verschlucken und faelschlich "0 Monate"
+// statt "1 Monat" anzeigen (z.B. ein 2,67 Tage altes Fohlen ist mit
+// 2,5 Tagen/Monat schon im 1. Monat, floor(2)/2.5 rundet das aber vor
+// der Monatsberechnung faelschlich auf 0 Tage runter). Gerundet wird
+// erst ganz am Ende in gameAgeYears/formatAge.
 const REAL_DAYS_PER_GAME_YEAR = 30;
 function gameAgeDays(birthdateIso) {
   if (!birthdateIso) return null;
   const birth = new Date(birthdateIso);
   if (Number.isNaN(birth.getTime())) return null;
-  const daysSinceBirth = Math.floor((Date.now() - birth.getTime()) / 86400000);
+  const daysSinceBirth = (Date.now() - birth.getTime()) / 86400000;
   return daysSinceBirth < 0 ? null : daysSinceBirth;
 }
 function gameAgeYears(birthdateIso) {
@@ -1126,14 +1134,25 @@ function gameAgeYears(birthdateIso) {
   return days == null ? null : Math.floor(days / REAL_DAYS_PER_GAME_YEAR);
 }
 
+// Geburtsdatum -> {years, months} (volle Spieljahre + volle Monate im
+// laufenden Spieljahr, beide abgerundet) - gemeinsame Basis fuer
+// formatAge sowie fuer die monatsgenauen Alters-Hinweise in list.js
+// (checkAgeNotices, z.B. "Fohlen mit 6 Monaten").
+function gameAgeYearsMonths(birthdateIso) {
+  const daysSinceBirth = gameAgeDays(birthdateIso);
+  if (daysSinceBirth == null) return null;
+  const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
+  const remainderDays = daysSinceBirth - years * REAL_DAYS_PER_GAME_YEAR;
+  const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
+  return { years, months };
+}
+
 // Formatiert ein Geburtsdatum als Alter in Spieljahren ("X Jahre, Y
 // Monate").
 function formatAge(birthdateIso) {
-  const daysSinceBirth = gameAgeDays(birthdateIso);
-  if (daysSinceBirth == null) return '';
-  const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
-  const remainderDays = daysSinceBirth % REAL_DAYS_PER_GAME_YEAR;
-  const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
+  const ym = gameAgeYearsMonths(birthdateIso);
+  if (!ym) return '';
+  const { years, months } = ym;
   const parts = [];
   if (years > 0) parts.push(`${years} Jahr${years === 1 ? '' : 'e'}`);
   if (months > 0 || !years) parts.push(`${months} Monat${months === 1 ? '' : 'e'}`);
@@ -1230,5 +1249,5 @@ function setCheckDropdownSelected(rootId, values) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, matchesTags };
+  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, gameAgeYearsMonths, matchesTags };
 }
