@@ -6,6 +6,16 @@ drin.
 
 ---
 
+## 10.08.2026
+
+- **ID-Treffer beim Anlegen wird jetzt still ergänzt statt nachzufragen**:
+  gibt es bereits ein Pferd mit exakt derselben Spiel-ID (auch unter
+  anderem Namen), wird der bestehende Datensatz automatisch aktualisiert
+  – wie beim Namenstreffer, ohne Rückfrage-Popup. Leer gelassene Felder
+  überschreiben dabei keine bereits vorhandenen Werte.
+
+---
+
 ## 09.08.2026
 
 - **Alters-Hinweise in der Übersicht**: neuer Hinweiskasten für Pferde,

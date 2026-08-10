@@ -300,6 +300,12 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   Pferdeseite im Spiel (in der Übersicht und auf der Ansichtsseite). Du
   kannst hier auch die komplette Spiel-Adresse (die ganze URL) einfügen –
   beim Speichern wird automatisch nur die Nummer daraus übernommen.
+  Trägst du eine ID ein, die bei einem anderen (auch anders benannten)
+  Pferd bereits hinterlegt ist, wird genau wie beim Namenstreffer
+  automatisch **das bestehende Pferd aktualisiert und ergänzt** statt
+  ein zweites angelegt – unabhängig davon, ob im aktuellen Formular alle
+  Felder ausgefüllt sind. Leer gelassene Felder überschreiben dabei
+  keine bereits vorhandenen Werte.
 - **Geschlecht**.
 - **Rasse** – wird beim Eintippen wie beim automatischen Auslesen
   automatisch ausgeschrieben (z.B. wird aus dem Kürzel „APH“
@@ -434,17 +440,20 @@ das Bild zu aktualisieren – ein einmaliger Hinweis genau bei dieser
 Änderung, nicht bei jedem weiteren Speichern eines bereits zugelassenen
 Pferds.
 
-**Dopplungs-Check beim Anlegen**: Trägst du ein vermeintlich neues Pferd
-ein und es gibt bereits einen Datensatz mit **gleicher Spiel-ID** oder
-**identischem GP, Ext, Ext% und Int**, öffnet sich vor dem Speichern ein
-Popup mit einer Gegenüberstellung (Name/Besitzer/ID/Werte) von neuem und
-bereits vorhandenem Datensatz, inklusive Angabe, welche Daten
-übereinstimmen. „Ja, Datensatz ergänzen“ aktualisiert das bereits
-vorhandene Pferd (auch der Name wird übernommen) statt es doppelt
-anzulegen – nützlich z.B. bei einem Fohlen, das zuerst automatisch als
-„Fohlen_Mutter X Vater“ angelegt und jetzt unter seinem echten Namen
-erneut eingetragen wird. „Nein, neu anlegen“ legt wie gewohnt einen
-neuen, separaten Datensatz an.
+**Dopplungs-Check beim Anlegen**: Name- und ID-Treffer (siehe
+[4.2](#42-stammdaten)) werden ohne Rückfrage automatisch ergänzt, da
+beide eindeutig sind. Trägst du dagegen ein vermeintlich neues Pferd mit
+einem **anderen** Namen und einer **anderen (oder gar keiner)** ID ein,
+aber es gibt bereits einen Datensatz mit **identischem GP, Ext, Ext% und
+Int**, öffnet sich vor dem Speichern ein Popup mit einer
+Gegenüberstellung (Name/Besitzer/ID/Werte) von neuem und bereits
+vorhandenem Datensatz – hier wird nachgefragt, da rein zufällig gleiche
+Werte nicht ausgeschlossen sind. „Ja, Datensatz ergänzen“ aktualisiert
+das bereits vorhandene Pferd (auch der Name wird übernommen) statt es
+doppelt anzulegen – nützlich z.B. bei einem Fohlen, das zuerst
+automatisch als „Fohlen_Mutter X Vater“ angelegt und jetzt unter seinem
+echten Namen erneut eingetragen wird. „Nein, neu anlegen“ legt wie
+gewohnt einen neuen, separaten Datensatz an.
 
 Hat der gefundene, bereits vorhandene Datensatz dabei Schlagwörter, die
 im gerade ausgefüllten Formular nicht angehakt sind (weil du ja nicht

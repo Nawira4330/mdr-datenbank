@@ -764,14 +764,40 @@ async function performSave(formData, payload, session) {
       for (const key of Object.keys(payload)) {
         payload[key] = mergeFieldValue(key, existing[key], payload[key]);
       }
-    } else {
-      // Kein exakter Namenstreffer - trotzdem prüfen, ob es sich um
-      // dasselbe Pferd unter anderem Namen handeln könnte (z.B. ein
-      // Fohlen, das zuerst automatisch als "Fohlen_Mutter X Vater"
-      // angelegt wurde und jetzt unter seinem echten Namen erneut
-      // eingetragen wird): gleiche Spiel-ID oder identische GP/Ext/Ext%/
-      // Int-Werte. Anders als beim exakten Namenstreffer NICHT still
-      // aktualisieren, sondern erst nachfragen (siehe askIsDuplicateHorse).
+    } else if (payload.external_id) {
+      // Kein Namenstreffer, aber eine Spiel-ID eingetragen - die ID ist
+      // eindeutig (kommt im Spiel nur einmal vor), deshalb genau wie beim
+      // exakten Namenstreffer STILL aktualisieren statt erst nachzufragen
+      // (z.B. wenn ein Fohlen zuerst automatisch als "Fohlen_Mutter X
+      // Vater" angelegt wurde und jetzt unter seinem echten Namen erneut
+      // eingetragen wird). Fehlende Felder im neuen Formular ERGÄNZEN den
+      // bestehenden Datensatz dabei nur, statt ihn zu leeren.
+      const { data: idMatch, error: idLookupError } = await supabaseClient
+        .from('horses')
+        .select('*')
+        .eq('external_id', payload.external_id)
+        .limit(1)
+        .maybeSingle();
+      if (idLookupError) {
+        errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + idLookupError.message;
+        return;
+      }
+      if (idMatch) {
+        targetId = idMatch.id;
+        beforeRecord = idMatch;
+        for (const key of Object.keys(payload)) {
+          payload[key] = mergeFieldValue(key, idMatch[key], payload[key]);
+        }
+      }
+    }
+
+    if (!targetId) {
+      // Weder Namens- noch ID-Treffer - trotzdem prüfen, ob es sich um
+      // dasselbe Pferd unter anderem Namen UND ohne (oder mit
+      // abweichender) ID handeln könnte: identische GP/Ext/Ext%/Int-Werte.
+      // Anders als bei Name/ID (beides eindeutig) NICHT still
+      // aktualisieren, sondern erst nachfragen (siehe askIsDuplicateHorse),
+      // da rein zufällig gleiche Werte nicht ausgeschlossen sind.
       const newStats = quickStatsOf(payload);
       const { data: candidates, error: statsLookupError } = await supabaseClient
         .from('horses')
@@ -780,24 +806,13 @@ async function performSave(formData, payload, session) {
         errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + statsLookupError.message;
         return;
       }
-      let candidate = null;
-      const reasonParts = [];
-      if (payload.external_id) {
-        candidate = (candidates || []).find((h) => h.external_id === payload.external_id) || null;
-        if (candidate) reasonParts.push('gleiche ID');
-      }
-      if (!candidate) {
-        candidate = (candidates || []).find((h) => statsMatch(newStats, quickStatsOf(h))) || null;
-        if (candidate) reasonParts.push('GP, Ext, Ext% und Int identisch');
-      } else if (statsMatch(newStats, quickStatsOf(candidate))) {
-        reasonParts.push('GP, Ext, Ext% und Int identisch');
-      }
+      const candidate = (candidates || []).find((h) => statsMatch(newStats, quickStatsOf(h))) || null;
 
       if (candidate) {
         const { data: fullCandidate } = await supabaseClient.from('horses').select('*').eq('id', candidate.id).maybeSingle();
         if (fullCandidate) {
           const isSame = await askIsDuplicateHorse(
-            reasonParts,
+            ['GP, Ext, Ext% und Int identisch'],
             { name: formData.name, owner: formData.owner, external_id: formData.external_id, ...newStats },
             { name: fullCandidate.name, owner: fullCandidate.owner, external_id: fullCandidate.external_id, ...quickStatsOf(fullCandidate) },
           );

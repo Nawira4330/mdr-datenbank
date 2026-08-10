@@ -768,11 +768,18 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
     text-align: left;
     flex-shrink: 0;
   }
-  /* Auswahl-Kästchen direkt vor dem Namen, beide ohne Label, auf einer
-     gemeinsamen ersten Zeile. */
+  /* Auswahl-Kästchen, Mini-Bild und Name zusammen auf einer gemeinsamen
+     ersten Zeile, alle ohne eigenes Label. align-self:flex-end statt des
+     von der Zeile geerbten "center" (siehe #horse-table tr weiter oben) -
+     die drei Felder sind unterschiedlich hoch (Bild 40px, Kästchen/Name
+     deutlich weniger), bei "center" säßen ihre unteren Trennlinien dadurch
+     auf verschiedenen Höhen und der Strich wirkte verrutscht/gestuft statt
+     durchgehend gerade. "flex-end" richtet alle drei Unterkanten (und
+     damit die border-bottom-Linien) exakt aneinander aus. */
   #horse-table td[data-label="Auswählen"] {
     order: -1;
     flex: 0 0 auto;
+    align-self: flex-end;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
   }
@@ -780,13 +787,27 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
+    align-self: flex-end;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
   }
   #horse-table td[data-label="Bild"]::before { content: none; }
   #horse-table td[data-label="Name"] {
     order: -1;
-    flex: 1 1 auto;
+    /* flex-basis 0% statt "auto": bei "auto" entscheidet der Browser
+       schon anhand der ungeschrumpften Inhaltsbreite (langer Name +
+       Schlagwort-Badges), ob das Feld überhaupt auf die erste Zeile
+       neben Kästchen/Bild passt - reicht der Platz nicht, rutscht das
+       ganze Feld in eine eigene Zeile statt seinen Inhalt intern
+       umzubrechen, und die gemeinsame Trennlinie reißt auseinander. Mit
+       Basis 0% + min-width:0 bekommt es zunächst (fast) keinen Platz
+       zugewiesen und wächst danach nur so weit wie tatsächlich übrig
+       ist, wodurch Name/Badges innerhalb der Zeile umbrechen statt das
+       Feld selbst wegzuschieben. */
+    flex: 1 1 0%;
+    min-width: 0;
+    align-self: flex-end;
+    flex-wrap: wrap;
     justify-content: flex-start;
     text-align: left;
     font-size: 1.05rem;
