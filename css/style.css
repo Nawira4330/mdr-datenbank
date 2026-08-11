@@ -466,7 +466,13 @@ body.hide-delete #bulk-delete-btn {
    Sicherheitsnetz für sehr schmale Bildschirme erhalten. */
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; }
+/* vertical-align:top statt der Standardvorgabe "middle" - Zeilen sind
+   unterschiedlich hoch (z.B. Name mit mehreren Schlagwort-Badges
+   umgebrochen), bei "middle" würden kurze Zellen (Kästchen, Mini-Bild)
+   dann mittig in der hohen Zeile schweben statt oben bündig mit dem
+   Zeilenanfang, wodurch die untere Trennlinie im Vergleich zu ihrem
+   Inhalt verrutscht wirkt. */
+th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; vertical-align: top; }
 /* overflow-wrap:break-word (oben) wuerde bei sehr schmalen Spalten
    (z.B. "Bild", "Geschlecht") einzelne Woerter mitten im Wort umbrechen
    ("Bil"/"d") statt nur an Wortgrenzen - fuer Kopfzeilen unerwuenscht,

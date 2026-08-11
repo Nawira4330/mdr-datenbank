@@ -8,6 +8,10 @@ drin.
 
 ## 10.08.2026
 
+- **Trennlinien in der Desktop-Tabelle korrigiert**: bei Zeilen mit
+  mehreren Schlagwörtern (die den Namen umbrechen und die Zeile höher
+  machen) schwebten Kästchen und Mini-Bild mittig statt oben, wodurch
+  die untere Trennlinie verrutscht wirkte.
 - **Aktionen-Spalte in der Übersicht verkleinert**: Spaltenüberschrift
   entfernt (nur noch die ✏️/✗-Icons), Spalte selbst schmaler.
 - **ID-Treffer beim Anlegen wird jetzt still ergänzt statt nachzufragen**:
