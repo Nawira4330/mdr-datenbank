@@ -8,6 +8,8 @@ drin.
 
 ## 10.08.2026
 
+- **Aktionen-Spalte in der Übersicht verkleinert**: Spaltenüberschrift
+  entfernt (nur noch die ✏️/✗-Icons), Spalte selbst schmaler.
 - **ID-Treffer beim Anlegen wird jetzt still ergänzt statt nachzufragen**:
   gibt es bereits ein Pferd mit exakt derselben Spiel-ID (auch unter
   anderem Namen), wird der bestehende Datensatz automatisch aktualisiert
