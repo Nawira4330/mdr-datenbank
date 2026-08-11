@@ -474,55 +474,16 @@ table { border-collapse: collapse; width: 100%; table-layout: fixed; }
    Zeilenanfang, wodurch die untere Trennlinie im Vergleich zu ihrem
    Inhalt verrutscht wirkt. */
 th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; vertical-align: top; }
-/* Ohne Mindesthöhe ist jede Zeile nur so hoch wie ihr Inhalt braucht -
-   ein Pferd mit Schlagwort-Badge macht seine Zeile dadurch höher als
-   eine ohne, wodurch die Trennlinien beim Durchscrollen ungleichmäßig
-   wirken. Mindesthöhe entspricht einer Zeile mit einem Schlagwort - bei
-   zwei oder mehr Badges bleibt die Zeile weiterhin höher, das ist
-   selten genug, um es hinzunehmen. Nur ab der echten Tabellenansicht
-   (siehe Umbau in Kartenansicht weiter unten), sonst würde das auch der
-   mobilen Kartenansicht ungewollt Mindesthöhe aufzwingen. */
+/* Zellen duerfen normal umbrechen - alle Zellen EINER Zeile teilen sich im
+   Tabellen-Layout ohnehin dieselbe Hoehe, die Trennlinie "springt" also
+   nie innerhalb einer Zeile, auch wenn Zeilen UNTEREINANDER unterschiedlich
+   hoch sind (je nachdem, wie viel eine Zelle umbricht). */
 @media (min-width: 901px) {
   /* Erzwingt genug Breite, damit Name/Farbe/Rasse/Besitzer & Co. im
      Normalfall einzeilig bleiben (siehe Kommentar bei .table-wrap oben) -
      ist der Bildschirm schmaler, übernimmt .table-wrap's overflow-x das
      horizontale Scrollen, statt dass Spalteninhalte gequetscht werden. */
   #horse-table { min-width: 1400px; }
-  /* min-height auf <tr> selbst wird von Tabellen-Layout in der Praxis
-     ignoriert (bekannte Browser-Einschraenkung) - auf den Zellen
-     (td/th) wirkt es dagegen zuverlaessig. box-sizing:border-box, damit
-     die ohnehin vorhandene Zell-Innenabstand (padding) mitgerechnet
-     wird statt zur Mindesthöhe hinzuzukommen. */
-  #horse-table tbody td { min-height: 4.95rem; box-sizing: border-box; }
-  /* WICHTIG: min-height/height + overflow:hidden allein reichen NICHT,
-     um eine Zeile wirklich auf eine feste Höhe zu begrenzen - Browser
-     lassen Tabellenzeilen trotzdem wachsen, wenn eine Zelle umbricht
-     (die Automatik zur Zeilenhoehe schaut zuerst auf den natürlichen,
-     ungeschrumpften Platzbedarf aller Zellen, "overflow" clippt erst
-     danach). Der einzige zuverlaessige Weg, eine Zeile GARANTIERT auf
-     dieselbe Höhe wie alle anderen zu zwingen: den Inhalt gar nicht erst
-     umbrechen lassen (white-space:nowrap), sondern einzeilig mit "…"
-     abschneiden - betrifft die Spalten, die am ehesten lang werden
-     (Name+Schlagwörter, Rasse, Farbe, Besitzer, Genetik-Code). Der volle
-     Wert bleibt per Tooltip (title-Attribut) und auf der Pferdeseite
-     einsehbar. */
-  #horse-table td[data-label="Name"],
-  #horse-table td[data-label="Rasse"],
-  #horse-table td[data-label="Farbe"],
-  #horse-table td[data-label="Besitzer"],
-  #horse-table td.genetik-cell {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  /* .name-cell (siehe weiter unten) ist ein Flex-Container fuer Name +
-     Schlagwort-Badges - "flex-wrap: wrap" dort laesst die Badges bei
-     mehreren Schlagwörtern trotz obigem white-space:nowrap auf eine
-     zweite Zeile umbrechen (flex-wrap ist ein eigener, von white-space
-     unabhaengiger Umbruchmechanismus). nowrap erzwingt auch hier eine
-     Zeile, überzählige Badges werden vom overflow:hidden oben
-     abgeschnitten. */
-  #horse-table td.name-cell { flex-wrap: nowrap; }
 }
 /* overflow-wrap:break-word (oben) wuerde bei sehr schmalen Spalten
    (z.B. "Bild", "Geschlecht") einzelne Woerter mitten im Wort umbrechen
@@ -584,7 +545,7 @@ td.keep-foal-cell { white-space: nowrap; }
 }
 /* Name-Zelle der Übersicht (siehe rowHtml in list.js) - Name-Link und
    Schlagwort-Badges nebeneinander/umbrechend statt gequetscht. */
-.name-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.name-cell-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
 
 /* Schlagwort-Zuweisung im Pferd-Formular (horse.html) - je Zeile eine
    Checkbox mit Farbpunkt und optionalem Zusatztext-Feld. */
