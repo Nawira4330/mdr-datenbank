@@ -1,6 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
 const { computeDisplayFields, DASH } = require('./horseStats');
-const { getParentNames } = require('./pedigree');
 
 const COLOR = 0x8b5e3c;
 
@@ -54,20 +53,34 @@ function steckbriefValue(d) {
   const lines = [`Rasse: ${d.breed}`];
   if (d.breedComposition != null) lines.push(`*${d.breedComposition}*`);
   lines.push(`Geschlecht: ${d.gender}`);
-  lines.push(`Farbe: ${d.coatColor}`);
-  lines.push(`Zuchtzulassung: ${d.zzl}`);
+  lines.push(`Alter: ${d.age}`);
   return lines.join('\n');
 }
 
-// Namen der Eltern stehen bereits im pedigree-Feld des Pferdes selbst -
-// keine zusaetzliche Datenbankabfrage noetig, um sie immer direkt unter
-// der Hauptkarte mit anzuzeigen (statt nur ueber das Menue abrufbar).
-function elternValue(horse) {
-  const { father, mother } = getParentNames(horse);
-  return `Vater: ${father || DASH}\nMutter: ${mother || DASH}`;
+// Farbe steht bewusst direkt ueber dem Farbcode (statt im Steckbrief),
+// damit beide zusammengehoerigen Werte im selben Feld stehen.
+function farbgenetikValue(d) {
+  return `Farbe: ${d.coatColor}\n\`${d.colorGenetics}\``;
 }
 
-function buildHorseEmbed(horse) {
+// Zeigt die Eltern mit denselben Werten wie in der Geschwister-/
+// Nachkommen-Ansicht (Farbe/ZZL/Besitzer, GP/Ext/Ext%/Int/HLP-SLP), wenn
+// ein eigener Datensatz fuer sie existiert. Nicht jedes Elterntier ist
+// selbst in der Datenbank erfasst (z.B. Tiere ausserhalb der eigenen
+// Zucht) - in dem Fall bleibt es beim reinen Namen aus dem pedigree-Feld,
+// statt komplett zu verschwinden.
+function elternLine(label, record, fallbackName) {
+  if (record) return formatRelativeLine(record, label);
+  if (fallbackName) return `${label}: ${fallbackName}`;
+  return `${label}: ${DASH}`;
+}
+
+function elternValue(father, fatherName, mother, motherName) {
+  return `${elternLine('Vater', father, fatherName)}\n\n${elternLine('Mutter', mother, motherName)}`;
+}
+
+function buildHorseEmbed(horse, eltern = {}) {
+  const { father, fatherName, mother, motherName } = eltern;
   const d = computeDisplayFields(horse);
   const link = mdrGameLink(horse.external_id);
 
@@ -76,9 +89,9 @@ function buildHorseEmbed(horse) {
     .setTitle(d.name)
     .addFields(
       { name: 'Steckbrief', value: steckbriefValue(d) },
-      { name: 'Eltern', value: elternValue(horse) },
-      { name: 'Farbgenetik', value: `\`${d.colorGenetics}\`` },
-      { name: 'Leistungswerte', value: `GP ${d.gp}\nExt ${d.ext} (${d.extPercent})\nInt ${d.int}\nHLP/SLP ${d.hlpSlp}` },
+      { name: 'Eltern', value: elternValue(father, fatherName, mother, motherName) },
+      { name: 'Farbgenetik', value: farbgenetikValue(d) },
+      { name: 'Leistungswerte', value: `GP ${d.gp}\nExt ${d.ext} (${d.extPercent})\nInt ${d.int}\nZZL ${d.zzlIcon}\nHLP/SLP ${d.hlpSlp}` },
       { name: 'Besitzer', value: d.owner },
     );
 
@@ -134,23 +147,6 @@ function linesToFields(baseLabel, lines) {
   }));
 }
 
-function buildParentsEmbed(horse, father, mother) {
-  const embed = new EmbedBuilder()
-    .setColor(colorForHorse(horse))
-    .setTitle(`Eltern von ${horse.name}`);
-
-  embed.addFields({
-    name: 'Vater',
-    value: father ? formatRelativeLine(father) : DASH,
-  });
-  embed.addFields({
-    name: 'Mutter',
-    value: mother ? formatRelativeLine(mother) : DASH,
-  });
-
-  return embed;
-}
-
 // "label" ist "Geschwister/Halbgeschwister (Vater)" bzw. "... (Mutter)" -
 // beide Ansichten sind unabhaengige Menuepunkte (siehe submenu.js/index.js),
 // ein Vollgeschwister (teilt beide Eltern) taucht daher in beiden Ansichten
@@ -183,7 +179,6 @@ const TAG_EMBED_COLORS = {
   Verkauf: 0xe03131,
   Reserviert: 0xf08c00,
   Bleibt: 0x2f9e44,
-  Zuchttier: 0x1c7ed6,
   GBH: 0x9c36b5,
 };
 
@@ -211,8 +206,9 @@ function buildHelpEmbed() {
         name: '/mdrdb pferd',
         value:
           'Pferd per Namenssuche (Dropdown) anzeigen: Rasse, Geschlecht, Farbe, Farbgenetik, ' +
-          'Leistungswerte (GP/Ext/Ext%/Int), Besitzer. Danach oeffnet sich ein privates Menue, ' +
-          'um zusaetzlich Eltern, Geschwister/Halbgeschwister oder Nachkommen oeffentlich zu posten.',
+          'Leistungswerte (GP/Ext/Ext%/Int), Besitzer und Eltern. Danach oeffnet sich ein ' +
+          'privates Menue, um zusaetzlich Geschwister/Halbgeschwister oder Nachkommen ' +
+          'oeffentlich zu posten.',
       },
       {
         name: '/mdrdb-rassen  _(nur Admin, für andere unsichtbar)_',
@@ -231,7 +227,7 @@ function buildHelpEmbed() {
         name: '/mdrdb-tag',
         value:
           'Listet alle Pferde mit einem bestimmten Schlagwort auf (Verkauf/Reserviert/Bleibt/' +
-          'Zuchttier/GBH), optional per Namensausschnitt eingegrenzt.',
+          'GBH), optional per Namensausschnitt eingegrenzt.',
       },
       {
         name: '/mdrdb-verkaufen  _(nur der/die aktuelle Besitzer*in)_',
@@ -255,7 +251,6 @@ function buildHelpEmbed() {
 
 module.exports = {
   buildHorseEmbed,
-  buildParentsEmbed,
   buildSiblingsEmbed,
   buildOffspringEmbed,
   buildTagSearchEmbed,

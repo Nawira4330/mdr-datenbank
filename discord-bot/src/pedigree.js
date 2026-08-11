@@ -9,7 +9,7 @@ const supabase = require('./supabaseClient');
 const HORSE_COLUMNS = [
   'id', 'name', 'gender', 'breed', 'coat_color', 'colors', 'notes', 'owner',
   'exterior_genetics', 'exterior_descriptive', 'temperament', 'tournament_potential', 'pedigree',
-  'breeding_allowed', 'hlp_slp', 'tags',
+  'breeding_allowed', 'hlp_slp', 'tags', 'birthdate',
 ].join(', ');
 
 const PAGE_SIZE = 1000;

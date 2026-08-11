@@ -8,11 +8,14 @@ function buildSubmenu(horseId) {
     .setCustomId(`mdrdb_menu:${horseId}`)
     .setPlaceholder('Weitere Informationen anzeigen…')
     .addOptions(
-      { label: '1 - Eltern anzeigen', value: 'parents' },
-      { label: '2 - Geschwister/Halbgeschwister (Vater) anzeigen', value: 'siblings_father' },
-      { label: '3 - Geschwister/Halbgeschwister (Mutter) anzeigen', value: 'siblings_mother' },
-      { label: '4 - Nachkommen anzeigen', value: 'offspring' },
-      { label: '5 - fertig', value: 'done' },
+      // "Eltern anzeigen" gibt es hier bewusst nicht mehr - die Eltern
+      // stehen seit dem entsprechenden Update immer schon direkt in der
+      // Hauptkarte (siehe buildHorseEmbed in embeds.js), ein eigener
+      // Menuepunkt dafuer waere nur noch redundant.
+      { label: '1 - Geschwister/Halbgeschwister (Vater) anzeigen', value: 'siblings_father' },
+      { label: '2 - Geschwister/Halbgeschwister (Mutter) anzeigen', value: 'siblings_mother' },
+      { label: '3 - Nachkommen anzeigen', value: 'offspring' },
+      { label: '4 - fertig', value: 'done' },
     );
 
   return new ActionRowBuilder().addComponents(select);

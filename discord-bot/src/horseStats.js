@@ -69,6 +69,46 @@ function hlpSlpDisplay(text) {
   return m ? m[0] : DASH;
 }
 
+// Symbol statt Ja/Nein fuer die kompakte Leistungswerte-Ansicht im
+// Haupt-Embed (siehe embeds.js) - zzlDisplay bleibt fuer die
+// Textdarstellung in den Geschwister-/Nachkommen-/Tag-Listen bestehen.
+function zzlIcon(breedingAllowed) {
+  if (breedingAllowed === true) return '✅';
+  if (breedingAllowed === false) return '❌';
+  return DASH;
+}
+
+// Portiert aus js/parser.js (gameAgeDays/gameAgeYearsMonths/formatAge) -
+// dasselbe Spieljahre-Modell (30 reale Tage = 1 Spieljahr, nicht die
+// reale Kalenderzeit) wie auf der Weboberflaeche, damit das angezeigte
+// Alter uebereinstimmt. Referenz ist immer "jetzt", das Alter wird also
+// bei jedem Aufruf neu berechnet statt gespeichert.
+const REAL_DAYS_PER_GAME_YEAR = 30;
+function gameAgeDays(birthdateIso) {
+  if (!birthdateIso) return null;
+  const birth = new Date(birthdateIso);
+  if (Number.isNaN(birth.getTime())) return null;
+  const daysSinceBirth = (Date.now() - birth.getTime()) / 86400000;
+  return daysSinceBirth < 0 ? null : daysSinceBirth;
+}
+function gameAgeYearsMonths(birthdateIso) {
+  const daysSinceBirth = gameAgeDays(birthdateIso);
+  if (daysSinceBirth == null) return null;
+  const years = Math.floor(daysSinceBirth / REAL_DAYS_PER_GAME_YEAR);
+  const remainderDays = daysSinceBirth - years * REAL_DAYS_PER_GAME_YEAR;
+  const months = Math.floor(remainderDays / (REAL_DAYS_PER_GAME_YEAR / 12));
+  return { years, months };
+}
+function ageDisplay(birthdateIso) {
+  const ym = gameAgeYearsMonths(birthdateIso);
+  if (!ym) return DASH;
+  const { years, months } = ym;
+  const parts = [];
+  if (years > 0) parts.push(`${years} Jahr${years === 1 ? '' : 'e'}`);
+  if (months > 0 || !years) parts.push(`${months} Monat${months === 1 ? '' : 'e'}`);
+  return parts.join(', ');
+}
+
 // Berechnet alle Anzeige-Felder fuer ein "horses"-Row (Supabase select('*')).
 // GP bleibt bewusst der Rohstring aus tournament_potential (wie in
 // horseForm.js tournamentSummaryHtml angezeigt), statt wie in list.js
@@ -111,7 +151,9 @@ function computeDisplayFields(horse) {
     int: fmtNumber(averageScore(horse.temperament, scoreTemperamentTerm)),
     owner: fmtText(horse.owner),
     zzl: zzlDisplay(horse.breeding_allowed),
+    zzlIcon: zzlIcon(horse.breeding_allowed),
     hlpSlp: hlpSlpDisplay(horse.hlp_slp),
+    age: ageDisplay(horse.birthdate),
   };
 }
 

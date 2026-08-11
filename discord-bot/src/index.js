@@ -13,7 +13,6 @@ const { getGuildSettings, getChannelSettings } = require('./settings');
 const { horseMatchesFilters } = require('./filters');
 const {
   buildHorseEmbed,
-  buildParentsEmbed,
   buildSiblingsEmbed,
   buildOffspringEmbed,
   buildTagSearchEmbed,
@@ -22,7 +21,7 @@ const {
 const { setTag, removeTag } = require('./tags');
 const supabaseService = require('./supabaseServiceClient');
 const { buildSubmenu } = require('./interactions/submenu');
-const { handleAutocomplete } = require('./interactions/autocomplete');
+const { handleAutocomplete, handleTagPferdAutocomplete } = require('./interactions/autocomplete');
 const { CUSTOM_ID: RASSEN_CUSTOM_ID, buildBreedSelectRow, handleBreedSelect } = require('./interactions/breedSelect');
 const {
   ZZL_CUSTOM_ID,
@@ -46,6 +45,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // (beide haben ebenfalls eine "pferd"-Option mit Autocomplete) -
     // handleAutocomplete liest die Option generisch ueber getFocused(),
     // ist also unabhaengig vom konkreten Befehlsnamen wiederverwendbar.
+    // /mdrdb-tag braucht dagegen eine eigene Autocomplete-Funktion, da dort
+    // nur Pferde mit dem bereits gewaehlten "tag" vorgeschlagen werden
+    // sollen (siehe handleTagPferdAutocomplete).
+    if (interaction.isAutocomplete() && interaction.commandName === 'mdrdb-tag') {
+      await handleTagPferdAutocomplete(interaction);
+      return;
+    }
     if (
       interaction.isAutocomplete() &&
       ['mdrdb', 'mdrdb-verkaufen', 'mdrdb-besitzer'].includes(interaction.commandName)
@@ -207,7 +213,23 @@ async function handleMdrdbCommand(interaction) {
     }
   }
 
-  await interaction.reply({ embeds: [buildHorseEmbed(horse)], components: [buildDeleteRow(interaction.user.id)] });
+  // Ab hier kommen zwei weitere Datenbankabfragen (Vater/Mutter) dazu -
+  // Discord erlaubt nur 3 Sekunden bis zur ersten Antwort ("Unknown
+  // interaction" / 10062 wenn ueberschritten). deferReply() bestaetigt die
+  // Interaktion sofort (Bot zeigt "denkt nach..."), danach gilt ein viel
+  // grosszuegigeres 15-Minuten-Fenster fuer editReply().
+  await interaction.deferReply();
+
+  const { father: fatherName, mother: motherName } = getParentNames(horse);
+  const [father, mother] = await Promise.all([
+    fatherName ? fetchHorseByName(fatherName) : null,
+    motherName ? fetchHorseByName(motherName) : null,
+  ]);
+
+  await interaction.editReply({
+    embeds: [buildHorseEmbed(horse, { father, fatherName, mother, motherName })],
+    components: [buildDeleteRow(interaction.user.id)],
+  });
   await interaction.followUp({
     content: `Weitere Informationen zu **${horse.name}**:`,
     components: [buildSubmenu(horse.id)],
@@ -264,16 +286,6 @@ async function handleSubmenu(interaction) {
   // und Discord Komponenten auf ephemeren Nachrichten ohnehin nur der
   // aufrufenden Person zum Klicken anzeigt.
   const deleteRow = [buildDeleteRow(interaction.user.id)];
-
-  if (action === 'parents') {
-    const { father, mother } = getParentNames(horse);
-    const [fatherHorse, motherHorse] = await Promise.all([
-      father ? fetchHorseByName(father) : null,
-      mother ? fetchHorseByName(mother) : null,
-    ]);
-    await interaction.followUp({ embeds: [buildParentsEmbed(horse, fatherHorse, motherHorse)], components: deleteRow });
-    return;
-  }
 
   const allHorses = await fetchAllHorsesLight();
 

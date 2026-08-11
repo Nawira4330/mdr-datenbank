@@ -58,12 +58,15 @@ const commands = [
           { name: 'Verkauf', value: 'Verkauf' },
           { name: 'Reserviert', value: 'Reserviert' },
           { name: 'Bleibt', value: 'Bleibt' },
-          { name: 'Zuchttier', value: 'Zuchttier' },
           { name: 'GBH', value: 'GBH' },
         ),
     )
     .addStringOption((option) =>
-      option.setName('pferd').setDescription('Optional: Ergebnis per Namensausschnitt eingrenzen').setRequired(false),
+      option
+        .setName('pferd')
+        .setDescription('Optional: Ergebnis eingrenzen (nur Pferde mit dem gewaehlten Tag)')
+        .setRequired(false)
+        .setAutocomplete(true),
     )
     .toJSON(),
   // "verkaufen" und "besitzer" sind bewusst zwei getrennte Befehle statt
