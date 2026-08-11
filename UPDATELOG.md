@@ -6,6 +6,27 @@ drin.
 
 ---
 
+## 11.08.2026
+
+- **Ø-Vergleich Toleranz einstellbar** (Einstellungen): pro Wert
+  (GP/Ext/Ext%/Int) lässt sich festlegen, wie viel schlechter als der
+  Durchschnitt ein Pferd noch sein darf, ohne in der Übersicht rot
+  markiert zu werden - für eine großzügigere Auswahl.
+- **Schlagwort "Zuchttier" entfernt** (inkl. Migration für bereits
+  vergebene Schlagwörter) - ein Ersatz-Schlagwort für Pferde, die auf
+  ihr nächstes Fohlen warten, kommt noch.
+- **Zeilenhöhen in der Übersichtstabelle vereinheitlicht**: Name, Rasse,
+  Farbe, Besitzer und Genetik-Code wurden bei langen Werten (mehrere
+  Schlagwörter, lange Rassen-/Farbnamen) mehrzeilig und machten dadurch
+  einzelne Zeilen höher als andere, wodurch die Trennlinien "verrutscht"
+  wirkten. Diese Spalten werden jetzt einzeilig mit "…" abgekürzt (voller
+  Wert per Tooltip beim Draufhalten oder auf der Pferdeseite), die
+  Tabelle hat außerdem eine Mindestbreite und scrollt darunter
+  horizontal statt Spalten zusammenzustauchen. Zeilen sind dadurch jetzt
+  durchgehend exakt gleich hoch.
+
+---
+
 ## 10.08.2026
 
 - **Trennlinien in der Desktop-Tabelle korrigiert**: bei Zeilen mit

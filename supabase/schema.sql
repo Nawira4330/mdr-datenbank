@@ -327,6 +327,9 @@ create table if not exists public.user_settings (
   -- Persoenliche Seitengroesse in % (z.B. 80). NULL = App-Standard (siehe
   -- --zoom in css/style.css) - migration_020_page_zoom.sql.
   page_zoom smallint,
+  -- Toleranzwerte fuer den Oe-Vergleich in der Uebersicht, {gp, ext,
+  -- extPercent, int} - migration_027_compare_tolerances.sql.
+  compare_tolerances jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 

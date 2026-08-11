@@ -75,7 +75,7 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled, page_zoom')
+    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances')
     .eq('user_id', currentUserId)
     .maybeSingle();
   if (error || !data) return;
@@ -94,6 +94,12 @@ async function loadCurrentSettings() {
   // "page_zoom" ist NULL, solange nie gespeichert wurde - dann bleibt die
   // Auswahl beim App-Standard (80%, siehe --zoom in style.css).
   document.getElementById('page-zoom-select').value = data.page_zoom || 80;
+
+  const tolerances = data.compare_tolerances || {};
+  document.getElementById('tolerance-gp').value = tolerances.gp || '';
+  document.getElementById('tolerance-ext').value = tolerances.ext || '';
+  document.getElementById('tolerance-extpct').value = tolerances.extPercent || '';
+  document.getElementById('tolerance-int').value = tolerances.int || '';
 }
 
 async function onSave() {
@@ -102,12 +108,18 @@ async function onSave() {
   const selected = [...document.querySelectorAll('#breed-checkboxes input[type="checkbox"]:checked')].map((cb) => cb.value);
   const verpaarungEnabled = document.getElementById('verpaarung-enabled-checkbox').checked;
   const pageZoom = Number(document.getElementById('page-zoom-select').value);
+  const compareTolerances = {
+    gp: Number(document.getElementById('tolerance-gp').value) || 0,
+    ext: Number(document.getElementById('tolerance-ext').value) || 0,
+    extPercent: Number(document.getElementById('tolerance-extpct').value) || 0,
+    int: Number(document.getElementById('tolerance-int').value) || 0,
+  };
   // Leere Rassen-Auswahl als NULL statt leerem Array speichern - beides
   // bedeutet "keine Einschränkung", NULL ist aber eindeutiger als Zustand
   // "bewusst nichts ausgewählt" vs. "Feld nie gesetzt".
   const { error } = await supabaseClient
     .from('user_settings')
-    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null, verpaarung_enabled: verpaarungEnabled, page_zoom: pageZoom });
+    .upsert({ user_id: currentUserId, preferred_breeds: selected.length ? selected : null, verpaarung_enabled: verpaarungEnabled, page_zoom: pageZoom, compare_tolerances: compareTolerances });
   statusEl.textContent = error ? 'Speichern fehlgeschlagen: ' + error.message : 'Gespeichert.';
   // Sofort anwenden, ohne dass die Seite neu geladen werden muss (siehe
   // applyPageZoom in auth.js - dieselbe Logik, die jede geschützte Seite

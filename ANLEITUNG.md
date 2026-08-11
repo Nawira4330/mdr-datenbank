@@ -341,8 +341,8 @@ z.B. nach einem Update im Spiel erneut auslesen willst.
   Feld) – es wird dann automatisch hochgeladen und die entstehende
   Adresse ins Feld eingetragen. Direkt darunter erscheint eine kleine
   Bildvorschau, sobald eine Adresse eingetragen ist.
-- **Schlagwörter**: eine feste Liste (Verkauf, Reserviert, Bleibt,
-  Zuchttier, GBH), kein freies Textfeld – haken an, was zutrifft,
+- **Schlagwörter**: eine feste Liste (Verkauf, Reserviert, Bleibt, GBH),
+  kein freies Textfeld – haken an, was zutrifft,
   mehrere gleichzeitig sind möglich. Zu jedem angehakten Schlagwort lässt
   sich optional ein kurzer Zusatztext eintragen (z.B. bei „Reserviert“,
   wer reserviert hat) – erscheint dann z.B. als „Reserviert: für Lisa“.
@@ -610,6 +610,16 @@ weiteren Login übernommen.
 Filter-Vorlagen (siehe [3.4](#34-filtern-und-suchen)). „Löschen“ wirkt
 sofort und unwiderruflich, unabhängig vom „Speichern“-Button für die
 anderen Einstellungen auf dieser Seite.
+
+**Ø-Vergleich Toleranz**: Beim [Ø-Vergleich](#35-die-tabelle) in der
+Übersicht gilt normalerweise jeder Wert unter dem Durchschnitt als
+„schlechter“ (rot). Trägst du hier für GP/Ext/Ext%/Int jeweils eine
+Toleranz ein, zählt ein Pferd trotzdem noch als akzeptabel (ungefärbt
+statt rot), solange es höchstens um den eingetragenen Betrag schlechter
+als der Durchschnitt ist – z.B. lässt „Ext%-Toleranz 2“ auch Pferde bis
+zu 2 Punkte unter dem Ø-Ext% ungefärbt, für eine großzügigere Auswahl.
+Ob ein Pferd deutlich **besser** als der Durchschnitt ist (grün), ändert
+sich dadurch nicht. 0 oder leer = wie bisher, keine Toleranz.
 
 ---
 

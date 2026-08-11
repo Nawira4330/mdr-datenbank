@@ -20,7 +20,7 @@ Discord-Bot fuer die [MDR Pferdedatenbank](../README.md):
   lassen sich unabhaengig voneinander setzen und gelten gleichzeitig
   (UND-verknuepft).
 - **`/mdrdb-tag`** listet alle Pferde mit einem bestimmten Schlagwort
-  (Verkauf/Reserviert/Bleibt/Zuchttier/GBH) auf, optional per
+  (Verkauf/Reserviert/Bleibt/GBH) auf, optional per
   Namensausschnitt eingegrenzt.
 - **`/mdrdb-verkaufen`** (nur der/die aktuelle Besitzer*in laut
   Besitzer-Feld, oder der Bot-Owner) markiert ein Pferd mit dem Schlagwort

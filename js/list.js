@@ -12,6 +12,11 @@ let preferredBreeds = null;
 // null = aus, sonst {gp, ext, extPercent, int} als Vergleichsbasis für
 // die Grün/Rot-Markierung in rowHtml.
 let compareBaseline = null;
+// Persönliche Toleranzwerte für den Ø-Vergleich (Einstellungen, siehe
+// migration_027_compare_tolerances.sql) - {gp, ext, extPercent, int},
+// jeweils "wie viel schlechter als der Durchschnitt zählt noch als
+// akzeptabel" (0/fehlend = keine Toleranz, wie bisher). Siehe cmpClass.
+let compareTolerances = {};
 // Eingeloggtes Konto - wird u.a. von saveFilterPreset() gebraucht (siehe
 // wireFilterPresets), sonst nur lokal in init() gebraucht.
 let currentSession = null;
@@ -61,10 +66,11 @@ async function init() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds')
+    .select('preferred_breeds, compare_tolerances')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
+  compareTolerances = (!error && data?.compare_tolerances) || {};
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -516,10 +522,15 @@ async function computeCompareBaseline() {
 // NIEDRIGERER Wert (Skala 1=exzellent...4/5=schlecht, siehe
 // scoreExteriorTerm/scoreTemperamentTerm) - daher "lowerIsBetter" je
 // Aufruf mitgeben. Nichts bei fehlendem Wert auf einer der beiden Seiten.
-function cmpClass(value, baseline, lowerIsBetter) {
+// "tolerance" (siehe compareTolerances/Einstellungen) verschiebt nur die
+// "schlechter"-Schwelle, nicht die "besser"-Schwelle: ein Wert, der bis
+// zu "tolerance" schlechter als der Durchschnitt ist, gilt dann als
+// neutral (ungefärbt) statt rot - für eine großzügigere Auswahl in der
+// Übersicht, ohne die Definition von "besser" (grün) zu verwässern.
+function cmpClass(value, baseline, lowerIsBetter, tolerance = 0) {
   if (!compareBaseline || value == null || baseline == null) return '';
   const better = lowerIsBetter ? value < baseline : value > baseline;
-  const worse = lowerIsBetter ? value > baseline : value < baseline;
+  const worse = lowerIsBetter ? value > baseline + tolerance : value < baseline - tolerance;
   if (better) return 'cmp-good';
   if (worse) return 'cmp-bad';
   return '';
@@ -530,14 +541,14 @@ function cmpClass(value, baseline, lowerIsBetter) {
 function overallCmpClass(d) {
   if (!compareBaseline) return '';
   const pairs = [
-    [d.gp, compareBaseline.gp, false],
-    [d.extAvg, compareBaseline.ext, true],
-    [d.extPercent, compareBaseline.extPercent, false],
-    [d.intAvg, compareBaseline.int, true],
+    [d.gp, compareBaseline.gp, false, compareTolerances.gp || 0],
+    [d.extAvg, compareBaseline.ext, true, compareTolerances.ext || 0],
+    [d.extPercent, compareBaseline.extPercent, false, compareTolerances.extPercent || 0],
+    [d.intAvg, compareBaseline.int, true, compareTolerances.int || 0],
   ].filter(([v, b]) => v != null && b != null);
   if (!pairs.length) return '';
   const above = pairs.filter(([v, b, lowerIsBetter]) => (lowerIsBetter ? v < b : v > b)).length;
-  const below = pairs.filter(([v, b, lowerIsBetter]) => (lowerIsBetter ? v > b : v < b)).length;
+  const below = pairs.filter(([v, b, lowerIsBetter, tol]) => (lowerIsBetter ? v > b + tol : v < b - tol)).length;
   if (above > below) return 'cmp-good';
   if (below > above) return 'cmp-bad';
   return '';
@@ -795,6 +806,7 @@ function rowHtml(h) {
   // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) direkt daneben,
   // statt einer eigenen Spalte - die Tabelle ist ohnehin schon sehr breit.
   const nameCell = `<a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${tagsBadgesHtml(h.tags)}`;
+  const nameTitle = [h.name || '(ohne Name)', ...(h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label)].join(' – ');
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
@@ -807,19 +819,19 @@ function rowHtml(h) {
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
     <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
-    <td data-label="Name" class="${nameCls}">${nameCell}</td>
+    <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
-    <td data-label="Rasse">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
-    <td data-label="Farbe">${escapeHtml(h.coat_color || '')}</td>
-    <td data-label="Genetik" class="small" style="font-family: ui-monospace, monospace;">${escapeHtml(d.presentGenes)}</td>
-    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="Rasse" title="${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
+    <td data-label="Farbe" title="${escapeHtml(h.coat_color || '')}">${escapeHtml(h.coat_color || '')}</td>
+    <td data-label="Genetik" class="small genetik-cell" style="font-family: ui-monospace, monospace;" title="${escapeHtml(d.presentGenes)}">${escapeHtml(d.presentGenes)}</td>
+    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false, compareTolerances.gp)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
+    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true, compareTolerances.ext)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
+    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false, compareTolerances.extPercent)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
+    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true, compareTolerances.int)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
-    <td data-label="Besitzer">${escapeHtml(h.owner || '')}</td>
+    <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
     <td data-label="Zuletzt bearbeitet">${h.updated_at ? escapeHtml(formatTimestamp(h.updated_at)) : ''}</td>
     <td data-label="Aktionen" class="actions-cell">
