@@ -805,7 +805,14 @@ function rowHtml(h) {
   // Spiel-Link über den eigenen 🔗-Button (nur falls external_id gesetzt).
   // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) direkt daneben,
   // statt einer eigenen Spalte - die Tabelle ist ohnehin schon sehr breit.
-  const nameCell = `<a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${tagsBadgesHtml(h.tags)}`;
+  // .name-cell selbst bleibt ein normales table-cell-Element (display:flex
+  // DIREKT auf einem <td> nimmt es aus dem Tabellen-Zeilenlayout heraus -
+  // es wuerde dann nicht mehr automatisch auf die Zeilenhoehe der
+  // Geschwister-Zellen gestreckt, wodurch seine eigene Trennlinie
+  // "hoeher" als der Rest der Zeile sass, siehe Nutzer-Feedback). Die
+  // Flex-Anordnung fuer Name+Badges sitzt deshalb auf einem inneren Span
+  // statt auf dem <td> selbst.
+  const nameCell = `<span class="name-cell-inner"><a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${tagsBadgesHtml(h.tags)}</span>`;
   const nameTitle = [h.name || '(ohne Name)', ...(h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label)].join(' – ');
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
