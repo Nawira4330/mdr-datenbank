@@ -8,6 +8,11 @@ drin.
 
 ## 11.08.2026
 
+- **Massenerfassung beim Neuanlegen**: neuer Button „Speichern &
+  nächstes Pferd“ - speichert das aktuelle Pferd und leert das Formular
+  direkt für die nächste Neuanlage, statt zur Übersicht zurückzuspringen.
+  Zeigt darunter, welche Pferde in der aktuellen Sitzung schon erfasst
+  wurden.
 - **"3 Jahre alt geworden"-Hinweis verschwindet jetzt gezielter**:
   bisher blieb er das ganze 4. Spieljahr über stehen. Jetzt verschwindet
   er, sobald das Pferd danach erneut gespeichert wird (z.B. nach dem

@@ -26,6 +26,10 @@ let originalRecord = null;
 // SyntaxError ausloesen, der das komplette zweite Skript (verpaarung.js)
 // stumm lahmlegt (siehe Commit-Historie).
 let formIdentity = null;
+// Namen der in dieser Sitzung per "Speichern & nächstes Pferd" bereits
+// erfassten Pferde (siehe onSaveAndNew/resetFormForNextEntry) - rein
+// zur Anzeige ("Diese Sitzung: ..."), nicht gespeichert.
+let bulkSessionNames = [];
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -170,6 +174,11 @@ async function init() {
     // laesst sich bei Bedarf (z.B. erneutes Auslesen) einfach aufklappen.
     document.getElementById('paste-details').open = false;
     await loadHorse(editingId);
+  } else {
+    // "Massenerfassung": nur bei einer echten Neuanlage sinnvoll (beim
+    // Bearbeiten eines bestehenden Pferds gibt es ja nur genau eines).
+    document.getElementById('save-and-new-btn').hidden = false;
+    document.getElementById('save-and-new-btn').addEventListener('click', onSaveAndNew);
   }
 }
 
@@ -381,12 +390,26 @@ function missingDataWarnings(payload) {
 let pendingSave = null;
 // Wohin performSave nach erfolgreichem Speichern weiterleitet - normal
 // zurueck zur Uebersicht, bei den Pfeil-Buttons (siehe onSaveAndNavigate)
-// stattdessen direkt zum naechsten/vorherigen Pferd.
+// stattdessen direkt zum naechsten/vorherigen Pferd. null (siehe
+// onSaveAndNew) heisst "gar nicht weiterleiten, Formular fuer die
+// naechste Neuanlage zuruecksetzen" (Massenerfassung).
 let saveRedirect = 'index.html';
 
 async function onSave(e) {
   e.preventDefault();
   saveRedirect = 'index.html';
+  await runSaveFlow();
+}
+
+// "Massenerfassung": speichert das aktuelle (neue) Pferd wie ein
+// normaler Save, leitet danach aber nicht weiter, sondern setzt das
+// Formular fuer die naechste Neuanlage zurueck (siehe
+// resetFormForNextEntry in performSave) - so laesst sich eine ganze
+// Reihe neuer Pferde ohne Umweg ueber die Uebersicht nacheinander
+// eintragen.
+async function onSaveAndNew(e) {
+  e.preventDefault();
+  saveRedirect = null;
   await runSaveFlow();
 }
 
@@ -872,7 +895,41 @@ async function performSave(formData, payload, session) {
       zzlJustApproved,
     }));
   }
+  if (saveRedirect === null) {
+    resetFormForNextEntry(formData.name);
+    return;
+  }
   window.location.href = saveRedirect;
+}
+
+// Setzt das Formular nach "Speichern & nächstes Pferd" auf den Stand
+// einer leeren Neuanlage zurück, ohne die Seite neu zu laden (spart bei
+// vielen Pferden hintereinander den Umweg über die Übersicht). Native
+// form.reset() deckt die meisten Formularfelder ab (Text/Zahl/Auswahl/
+// Kästchen inkl. Schlagwörter) - Rohtext-Box und die aus dem Rohtext
+// abgeleiteten Detail-Tabellen/Vorschau liegen außerhalb des <form> bzw.
+// werden aus extraData gerendert und müssen deshalb manuell geleert
+// werden.
+async function resetFormForNextEntry(savedName) {
+  bulkSessionNames.push(savedName);
+  document.getElementById('horse-form').reset();
+  extraData = {};
+  originalRecord = null;
+  document.getElementById('raw-text').value = '';
+  document.getElementById('paste-details').open = true;
+  document.getElementById('parse-status').textContent = '';
+  document.getElementById('form-error').textContent = '';
+  fillTagCheckboxes([]);
+  updateBreedCompositionVisibility();
+  updateImagePreview();
+  await renderDetailTables(extraData);
+  activateTab('stammdaten');
+
+  const listEl = document.getElementById('bulk-session-list');
+  listEl.hidden = false;
+  listEl.textContent = `Diese Sitzung bereits erfasst (${bulkSessionNames.length}): ${bulkSessionNames.join(', ')}`;
+
+  document.getElementById('raw-text').focus();
 }
 
 async function onDelete() {

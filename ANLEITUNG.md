@@ -434,6 +434,17 @@ Teil der Seite kopiert wurde), bleibt der bisherige, bereits bekannte
 Wert erhalten statt zu verschwinden – das Popup erscheint dann für diese
 Angabe nicht erneut.
 
+**Massenerfassung**: Beim Neuanlegen (nicht beim Bearbeiten eines
+bestehenden Pferds) gibt es neben „Speichern“ zusätzlich „Speichern &
+nächstes Pferd“. Speichert das aktuelle Pferd genauso wie „Speichern“,
+leitet danach aber **nicht** zur Übersicht weiter, sondern leert das
+Formular direkt für die nächste Neuanlage (Rohtext-Kasten, alle Felder,
+Schlagwörter) – so lassen sich mehrere Pferde nacheinander eintragen
+(Text einfügen → Automatisch auslesen → prüfen → Speichern & nächstes
+Pferd → …), ohne jedes Mal über die Übersicht zurückzuspringen. Unter
+den Buttons zeigt eine Zeile, welche Pferde in dieser Sitzung bereits so
+gespeichert wurden.
+
 Beim Aktualisieren eines bestehenden Pferds zeigt der Banner in der
 Übersicht nach dem Speichern zusätzlich, welche Felder sich dabei
 tatsächlich geändert haben (z.B. „Geändert: ZZL, Bild, Turnierwerte“).
