@@ -118,7 +118,7 @@ async function checkAgeNotices(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('id, name, birthdate, tags')
+    .select('id, name, birthdate, tags, created_at, updated_at')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -134,7 +134,26 @@ async function checkAgeNotices(session) {
     '<p>Fohlen brauchen ab 6 Monaten einen eigenen Stall:</p>',
   );
 
-  const turningThree = withAge.filter((h) => h.age.years === 3);
+  // "Ist 3 geworden" gilt technisch das ganze 4. Spieljahr (30 Tage) -
+  // zwei Einschränkungen, damit der Hinweis nur bei tatsächlich neu
+  // relevanten Fällen erscheint:
+  // - das Formular erneut zu speichern (z.B. nach dem Bild-Update) gilt
+  //   als "erledigt": bleibt das Pferd seitdem unangetastet (updated_at
+  //   vor dem 3.-Geburtstag), wird der Hinweis gezeigt, sonst
+  //   verschwindet er sofort statt erst nach Ablauf des ganzen
+  //   Spieljahres.
+  // - neu eingetragene Pferde, die schon bei der Ersteingabe älter als
+  //   3 Jahre waren (created_at nach dem 3.-Geburtstag), bekommen den
+  //   Hinweis gar nicht erst - die haben vermutlich schon ein aktuelles
+  //   Bild, das "Bild ändert sich mit 3 Jahren" ist hier nicht relevant.
+  const turningThree = withAge.filter((h) => {
+    if (h.age.years !== 3) return false;
+    const turnedThreeAt = new Date(h.birthdate).getTime() + 3 * REAL_DAYS_PER_GAME_YEAR * 86400000;
+    const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
+    if (createdAt >= turnedThreeAt) return false;
+    const savedAt = h.updated_at ? new Date(h.updated_at).getTime() : 0;
+    return savedAt < turnedThreeAt;
+  });
   renderAgeNotice(
     '#age3-notice',
     turningThree,

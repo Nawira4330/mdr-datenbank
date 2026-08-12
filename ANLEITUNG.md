@@ -115,8 +115,11 @@ eigenen Pferde und auf dem [Geburtsdatum](#42-stammdaten) basierend:
   selbst wieder, sobald das Fohlen 7 Monate alt wird.
 - **„X Pferd(e) ist/sind 3 Jahre alt geworden“** – im Spiel ändert sich
   das Pferdebild meist mit 3 Jahren, dieser Hinweis erinnert daran, das
-  Bild zu prüfen und ggf. zu aktualisieren. Er verschwindet von selbst
-  wieder, sobald das Pferd 4 wird.
+  Bild zu prüfen und ggf. zu aktualisieren. Er verschwindet, sobald du
+  das Pferd danach erneut speicherst (z.B. nach dem Bild-Update) oder
+  spätestens wenn es 4 wird. War ein Pferd bei der Ersteingabe bereits
+  über 3 Jahre alt, erscheint der Hinweis für dieses Pferd gar nicht
+  erst.
 - **„X Pferd(e) über 25 Jahre – automatisch mit „GBH“ markiert“** –
   Pferde über 25 Jahren bekommen automatisch das Schlagwort „GBH“
   zugewiesen (falls noch nicht vorhanden), dieser Kasten listet sie zur

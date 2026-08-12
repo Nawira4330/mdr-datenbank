@@ -8,6 +8,12 @@ drin.
 
 ## 11.08.2026
 
+- **"3 Jahre alt geworden"-Hinweis verschwindet jetzt gezielter**:
+  bisher blieb er das ganze 4. Spieljahr über stehen. Jetzt verschwindet
+  er, sobald das Pferd danach erneut gespeichert wird (z.B. nach dem
+  Bild-Update), und erscheint gar nicht erst bei Pferden, die schon bei
+  der Ersteingabe über 3 Jahre alt waren.
+
 - **Ø-Vergleich Toleranz einstellbar** (Einstellungen): pro Wert
   (GP/Ext/Ext%/Int) lässt sich festlegen, wie viel schlechter als der
   Durchschnitt ein Pferd noch sein darf, ohne in der Übersicht rot
