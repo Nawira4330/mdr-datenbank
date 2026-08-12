@@ -241,6 +241,17 @@ Dropdown-Menü mit **Rasse**, **ZZL**, **Besitzer** und **Geschlecht**
 legst du fest, welche Pferde in die Durchschnittsberechnung einfließen
 (unabhängig davon, welche Pferde die Filter oben gerade anzeigen). Ein
 leerer Wert (Fehlanzeige) bei GP/Ext/Ext%/Int bleibt unmarkiert.
+Unterhalb der Dropdowns zeigt eine Zeile die berechneten
+Durchschnittswerte selbst an (z.B. „Ø GP: 367 (±5)“) – die Zahl in
+Klammern ist deine [persönliche Toleranz](#9-einstellungen) für den
+jeweiligen Wert, falls eingetragen. Die Checkbox **Toleranz
+berücksichtigen** daneben schaltet die Toleranz für die Färbung ganz
+ein oder aus, ohne dass du sie in den Einstellungen löschen musst.
+Pferde, die nur *wegen* der Toleranz noch als akzeptabel gelten (also
+schlechter als der Durchschnitt, aber innerhalb der Toleranz), werden
+in einem eigenen, helleren Grünton markiert statt ungefärbt – so bleibt
+sichtbar, dass sie sich von echt überdurchschnittlichen Pferden
+unterscheiden.
 
 ---
 
@@ -267,9 +278,12 @@ Der schnellste Weg, ein Pferd einzutragen:
 
 1. Im Spiel die Pferdeseite öffnen, die komplette Seite markieren
    (Strg+A) und kopieren (Strg+C).
-2. Den Text in das Feld „Text von der Pferdeseite einfügen“ einfügen.
-3. Auf „Automatisch auslesen“ klicken.
-4. Alle darunter befüllten Felder **kurz prüfen**, bevor du speicherst –
+2. Den Text in das Feld „Text von der Pferdeseite einfügen“ einfügen –
+   das Auslesen startet dabei automatisch (kein zusätzlicher Klick
+   nötig). Der Button „Automatisch auslesen“ bleibt trotzdem nutzbar,
+   z.B. nach manuellen Korrekturen im Text oder für ein erneutes
+   Auslesen.
+3. Alle darunter befüllten Felder **kurz prüfen**, bevor du speicherst –
    die automatische Erkennung ist textbasiert und kann bei
    Layout-Änderungen im Spiel danebenliegen.
 
@@ -432,7 +446,12 @@ schon bekannt, verlangt ein erneutes „Automatisch auslesen“ sie nicht
 nochmal: fehlt ein Wert im diesmal eingefügten Text (z.B. weil nur ein
 Teil der Seite kopiert wurde), bleibt der bisherige, bereits bekannte
 Wert erhalten statt zu verschwinden – das Popup erscheint dann für diese
-Angabe nicht erneut.
+Angabe nicht erneut. Das gilt genauso, wenn ein vermeintlich neues Pferd
+tatsächlich per Name oder ID mit einem bereits bestehenden Pferd
+zusammengeführt wird (siehe „Dopplungs-Check“ unten) – ist dort z.B. bei
+einem reinen Nachtrag (nur ein paar Felder ergänzt, kein neuer
+Spieltext) schon alles Nötige bekannt, erscheint das Popup gar nicht
+erst.
 
 **Massenerfassung**: Beim Neuanlegen (nicht beim Bearbeiten eines
 bestehenden Pferds) gibt es neben „Speichern“ zusätzlich „Speichern &
@@ -442,8 +461,17 @@ Formular direkt für die nächste Neuanlage (Rohtext-Kasten, alle Felder,
 Schlagwörter) – so lassen sich mehrere Pferde nacheinander eintragen
 (Text einfügen → Automatisch auslesen → prüfen → Speichern & nächstes
 Pferd → …), ohne jedes Mal über die Übersicht zurückzuspringen. Unter
-den Buttons zeigt eine Zeile, welche Pferde in dieser Sitzung bereits so
-gespeichert wurden.
+den Buttons erscheint eine Karte mit der Anzahl und einer Liste der in
+dieser Sitzung bereits erfassten Pferde – jeder Eintrag verlinkt direkt
+zu diesem Pferd, ein grüner Haken markiert eine echte Neuanlage, ein
+blauer Punkt mit dem Zusatz „aktualisiert“ dagegen einen Nachtrag zu
+einem bereits bestehenden Pferd (z.B. weil derselbe Name/dieselbe ID
+schon vorhanden war). Der Button „Fertig / Zur Übersicht“ unter der
+Liste beendet die Sitzung direkt, ohne dass dafür noch ein weiteres
+(leeres) Pferd gespeichert werden muss. Alternativ beendest du die Reihe
+auch mit einem normalen „Speichern“ des letzten Pferds – in beiden
+Fällen listet der Banner in der Übersicht anschließend alle in dieser
+Sitzung erfassten Pferde auf statt nur des letzten.
 
 Beim Aktualisieren eines bestehenden Pferds zeigt der Banner in der
 Übersicht nach dem Speichern zusätzlich, welche Felder sich dabei

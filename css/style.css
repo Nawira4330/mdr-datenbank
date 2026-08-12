@@ -14,7 +14,9 @@
   --accent-dark: #649200;
   --danger: #c84149;
   --success: #6b9d00;
+  --success-tolerance: #1f8f7a;
   --warning: #b5860a;
+  --info: #2f7fd1;
   /* Zusätzliche Farbe nur für Schlagwort-Badges (siehe HORSE_TAG_OPTIONS
      in js/parser.js) - Verkauf/Reserviert/Bleibt decken sich bereits mit
      danger/warning/success, GBH braucht eine weitere, klar
@@ -50,7 +52,9 @@
     --accent-dark: #a3ca79;
     --danger: #e0827f;
     --success: #89b957;
+    --success-tolerance: #4fc9b0;
     --warning: #d9a441;
+    --info: #6fa8dc;
     --tag-purple: #b98fd9;
     --th-bg-solid: #2a3b3c;
   }
@@ -339,6 +343,15 @@ label {
 .compare-avg-toggle input[type="checkbox"] { width: auto; margin-top: 0.25rem; }
 .compare-avg-toggle-text { display: flex; flex-direction: column; gap: 0.15rem; }
 .compare-avg-block #compare-avg-panel { margin-top: 0.75rem; margin-bottom: 0; }
+.compare-tolerance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  align-self: center;
+}
+.compare-tolerance-toggle input[type="checkbox"] { width: auto; margin: 0; }
+.compare-avg-values { flex-basis: 100%; }
 
 .checkdrop { position: relative; }
 .checkdrop-toggle {
@@ -506,6 +519,12 @@ td.actions-cell .btn:last-child, td.actions-cell button:last-child { margin-righ
    GP/Ext% ist ein höherer Wert besser, bei Ext/Int ein niedrigerer). */
 td.cmp-good { background: rgba(107, 157, 0, 0.16); }
 td.cmp-good, td.cmp-good a { color: var(--success); font-weight: 600; }
+/* Schlechter als der Durchschnitt, aber innerhalb der persönlichen
+   Toleranz (siehe Toleranz-Einstellungen/-Häkchen) - eigener Grünton statt
+   ungefärbt, damit "durch Toleranz noch akzeptabel" sichtbar bleibt, ohne
+   mit "wirklich besser" (cmp-good) verwechselt zu werden. */
+td.cmp-tolerance { background: rgba(31, 143, 122, 0.14); }
+td.cmp-tolerance, td.cmp-tolerance a { color: var(--success-tolerance); font-weight: 600; }
 td.cmp-bad { background: rgba(200, 65, 73, 0.14); }
 td.cmp-bad, td.cmp-bad a { color: var(--danger); font-weight: 600; }
 
@@ -695,6 +714,33 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.2rem 0; }
 .form-actions .push-right { margin-left: auto; }
+
+/* Massenerfassung-Karte ("Speichern & nächstes Pferd", siehe
+   renderBulkSessionCard in horseForm.js) - zeigt die in dieser Sitzung
+   bereits erfassten Pferde als laufende Liste, analog zur entsprechenden
+   Anzeige im Discord-Bot. */
+.bulk-session-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  text-align: center;
+}
+.bulk-session-count { font-family: var(--font-heading); font-size: 2.4rem; color: var(--accent-dark); line-height: 1.1; }
+.bulk-session-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.8rem; }
+.bulk-session-items { list-style: none; margin: 0 0 1rem; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 0.3rem; }
+.bulk-session-item { display: flex; align-items: center; gap: 0.5rem; }
+.bulk-session-icon { flex: 0 0 auto; }
+.bulk-session-item a { flex: 1 1 auto; overflow-wrap: break-word; }
+.bulk-session-badge {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--info);
+  border: 1px solid var(--info);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
 
 .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 0; }
 

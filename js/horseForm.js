@@ -26,10 +26,13 @@ let originalRecord = null;
 // SyntaxError ausloesen, der das komplette zweite Skript (verpaarung.js)
 // stumm lahmlegt (siehe Commit-Historie).
 let formIdentity = null;
-// Namen der in dieser Sitzung per "Speichern & nächstes Pferd" bereits
-// erfassten Pferde (siehe onSaveAndNew/resetFormForNextEntry) - rein
-// zur Anzeige ("Diese Sitzung: ..."), nicht gespeichert.
-let bulkSessionNames = [];
+// Die in dieser Sitzung per "Speichern & nächstes Pferd" bereits
+// erfassten Pferde (siehe onSaveAndNew/resetFormForNextEntry) - je
+// {id, name, updated} ("updated" = Nachtrag zu einem bereits bestehenden
+// Pferd statt echter Neuanlage, siehe targetId in performSave). Rein zur
+// Anzeige (renderBulkSessionCard) und für den Übersicht-Banner beim
+// Abschluss der Sitzung, nicht selbst gespeichert.
+let bulkSessionEntries = [];
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -131,6 +134,16 @@ document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const filename = rawSrc.split(/[/\\]/).pop() || '';
   const idMatch = filename.match(/^(\d+)/);
   if (idMatch) document.getElementById('external_id').value = idMatch[1];
+});
+
+// Automatisches Auslesen direkt beim Einfügen (Strg+V) in #raw-text, statt
+// erst nach Klick auf "Automatisch auslesen" - der Button bleibt trotzdem
+// nutzbar (z.B. nach manuellen Korrekturen im Text oder erneutem Auslesen).
+// setTimeout(0), weil der eingefügte Text im "paste"-Event selbst noch
+// nicht im Feld steht (der Browser fügt ihn erst direkt danach ein) -
+// onParse() liest also sonst noch den alten (leeren) Wert.
+document.getElementById('raw-text')?.addEventListener('paste', () => {
+  setTimeout(onParse, 0);
 });
 
 async function init() {
@@ -473,16 +486,27 @@ async function runSaveFlow() {
   // Datenbank stehen, nicht der Rohtext selbst.
   payload.raw_text = null;
 
-  const warnings = missingDataWarnings(payload);
+  // Muss VOR der Vollständigkeits-Prüfung laufen (siehe unten): ist das
+  // hier eigentlich nur ein Nachtrag zu einem bereits bestehenden Pferd
+  // (Name-/ID-Treffer, siehe resolveSaveTarget), sollen bereits bekannte
+  // Werte des bestehenden Datensatzes mitzählen - sonst würde z.B. „Die
+  // Turnierwerte fehlen“ auch dann noch angezeigt, wenn sie im
+  // bestehenden Datensatz längst erfasst sind und im diesmal
+  // eingefügten (kürzeren) Text nur nicht nochmal enthalten waren.
+  const resolved = await resolveSaveTarget(formData, payload);
+  if (!resolved) return;
+  const { targetId, payload: mergedPayload, beforeRecord } = resolved;
+
+  const warnings = missingDataWarnings(mergedPayload);
   if (warnings.length) {
-    pendingSave = { formData, payload, session };
+    pendingSave = { formData, payload: mergedPayload, session, targetId, beforeRecord };
     const list = document.getElementById('save-warning-list');
     list.innerHTML = warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('');
     document.getElementById('save-warning-modal').hidden = false;
     return;
   }
 
-  await performSave(formData, payload, session);
+  await performSave(formData, mergedPayload, session, targetId, beforeRecord);
 }
 
 function wireSaveWarningModal() {
@@ -493,9 +517,9 @@ function wireSaveWarningModal() {
   document.getElementById('save-warning-confirm').addEventListener('click', async () => {
     document.getElementById('save-warning-modal').hidden = true;
     if (!pendingSave) return;
-    const { formData, payload, session } = pendingSave;
+    const { formData, payload, session, targetId, beforeRecord } = pendingSave;
     pendingSave = null;
-    await performSave(formData, payload, session);
+    await performSave(formData, payload, session, targetId, beforeRecord);
   });
 }
 
@@ -747,12 +771,43 @@ async function autoUpdateParentFlaxenCarriers(payload) {
   return { updated, warnings };
 }
 
-async function performSave(formData, payload, session) {
+// Führt "payload" (das frisch ausgefüllte/geparste Formular) mit einem
+// gefundenen bestehenden Datensatz zusammen - für Felder, die in payload
+// bereits stehen, per mergeFieldValue (leer im neuen Formular -> alten
+// Wert behalten). Die strukturierten JSONB-Felder (Turnierwerte,
+// Stammbaum, Farbgenetik, ...) stehen bei einer vermeintlichen Neuanlage
+// OHNE eigenes "Automatisch auslesen" aber gar nicht erst in payload
+// (siehe runSaveFlow: nur was in extraData steht, landet dort) - ohne
+// dieses Nachtragen würden sie beim UPDATE schlicht nicht angefasst
+// (bleiben also ohnehin unverändert bestehen), ABER missingDataWarnings
+// direkt danach würde sie fälschlich als "fehlt" melden, weil es sie in
+// payload gar nicht sieht. Deshalb hier zusätzlich aus dem bestehenden
+// Datensatz nachtragen, wenn sie in payload fehlen.
+function mergePayloadFromExisting(payload, existing) {
+  for (const key of Object.keys(payload)) {
+    payload[key] = mergeFieldValue(key, existing[key], payload[key]);
+  }
+  for (const key of JSONB_KEYS) {
+    if (!(key in payload)) payload[key] = existing[key];
+  }
+}
+
+// Ermittelt, ob dieser Speichervorgang ein neuer Datensatz wird oder
+// (still oder nach Rückfrage) ein bestehender Datensatz ergänzt wird -
+// inklusive dem eigentlichen Zusammenführen der Feldwerte (mergeFieldValue).
+// Bewusst von der eigentlichen DB-Schreiboperation (performSave)
+// getrennt: muss VOR der Vollständigkeits-Prüfung in runSaveFlow laufen,
+// damit diese den bereits gemergten (statt nur den frisch eingefügten)
+// Stand prüft - sonst würde ein bloßer Nachtrag zu einem bereits
+// vollständigen Pferd fälschlich als "unvollständig" gemeldet, nur weil
+// diesmal ein kürzerer Text eingefügt wurde. Gibt bei einem Lookup-Fehler
+// null zurück (Fehlermeldung ist dann bereits in #form-error gesetzt).
+async function resolveSaveTarget(formData, payload) {
   const errorEl = document.getElementById('form-error');
 
   // Vergleichsgrundlage für computeChangedFields (Flash-Banner nach dem
-  // Speichern, siehe unten) - beim regulären Bearbeiten der beim Laden
-  // vorgefundene Datensatz, in den beiden anderen Fällen (Namens- bzw.
+  // Speichern) - beim regulären Bearbeiten der beim Laden vorgefundene
+  // Datensatz, in den beiden anderen Fällen (Namens- bzw.
   // Dopplungs-Treffer weiter unten) der dort jeweils geladene bestehende
   // Datensatz. Bleibt bei einer echten Neuanlage null.
   let beforeRecord = editingId ? originalRecord : null;
@@ -772,7 +827,7 @@ async function performSave(formData, payload, session) {
       .maybeSingle();
     if (lookupError) {
       errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + lookupError.message;
-      return;
+      return null;
     }
     if (existing) {
       targetId = existing.id;
@@ -784,9 +839,7 @@ async function performSave(formData, payload, session) {
       // reguläten Bearbeiten (targetId = editingId, siehe unten) gilt das
       // bewusst NICHT: dort ist das Formular mit den alten Werten
       // vorbefüllt, ein leeres Feld dort also eine bewusste Änderung.
-      for (const key of Object.keys(payload)) {
-        payload[key] = mergeFieldValue(key, existing[key], payload[key]);
-      }
+      mergePayloadFromExisting(payload, existing);
     } else if (payload.external_id) {
       // Kein Namenstreffer, aber eine Spiel-ID eingetragen - die ID ist
       // eindeutig (kommt im Spiel nur einmal vor), deshalb genau wie beim
@@ -803,14 +856,12 @@ async function performSave(formData, payload, session) {
         .maybeSingle();
       if (idLookupError) {
         errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + idLookupError.message;
-        return;
+        return null;
       }
       if (idMatch) {
         targetId = idMatch.id;
         beforeRecord = idMatch;
-        for (const key of Object.keys(payload)) {
-          payload[key] = mergeFieldValue(key, idMatch[key], payload[key]);
-        }
+        mergePayloadFromExisting(payload, idMatch);
       }
     }
 
@@ -827,7 +878,7 @@ async function performSave(formData, payload, session) {
         .select('id, name, owner, external_id, tournament_potential, exterior_descriptive, exterior_genetics, temperament');
       if (statsLookupError) {
         errorEl.textContent = 'Prüfung auf bestehenden Datensatz fehlgeschlagen: ' + statsLookupError.message;
-        return;
+        return null;
       }
       const candidate = (candidates || []).find((h) => statsMatch(newStats, quickStatsOf(h))) || null;
 
@@ -842,21 +893,32 @@ async function performSave(formData, payload, session) {
           if (isSame) {
             targetId = fullCandidate.id;
             beforeRecord = fullCandidate;
-            for (const key of Object.keys(payload)) {
-              payload[key] = mergeFieldValue(key, fullCandidate[key], payload[key]);
-            }
+            mergePayloadFromExisting(payload, fullCandidate);
           }
         }
       }
     }
   }
 
+  return { targetId, payload, beforeRecord };
+}
+
+async function performSave(formData, payload, session, targetId, beforeRecord) {
+  const errorEl = document.getElementById('form-error');
+
   let error;
+  let insertedId;
   if (targetId) {
     ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));
   } else {
     payload.user_id = session.user.id;
-    ({ error } = await supabaseClient.from('horses').insert(payload));
+    // ".select('id').single()" wird nur für die Massenerfassung-Karte
+    // gebraucht (siehe resetFormForNextEntry) - dort verlinkt jeder Eintrag
+    // direkt auf das gerade angelegte Pferd, dafür muss dessen ID bekannt
+    // sein (bei einem Update ist das ohnehin schon targetId).
+    const insertResult = await supabaseClient.from('horses').insert(payload).select('id').single();
+    error = insertResult.error;
+    insertedId = insertResult.data?.id;
   }
 
   if (error) {
@@ -889,6 +951,13 @@ async function performSave(formData, payload, session) {
     sessionStorage.setItem('mdr_flash', JSON.stringify({
       action: targetId ? 'updated' : 'created',
       name: formData.name,
+      // Wurden zuvor bereits Pferde per "Speichern & nächstes Pferd"
+      // erfasst (siehe resetFormForNextEntry), zaehlt dieser letzte,
+      // regulaer per "Speichern" abgeschlossene Speichervorgang als Ende
+      // der Massenerfassung - der Banner in der Uebersicht listet dann
+      // ALLE in dieser Sitzung neu angelegten Pferde statt nur dieses
+      // eine, damit man den Ueberblick behaelt.
+      bulkNames: bulkSessionEntries.length ? [...bulkSessionEntries.map((e) => e.name), formData.name] : null,
       changedFields: targetId ? computeChangedFields(beforeRecord, payload) : [],
       flaxenUpdated: flaxenResult.updated,
       flaxenWarnings: flaxenResult.warnings,
@@ -896,7 +965,7 @@ async function performSave(formData, payload, session) {
     }));
   }
   if (saveRedirect === null) {
-    resetFormForNextEntry(formData.name);
+    resetFormForNextEntry(formData.name, targetId || insertedId, Boolean(targetId));
     return;
   }
   window.location.href = saveRedirect;
@@ -910,8 +979,8 @@ async function performSave(formData, payload, session) {
 // abgeleiteten Detail-Tabellen/Vorschau liegen außerhalb des <form> bzw.
 // werden aus extraData gerendert und müssen deshalb manuell geleert
 // werden.
-async function resetFormForNextEntry(savedName) {
-  bulkSessionNames.push(savedName);
+async function resetFormForNextEntry(savedName, savedId, wasUpdate) {
+  bulkSessionEntries.push({ id: savedId, name: savedName, updated: wasUpdate });
   document.getElementById('horse-form').reset();
   extraData = {};
   originalRecord = null;
@@ -925,11 +994,46 @@ async function resetFormForNextEntry(savedName) {
   await renderDetailTables(extraData);
   activateTab('stammdaten');
 
-  const listEl = document.getElementById('bulk-session-list');
-  listEl.hidden = false;
-  listEl.textContent = `Diese Sitzung bereits erfasst (${bulkSessionNames.length}): ${bulkSessionNames.join(', ')}`;
+  renderBulkSessionCard();
 
   document.getElementById('raw-text').focus();
+}
+
+// Baut die Massenerfassung-Karte auf (siehe .bulk-session-card in
+// style.css) - Zähler, Liste der bereits erfassten Pferde (grüner Haken
+// bei echter Neuanlage, blaues "aktualisiert"-Abzeichen bei einem
+// Nachtrag zu einem bereits bestehenden Pferd, siehe bulkSessionEntries)
+// sowie ein Button, um die Sitzung ohne eine weitere (leere) Neuanlage
+// direkt zu beenden.
+function renderBulkSessionCard() {
+  const listEl = document.getElementById('bulk-session-list');
+  listEl.hidden = false;
+  const items = bulkSessionEntries.map((entry) => `
+    <li class="bulk-session-item">
+      <span class="bulk-session-icon">${entry.updated ? '🔵' : '✅'}</span>
+      <a href="horse.html?id=${encodeURIComponent(entry.id)}">${escapeHtml(entry.name)}</a>
+      ${entry.updated ? '<span class="bulk-session-badge">aktualisiert</span>' : ''}
+    </li>
+  `).join('');
+  listEl.innerHTML = `
+    <div class="bulk-session-count">${bulkSessionEntries.length}</div>
+    <div class="bulk-session-label">In dieser Sitzung erfasst</div>
+    <ul class="bulk-session-items">${items}</ul>
+    <button type="button" id="bulk-session-finish-btn" class="secondary">Fertig / Zur Übersicht</button>
+  `;
+  document.getElementById('bulk-session-finish-btn').addEventListener('click', onBulkSessionFinish);
+}
+
+// Beendet die Massenerfassung-Sitzung direkt von der Karte aus, ohne dass
+// dafür noch ein (leeres) weiteres Pferd gespeichert werden muss - zeigt
+// in der Übersicht denselben Sammel-Banner wie ein regulärer Abschluss
+// per "Speichern" (siehe bulkNames in performSave).
+function onBulkSessionFinish() {
+  sessionStorage.setItem('mdr_flash', JSON.stringify({
+    action: 'created',
+    bulkNames: bulkSessionEntries.map((e) => e.name),
+  }));
+  window.location.href = 'index.html';
 }
 
 async function onDelete() {

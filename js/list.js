@@ -17,6 +17,10 @@ let compareBaseline = null;
 // jeweils "wie viel schlechter als der Durchschnitt zählt noch als
 // akzeptabel" (0/fehlend = keine Toleranz, wie bisher). Siehe cmpClass.
 let compareTolerances = {};
+// Häkchen "Toleranz berücksichtigen" (siehe wireCompareAvg) - bei false
+// wirkt effectiveTolerance() überall wie 0, d.h. keine grüne Toleranzzone,
+// nur noch strikt besser (grün) / schlechter (rot) wie vor diesem Feature.
+let compareToleranceEnabled = true;
 // Eingeloggtes Konto - wird u.a. von saveFilterPreset() gebraucht (siehe
 // wireFilterPresets), sonst nur lokal in init() gebraucht.
 let currentSession = null;
@@ -293,7 +297,12 @@ function showFlashBanner() {
   }
   const banner = document.querySelector('#flash-banner');
   const verb = flash.action === 'updated' ? 'aktualisiert' : 'neu angelegt';
-  let text = `„${flash.name}" wurde ${verb}.`;
+  // Massenerfassung (siehe "Speichern & nächstes Pferd" in horseForm.js):
+  // statt nur des zuletzt gespeicherten Pferds werden alle in dieser
+  // Sitzung neu angelegten Pferde aufgelistet.
+  let text = flash.bulkNames?.length
+    ? `${flash.bulkNames.length} Pferde neu angelegt: ${flash.bulkNames.map((n) => `„${n}"`).join(', ')}.`
+    : `„${flash.name}" wurde ${verb}.`;
   // Nur beim Aktualisieren sinnvoll (bei einer Neuanlage ist ohnehin
   // "alles neu") - zeigt, welche Felder sich durch diesen Speichervorgang
   // gegenüber dem vorherigen Stand tatsächlich geändert haben (siehe
@@ -463,19 +472,61 @@ function computeDerived(h) {
 function wireCompareAvg() {
   const toggle = document.querySelector('#compare-avg-toggle');
   const panel = document.querySelector('#compare-avg-panel');
+  const toleranceToggle = document.querySelector('#compare-tolerance-toggle');
   const recompute = async () => {
     if (!toggle.checked) return;
     compareBaseline = await computeCompareBaseline();
+    renderCompareAvgValues();
     await loadHorses();
   };
   toggle.addEventListener('change', async () => {
     panel.hidden = !toggle.checked;
     compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
+    renderCompareAvgValues();
     await loadHorses();
   });
   ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
     document.querySelector(sel).addEventListener('change', recompute);
   });
+  toleranceToggle.addEventListener('change', async () => {
+    compareToleranceEnabled = toleranceToggle.checked;
+    renderCompareAvgValues();
+    await loadHorses();
+  });
+}
+
+// Wie weit ein Wert schlechter als der Durchschnitt sein darf und trotzdem
+// nicht als "richtig schlecht" (cmp-bad), sondern nur als "durch Toleranz
+// akzeptabel" (cmp-tolerance) gilt - 0, wenn das Toleranz-Häkchen aus ist
+// oder für den jeweiligen Wert keine Toleranz hinterlegt ist.
+function effectiveTolerance(key) {
+  return compareToleranceEnabled ? (compareTolerances[key] || 0) : 0;
+}
+
+// Zeigt die aus der aktuellen Vergleichsbasis berechneten Ø-Werte neben den
+// Basis-Dropdowns an, inkl. der jeweils wirksamen Toleranz in Klammern
+// (siehe effectiveTolerance) - nur informativ, ohne Einfluss auf die
+// Berechnung selbst (die passiert weiterhin in cmpClass/overallCmpClass).
+function renderCompareAvgValues() {
+  const el = document.querySelector('#compare-avg-values');
+  if (!compareBaseline) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const part = (label, value, decimals, suffix, tolerance) => {
+    if (value == null) return `${label}: –`;
+    const val = value.toFixed(decimals) + (suffix || '');
+    const tolText = tolerance ? ` (±${tolerance.toFixed ? tolerance.toFixed(decimals) : tolerance}${suffix || ''})` : '';
+    return `${label}: ${val}${tolText}`;
+  };
+  el.textContent = [
+    part('Ø GP', compareBaseline.gp, 0, '', effectiveTolerance('gp')),
+    part('Ø Ext', compareBaseline.ext, 2, '', effectiveTolerance('ext')),
+    part('Ø Ext%', compareBaseline.extPercent, 0, '%', effectiveTolerance('extPercent')),
+    part('Ø Int', compareBaseline.int, 2, '', effectiveTolerance('int')),
+  ].join(' · ');
+  el.hidden = false;
 }
 
 // "Nach oben"-Pfeil (siehe .scroll-top-btn in style.css) - je nach
@@ -541,35 +592,43 @@ async function computeCompareBaseline() {
 // NIEDRIGERER Wert (Skala 1=exzellent...4/5=schlecht, siehe
 // scoreExteriorTerm/scoreTemperamentTerm) - daher "lowerIsBetter" je
 // Aufruf mitgeben. Nichts bei fehlendem Wert auf einer der beiden Seiten.
-// "tolerance" (siehe compareTolerances/Einstellungen) verschiebt nur die
-// "schlechter"-Schwelle, nicht die "besser"-Schwelle: ein Wert, der bis
-// zu "tolerance" schlechter als der Durchschnitt ist, gilt dann als
-// neutral (ungefärbt) statt rot - für eine großzügigere Auswahl in der
-// Übersicht, ohne die Definition von "besser" (grün) zu verwässern.
+// "tolerance" (siehe compareTolerances/Einstellungen, effectiveTolerance)
+// verschiebt nur die "schlechter"-Schwelle, nicht die "besser"-Schwelle:
+// ein Wert, der bis zu "tolerance" schlechter als der Durchschnitt ist,
+// gilt dann als "durch Toleranz akzeptabel" (eigener Grünton, cmp-tolerance)
+// statt rot - für eine großzügigere Auswahl in der Übersicht, ohne die
+// Definition von "besser" (cmp-good) zu verwässern. Ist der Wert weiter als
+// "tolerance" schlechter, bleibt es bei rot (cmp-bad).
 function cmpClass(value, baseline, lowerIsBetter, tolerance = 0) {
   if (!compareBaseline || value == null || baseline == null) return '';
   const better = lowerIsBetter ? value < baseline : value > baseline;
-  const worse = lowerIsBetter ? value > baseline + tolerance : value < baseline - tolerance;
   if (better) return 'cmp-good';
-  if (worse) return 'cmp-bad';
-  return '';
+  const worse = lowerIsBetter ? value > baseline : value < baseline;
+  if (!worse) return '';
+  const beyondTolerance = lowerIsBetter ? value > baseline + tolerance : value < baseline - tolerance;
+  return beyondTolerance ? 'cmp-bad' : 'cmp-tolerance';
 }
 
 // Klasse für die Name-Zelle - Mehrheitsentscheid über die vier Werte
-// (mehr "besser" als "schlechter" -> grün, umgekehrt rot, sonst nichts).
+// (mehr "besser" als "schlechter/toleriert" -> grün, umgekehrt bei
+// überwiegend "schlechter" rot bzw. bei überwiegend "toleriert" der
+// Toleranz-Grünton, sonst nichts).
 function overallCmpClass(d) {
   if (!compareBaseline) return '';
   const pairs = [
-    [d.gp, compareBaseline.gp, false, compareTolerances.gp || 0],
-    [d.extAvg, compareBaseline.ext, true, compareTolerances.ext || 0],
-    [d.extPercent, compareBaseline.extPercent, false, compareTolerances.extPercent || 0],
-    [d.intAvg, compareBaseline.int, true, compareTolerances.int || 0],
+    [d.gp, compareBaseline.gp, false, effectiveTolerance('gp')],
+    [d.extAvg, compareBaseline.ext, true, effectiveTolerance('ext')],
+    [d.extPercent, compareBaseline.extPercent, false, effectiveTolerance('extPercent')],
+    [d.intAvg, compareBaseline.int, true, effectiveTolerance('int')],
   ].filter(([v, b]) => v != null && b != null);
   if (!pairs.length) return '';
-  const above = pairs.filter(([v, b, lowerIsBetter]) => (lowerIsBetter ? v < b : v > b)).length;
-  const below = pairs.filter(([v, b, lowerIsBetter, tol]) => (lowerIsBetter ? v > b + tol : v < b - tol)).length;
-  if (above > below) return 'cmp-good';
-  if (below > above) return 'cmp-bad';
+  const classes = pairs.map(([v, b, lowerIsBetter, tolerance]) => cmpClass(v, b, lowerIsBetter, tolerance));
+  const good = classes.filter((c) => c === 'cmp-good').length;
+  const bad = classes.filter((c) => c === 'cmp-bad').length;
+  const tolerated = classes.filter((c) => c === 'cmp-tolerance').length;
+  const notGood = bad + tolerated;
+  if (good > notGood) return 'cmp-good';
+  if (notGood > good) return bad >= tolerated ? 'cmp-bad' : 'cmp-tolerance';
   return '';
 }
 
@@ -850,10 +909,10 @@ function rowHtml(h) {
     <td data-label="Rasse" title="${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe" title="${escapeHtml(h.coat_color || '')}">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small genetik-cell" style="font-family: ui-monospace, monospace;" title="${escapeHtml(d.presentGenes)}">${escapeHtml(d.presentGenes)}</td>
-    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false, compareTolerances.gp)}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true, compareTolerances.ext)}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false, compareTolerances.extPercent)}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true, compareTolerances.int)}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false, effectiveTolerance('gp'))}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
+    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true, effectiveTolerance('ext'))}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
+    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false, effectiveTolerance('extPercent'))}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
+    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true, effectiveTolerance('int'))}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
@@ -1062,6 +1121,7 @@ async function applyFilterState(state) {
   document.querySelector('#cmp-owner').value = state.cmpOwner || '';
   document.querySelector('#cmp-gender').value = state.cmpGender || '';
   compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
+  renderCompareAvgValues();
 
   loadHorses();
 }

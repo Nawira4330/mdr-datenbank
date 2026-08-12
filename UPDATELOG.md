@@ -6,13 +6,51 @@ drin.
 
 ---
 
+## 12.08.2026
+
+- **Massenerfassung: Sitzungs-Übersicht als Karte, direkter Abschluss-
+  Button**: die bisherige reine Textzeile "Diese Sitzung bereits
+  erfasst: ..." ist jetzt eine Karte mit großer Anzahl und einer Liste
+  aller bisher in dieser Sitzung erfassten Pferde, jeweils als direkter
+  Link zum Pferd. Neuanlagen bekommen einen grünen Haken, Nachträge zu
+  bereits bestehenden Pferden (z.B. Name-/ID-Treffer) ein blaues
+  "aktualisiert"-Abzeichen. Ein neuer Button "Fertig / Zur Übersicht"
+  beendet die Sitzung direkt von dieser Karte aus - vorher musste dafür
+  noch ein weiteres, eigentlich leeres Pferd über den normalen
+  "Speichern"-Button abgeschlossen werden.
+- **Automatisches Auslesen beim Einfügen**: Text ins Feld "Text von der
+  Pferdeseite einfügen" einfügen liest die Felder jetzt direkt aus,
+  ohne zusätzlichen Klick auf "Automatisch auslesen" - der Button bleibt
+  für manuelle Korrekturen/erneutes Auslesen weiterhin nutzbar.
+- **Ø-Vergleich: Durchschnittswerte sichtbar, Toleranz an/abschaltbar
+  und eigener Grünton**: unter den Basis-Dropdowns im „Ø-Vergleich
+  anzeigen“-Bereich stehen jetzt die berechneten Durchschnittswerte
+  selbst (z.B. „Ø GP: 367 (±5)“), inkl. der jeweils wirksamen
+  [Toleranz](#9-einstellungen) in Klammern. Eine neue Checkbox „Toleranz
+  berücksichtigen“ schaltet die Toleranz für die Färbung testweise ganz
+  ab, ohne die hinterlegten Werte in den Einstellungen zu löschen.
+  Pferde, die nur wegen der Toleranz noch als akzeptabel gelten
+  (schlechter als der Durchschnitt, aber innerhalb der Toleranz),
+  wurden bisher ungefärbt dargestellt - sie bekommen jetzt einen
+  eigenen, helleren Grünton (bei den einzelnen Werten wie beim Namen),
+  damit sie sich sowohl von echt überdurchschnittlichen als auch von
+  wirklich unterdurchschnittlichen Pferden unterscheiden lassen.
+
 ## 11.08.2026
 
 - **Massenerfassung beim Neuanlegen**: neuer Button „Speichern &
   nächstes Pferd“ - speichert das aktuelle Pferd und leert das Formular
   direkt für die nächste Neuanlage, statt zur Übersicht zurückzuspringen.
   Zeigt darunter, welche Pferde in der aktuellen Sitzung schon erfasst
-  wurden.
+  wurden, und listet am Ende alle in dieser Sitzung neu angelegten
+  Pferde im Banner der Übersicht auf.
+- **„Unvollständige Daten“-Hinweis bei Nachträgen korrigiert**: wurde
+  ein vermeintlich neues Pferd tatsächlich mit einem bereits bestehenden
+  Pferd zusammengeführt (Name-/ID-Treffer), meldete das Popup Felder wie
+  „Turnierwerte“ fälschlich als fehlend, obwohl sie im bestehenden
+  Datensatz längst erfasst waren - nur weil der diesmal eingefügte
+  (kürzere) Text sie nicht enthielt. Die Prüfung berücksichtigt jetzt den
+  bereits bestehenden Datensatz mit.
 - **"3 Jahre alt geworden"-Hinweis verschwindet jetzt gezielter**:
   bisher blieb er das ganze 4. Spieljahr über stehen. Jetzt verschwindet
   er, sobald das Pferd danach erneut gespeichert wird (z.B. nach dem
