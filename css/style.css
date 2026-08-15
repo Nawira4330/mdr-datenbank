@@ -22,6 +22,7 @@
      danger/warning/success, GBH braucht eine weitere, klar
      unterscheidbare Farbe. */
   --tag-purple: #8a5fb0;
+  --tag-slate: #5b7083;
   --radius: 8px;
   --font-heading: "Courgette", cursive;
   --font-body: "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -56,6 +57,7 @@
     --warning: #d9a441;
     --info: #6fa8dc;
     --tag-purple: #b98fd9;
+    --tag-slate: #93aabb;
     --th-bg-solid: #2a3b3c;
   }
 }

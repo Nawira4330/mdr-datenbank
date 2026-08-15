@@ -1,7 +1,7 @@
 // Feste Schlagwort-Liste wie HORSE_TAG_OPTIONS in ../js/parser.js - hier
 // nur die Labels, da der Bot keine CSS-Farben braucht (siehe embeds.js
 // TAG_EMBED_COLORS fuer die Discord-Entsprechung).
-const HORSE_TAG_LABELS = ['Verkauf', 'Reserviert', 'Bleibt', 'GBH'];
+const HORSE_TAG_LABELS = ['Verkauf', 'Reserviert', 'Bleibt', 'GBH', 'LastFoal', '???'];
 
 // Setzt/ueberschreibt genau ein Tag anhand seines Labels, alle anderen
 // Tags bleiben unveraendert - wie das Uebernehmen eines Vorschlags in

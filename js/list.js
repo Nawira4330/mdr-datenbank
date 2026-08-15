@@ -1221,19 +1221,39 @@ function onBulkDelete() {
 // Zusatztext einzeln setzen bleibt dem Formular in horse.html vorbehalten.
 let bulkTagMode = 'add';
 
+// Zusatztext-Feld je Schlagwort nur im "add"-Modus sinnvoll (beim
+// Entfernen spielt ein Zusatztext keine Rolle) - deshalb wird die Liste
+// bei jedem Öffnen (siehe onBulkTag) neu aufgebaut statt nur einmalig,
+// damit sie je nach Modus mit/ohne Zusatzfeld erscheint. Der einzelne
+// Zusatztext gilt dann für ALLE ausgewählten Pferde gleichermaßen (anders
+// als im Bearbeiten-Formular, wo jedes Pferd sein eigenes Zusatztext-Feld
+// je Schlagwort hat).
 function renderBulkTagCheckboxes() {
   const container = document.querySelector('#bulk-tag-checkboxes');
+  const showNotes = bulkTagMode === 'add';
   container.innerHTML = HORSE_TAG_OPTIONS.map(({ label, color }) => `
     <label class="tag-checkbox-row">
       <input type="checkbox" data-bulk-tag-checkbox="${escapeHtml(label)}" />
       <span class="tag-dot" style="background:${color}"></span>
       ${escapeHtml(label)}
+      ${showNotes ? `<input type="text" class="tag-note-input" data-bulk-tag-note="${escapeHtml(label)}" placeholder="Zusatz (optional)" disabled />` : ''}
     </label>
   `).join('');
 }
 
 function wireBulkTagModal() {
   renderBulkTagCheckboxes();
+  // Delegiert auf den Container (statt je Checkbox einzeln), da
+  // renderBulkTagCheckboxes das Innere bei jedem Öffnen (onBulkTag) neu
+  // aufbaut - ein Listener direkt auf dem Container bleibt davon
+  // unberührt, muss also nur einmalig hier verdrahtet werden.
+  document.querySelector('#bulk-tag-checkboxes').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-bulk-tag-checkbox]')) return;
+    const noteInput = document.querySelector(`[data-bulk-tag-note="${CSS.escape(e.target.dataset.bulkTagCheckbox)}"]`);
+    if (!noteInput) return;
+    noteInput.disabled = !e.target.checked;
+    if (!e.target.checked) noteInput.value = '';
+  });
   document.querySelector('#bulk-tag-cancel').addEventListener('click', () => {
     document.querySelector('#bulk-tag-modal').hidden = true;
   });
@@ -1244,29 +1264,35 @@ function onBulkTag(mode) {
   bulkTagMode = mode;
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   if (!rows.length) return;
-  document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]').forEach((cb) => { cb.checked = false; });
+  renderBulkTagCheckboxes();
   document.querySelector('#bulk-tag-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
   document.querySelector('#bulk-tag-modal-title').textContent = mode === 'add' ? 'Schlagwort zuweisen' : 'Schlagwort entfernen';
   document.querySelector('#bulk-tag-hint').textContent = mode === 'add'
-    ? 'Ausgewählte Schlagwörter werden ergänzt, bestehende bleiben erhalten. Zusatztext (z.B. wer reserviert hat) lässt sich nur einzeln je Pferd im Bearbeiten-Formular eintragen.'
+    ? 'Ausgewählte Schlagwörter werden ergänzt, bestehende bleiben erhalten. Ein eingetragener Zusatztext gilt für alle ausgewählten Pferde gleichermaßen.'
     : 'Ausgewählte Schlagwörter werden bei allen ausgewählten Pferden entfernt, falls vorhanden - andere Schlagwörter bleiben erhalten.';
   document.querySelector('#bulk-tag-confirm').textContent = mode === 'add' ? 'Zuweisen' : 'Entfernen';
   document.querySelector('#bulk-tag-modal').hidden = false;
 }
 
 async function confirmBulkTag() {
-  const chosen = [...document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]:checked')].map((cb) => cb.dataset.bulkTagCheckbox);
+  const chosen = [...document.querySelectorAll('#bulk-tag-checkboxes [data-bulk-tag-checkbox]:checked')].map((cb) => {
+    const label = cb.dataset.bulkTagCheckbox;
+    const noteInput = document.querySelector(`[data-bulk-tag-note="${CSS.escape(label)}"]`);
+    const note = noteInput?.value.trim();
+    return note ? { label, note } : { label };
+  });
   document.querySelector('#bulk-tag-modal').hidden = true;
   if (!chosen.length) return;
 
+  const chosenLabels = chosen.map((c) => c.label);
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   const results = await Promise.all(rows.map((row) => {
     let newTags;
     if (bulkTagMode === 'remove') {
-      newTags = (row.tags || []).filter((t) => !chosen.includes(t.label));
+      newTags = (row.tags || []).filter((t) => !chosenLabels.includes(t.label));
     } else {
       const existingLabels = new Set((row.tags || []).map((t) => t.label));
-      newTags = [...(row.tags || []), ...chosen.filter((label) => !existingLabels.has(label)).map((label) => ({ label }))];
+      newTags = [...(row.tags || []), ...chosen.filter((c) => !existingLabels.has(c.label))];
     }
     return supabaseClient.from('horses').update({ tags: newTags }).eq('id', row.id);
   }));

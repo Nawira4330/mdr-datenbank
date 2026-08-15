@@ -1076,6 +1076,8 @@ const HORSE_TAG_OPTIONS = [
   { label: 'Reserviert', color: 'var(--warning)' },
   { label: 'Bleibt', color: 'var(--success)' },
   { label: 'GBH', color: 'var(--tag-purple)' },
+  { label: 'LastFoal', color: 'var(--info)' },
+  { label: '???', color: 'var(--tag-slate)' },
 ];
 
 function tagColor(label) {
