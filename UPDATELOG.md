@@ -6,6 +6,18 @@ drin.
 
 ---
 
+## 17.08.2026
+
+- **Bugfix: manuell bestätigte "nicht vorhanden"-Gene wurden bei manchen
+  Pferden ignoriert** (z.B. "4Leafs Prisma Phantom Rose"): war ein
+  Genort wie Cream/KIT/Agouti manuell auf "nicht vorhanden" gesetzt (z.B.
+  Pearl explizit ausgeschlossen), aber die Fellfarbe legt gleichzeitig ein
+  reinerbiges Merkmal desselben Genorts nahe (z.B. "Perlino Champagne" =
+  Champagne+Pearl laut Spiel-Dokumentation), wurde der widersprüchliche,
+  automatisch abgeleitete Eintrag trotzdem zusätzlich angezeigt, statt vom
+  manuellen "nicht vorhanden" unterdrückt zu werden - betraf auch die
+  Vererbungs-Anzeige bei Nachkommen dieser Pferde.
+
 ## 12.08.2026
 
 - **Massenerfassung: Sitzungs-Übersicht als Karte, direkter Abschluss-

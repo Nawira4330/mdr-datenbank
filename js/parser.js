@@ -625,11 +625,12 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\bdunskin\b/i, label: 'Dunskin (Bay-Dun-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Cream', allele: 'Cr' }] },
   { pattern: /\bamber dun\b/i, label: 'Amber Dun (Bay-Dun-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }] },
   { pattern: /\bamber cream\b/i, label: 'Amber Cream (Bay-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
-  // Laut MDR-Doku wird derselbe Name ("Perlino Champagne") sowohl für die
-  // Kombination mit doppeltem Cream als auch für Champagne+Pearl benutzt
-  // (visuell kaum zu unterscheiden) - hier anhand der Beispielformel in
-  // der Doku als Champagne+Pearl abgelegt.
-  { pattern: /\bperlino champagne\b/i, label: 'Perlino Champagne (Bay-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
+  // Wie Perlino/Cremello/Smoky Cream (Nutzer-Korrektur): "Perlino
+  // Champagne" ist genauso mehrdeutig zwischen doppeltem Cream (CrCr)
+  // und Cream+Pearl (Cr+pl) - visuell nicht unterscheidbar. NICHT
+  // plpl (reines Pearl, ohne Cream) - das gilt laut Nutzer nur für
+  // Namen, die "Pearl"/"Apricot" tatsächlich enthalten (siehe unten).
+  { pattern: /\bperlino champagne\b/i, label: 'Perlino Champagne (Bay-Champagne-doppel-Cream/Cream+Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'A1' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'CrCr' }], ambiguousCream: true },
   { pattern: /\bsable dun\b/i, label: 'Sable Dun (Sealbrown-Dun-Champagne)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Dun', allele: 'D' }, { locus: 'Champagne', allele: 'Ch' }] },
   { pattern: /\bsable cream\b/i, label: 'Sable Cream (Sealbrown-Champagne-Cream)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'Cr' }] },
   { pattern: /\bsable pearl\b/i, label: 'Sable Pearl (Sealbrown-Champagne-Pearl)', hints: [{ locus: 'Extension', allele: 'E' }, { locus: 'Agouti', allele: 'At' }, { locus: 'Champagne', allele: 'Ch' }, { locus: 'Cream', allele: 'plpl' }] },
@@ -1055,7 +1056,20 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   const inferred = [];
   for (const h of hints) {
     if (testedLoci.has(h.locus)) continue;
-    const hKey = LOCUS_MULTI_ALLELES[h.locus] ? `${h.locus}:${h.allele}` : h.locus;
+    // Override-Schlüssel bei Mehr-Allel-Loci (LOCUS_MULTI_ALLELES) tragen
+    // immer den BLOSSEN Allel-Code (z.B. "Cream:pl"), abgeleitete Hinweise
+    // aus PHENOTYPE_GENE_HINTS aber oft den reinerbig verdoppelten Code
+    // (z.B. "plpl" bei "Perlino Champagne" = Champagne+Pearl, siehe dort) -
+    // ein direkter Key-Vergleich ("Cream:plpl" vs. "Cream:pl") traf hier
+    // nie zu, wodurch ein manuell gesetztes "Cream:pl: nicht vorhanden"
+    // (z.B. weil ein Pferd nachweislich stattdessen CrCr ist statt
+    // Champagne+Pearl) den widersprüchlichen abgeleiteten Hinweis nicht
+    // unterdrückte - beide Einträge erschienen gleichzeitig. Der Vergleich
+    // normalisiert den Hinweis-Code deshalb zuerst auf sein Basis-Allel
+    // (das, mit dem der Code beginnt).
+    const multiAlleles = LOCUS_MULTI_ALLELES[h.locus];
+    const primaryAllele = multiAlleles ? multiAlleles.find((a) => h.allele.startsWith(a)) : null;
+    const hKey = multiAlleles ? `${h.locus}:${primaryAllele || h.allele}` : h.locus;
     if (overriddenKeys.has(hKey)) continue;
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
