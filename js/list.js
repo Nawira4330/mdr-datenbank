@@ -61,6 +61,7 @@ async function init() {
   wireExportCsv();
   wireCompareAvg();
   wireFilterPresets();
+  wireSortPresets();
   wireScrollTop();
   showFlashBanner();
   await loadUserSettings(session);
@@ -69,6 +70,7 @@ async function init() {
   await loadTagSuggestions();
   await populateFilterOptions();
   await loadFilterPresets();
+  await loadSortPresets();
   await applyInitialFilterState();
 }
 
@@ -1242,6 +1244,63 @@ async function saveFilterPreset() {
     return;
   }
   await loadFilterPresets();
+}
+
+// --- Sortier-Vorlagen (gespeicherte, benannte Sortierungen je Konto,
+// siehe migration_029_sort_presets.sql) - unabhängig von den kompletten
+// Filter-Vorlagen oben: nur Feld + Richtung, keine Filter-/Suchfelder.
+// Nutzerwunsch: mehrere Sortierungen benennen und per Dropdown schnell
+// wechseln können, ohne dafür jedes Mal eine ganze Filter-Vorlage
+// anzulegen.
+async function loadSortPresets() {
+  const select = document.querySelector('#sort-preset-select');
+  select.innerHTML = '<option value="">Sortierung laden…</option>';
+  if (!currentSession) return;
+  const { data, error } = await supabaseClient
+    .from('sort_presets')
+    .select('id, name, sort_field, sort_dir')
+    .eq('user_id', currentSession.user.id)
+    .order('name');
+  if (error || !data) return;
+  for (const preset of data) {
+    const opt = document.createElement('option');
+    opt.value = preset.id;
+    opt.textContent = preset.name;
+    opt.dataset.sortField = preset.sort_field;
+    opt.dataset.sortDir = preset.sort_dir;
+    select.appendChild(opt);
+  }
+}
+
+function wireSortPresets() {
+  document.querySelector('#sort-preset-select').addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (!opt.value) return;
+    currentSort = { field: opt.dataset.sortField, dir: opt.dataset.sortDir };
+    syncMobileSortControls();
+    // Gilt wie ein manueller Sortier-Klick (siehe wireSortableHeaders) -
+    // bleibt so auch als geräte-lokaler Fallback erhalten, falls später
+    // keine Standard-Filtervorlage/Sortier-Vorlage mehr aktiv gewählt ist.
+    saveLastSort();
+    loadHorses();
+  });
+  document.querySelector('#save-sort-preset-btn').addEventListener('click', saveSortPreset);
+}
+
+async function saveSortPreset() {
+  const name = prompt('Name für diese Sortierung:');
+  if (!name || !name.trim()) return;
+  const { error } = await supabaseClient
+    .from('sort_presets')
+    .upsert(
+      { user_id: currentSession.user.id, name: name.trim(), sort_field: currentSort.field, sort_dir: currentSort.dir },
+      { onConflict: 'user_id,name' },
+    );
+  if (error) {
+    alert('Sortierung konnte nicht gespeichert werden: ' + error.message);
+    return;
+  }
+  await loadSortPresets();
 }
 
 // --- Mehrfachauswahl (Zeilen) ---

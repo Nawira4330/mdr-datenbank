@@ -12,6 +12,7 @@ async function init() {
   // Muss vor loadCurrentSettings laufen, da diese Dropdown-Optionen dort
   // erst gesetzt (ausgewählt) werden.
   await loadFilterPresetsList();
+  await loadSortPresetsList();
   await loadCurrentSettings();
 
   document.getElementById('save-settings-btn').addEventListener('click', onSave);
@@ -67,6 +68,45 @@ async function onDeleteFilterPreset(id) {
     return;
   }
   await loadFilterPresetsList();
+}
+
+// Gespeicherte Sortier-Vorlagen aus der Übersicht (siehe
+// migration_029_sort_presets.sql / js/list.js) - Löschen wirkt sofort,
+// unabhängig vom "Speichern"-Button unten.
+async function loadSortPresetsList() {
+  const container = document.getElementById('sort-presets-list');
+  const { data, error } = await supabaseClient
+    .from('sort_presets')
+    .select('id, name')
+    .eq('user_id', currentUserId)
+    .order('name');
+  if (error) {
+    container.innerHTML = '<p class="error">Sortierungen konnten nicht geladen werden.</p>';
+    return;
+  }
+  if (!data.length) {
+    container.innerHTML = '<p class="muted small">Noch keine Sortierungen gespeichert.</p>';
+    return;
+  }
+  container.innerHTML = data.map((p) =>
+    `<div style="display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0;">
+      <span style="flex: 1;">${escapeHtml(p.name)}</span>
+      <button type="button" class="danger small" data-delete-sort-preset="${p.id}">Löschen</button>
+    </div>`
+  ).join('');
+  container.querySelectorAll('[data-delete-sort-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => onDeleteSortPreset(btn.dataset.deleteSortPreset));
+  });
+}
+
+async function onDeleteSortPreset(id) {
+  if (!confirm('Diese Sortierung wirklich löschen?')) return;
+  const { error } = await supabaseClient.from('sort_presets').delete().eq('id', id);
+  if (error) {
+    alert('Löschen fehlgeschlagen: ' + error.message);
+    return;
+  }
+  await loadSortPresetsList();
 }
 
 // Rassen-Liste aus den tatsächlich vorkommenden Werten ableiten (wie

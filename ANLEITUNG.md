@@ -157,6 +157,14 @@ gewählte Sortierung auf diesem Gerät (Spaltenklick oder das
 Sortier-Dropdown auf dem Handy) und startet beim nächsten Öffnen direkt
 damit.
 
+**Sortier-Vorlagen**: Unabhängig von den Filter-Vorlagen lässt sich auch
+nur die aktuelle Sortierung (Spalte + Richtung) benannt speichern –
+„💾 Sortierung speichern“ über der Tabelle fragt nach einem Namen.
+Speicherst du erneut unter demselben Namen, wird sie überschrieben.
+Über das Dropdown „Sortierung laden…“ wendest du eine gespeicherte
+Sortierung sofort an (ändert nur die Sortierung, keine Filter). Löschen
+geht nur über [Einstellungen](#9-einstellungen).
+
 **Suche**
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
   Rolle.
@@ -669,6 +677,10 @@ anderen Einstellungen auf dieser Seite. Darunter legst du mit
 Übersicht öffnest – inklusive der zur Vorlage gehörenden Sortierung.
 „Keine“ lässt die Übersicht wie bisher ungefiltert starten. Diese
 Auswahl wird erst mit „Speichern“ unten übernommen.
+
+**Sortier-Vorlagen**: Liste deiner in der Übersicht gespeicherten,
+benannten Sortierungen (siehe [3.4](#34-filtern-und-suchen)) – unabhängig
+von den Filter-Vorlagen oben. „Löschen“ wirkt sofort und unwiderruflich.
 
 **Ø-Vergleich Toleranz**: Beim [Ø-Vergleich](#35-die-tabelle) in der
 Übersicht gilt normalerweise jeder Wert unter dem Durchschnitt als

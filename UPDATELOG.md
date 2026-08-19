@@ -8,6 +8,13 @@ drin.
 
 ## 19.08.2026
 
+- **Sortier-Vorlagen**: mehrere eigene, benannte Sortierungen (Spalte +
+  Richtung) speichern und über die Übersicht ("💾 Sortierung speichern" /
+  "Sortierung laden…") oder [Einstellungen](#9-einstellungen) (Liste zum
+  Löschen) verwalten - unabhängig von den bereits bestehenden, kompletten
+  Filter-Vorlagen. Migration `migration_029_sort_presets.sql` einmalig im
+  Supabase-Dashboard ausführen, sonst zeigt "Sortierung laden…" keine
+  Einträge und "Sortierung speichern" schlägt fehl.
 - **Bugfix: "Geändert: Eigenschaften" beim Speichern, obwohl nur im
   Spiel weitertrainiert wurde**: "Eigenschaften" (Grundlagen/Gangarten)
   speicherte bisher zusätzlich zum Potenzial auch den aktuellen
