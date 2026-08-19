@@ -146,7 +146,13 @@ Vergleichsbasis) für dein Konto. Speicherst du erneut unter demselben
 Namen, wird die Vorlage überschrieben. Über das Dropdown „Vorlage
 laden…“ wendest du eine gespeicherte Vorlage sofort an. Löschen geht
 nur über [Einstellungen](#9-einstellungen), nicht direkt in der
-Übersicht.
+Übersicht. Dort lässt sich außerdem eine Vorlage als **Standard beim
+Öffnen** festlegen – die Übersicht startet dann direkt gefiltert und
+sortiert wie beim Speichern dieser Vorlage, statt leer. Ohne
+Standard-Vorlage merkt sich die Übersicht immerhin die zuletzt manuell
+gewählte Sortierung auf diesem Gerät (Spaltenklick oder das
+Sortier-Dropdown auf dem Handy) und startet beim nächsten Öffnen direkt
+damit.
 
 **Suche**
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
@@ -195,8 +201,11 @@ entsprechen dabei 1 Spieljahr) und Zuletzt bearbeitet, sowie Aktionen
 (✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
 
 **Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste
-danach, ein weiterer Klick dreht die Richtung um. Auf dem Handy gibt es
-dafür stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
+danach, ein weiterer Klick dreht die Richtung um. Startrichtung ist bei
+den meisten Spalten aufsteigend (A-Z, 1-x) – bei „Zuletzt bearbeitet“
+dagegen absteigend, damit die neusten Änderungen zuerst erscheinen (ein
+weiterer Klick zeigt dann die ältesten). Auf dem Handy gibt es dafür
+stattdessen ein Dropdown-Menü „Sortieren“ oberhalb der Liste.
 
 **Nach oben**: Sobald du in einer langen Liste gescrollt hast, erscheint
 unten rechts ein ↑-Button, der dich direkt wieder an den Anfang bringt.
@@ -651,7 +660,12 @@ weiteren Login übernommen.
 **Filter-Vorlagen**: Liste deiner in der Übersicht gespeicherten
 Filter-Vorlagen (siehe [3.4](#34-filtern-und-suchen)). „Löschen“ wirkt
 sofort und unwiderruflich, unabhängig vom „Speichern“-Button für die
-anderen Einstellungen auf dieser Seite.
+anderen Einstellungen auf dieser Seite. Darunter legst du mit
+„Standard-Vorlage beim Öffnen der Übersicht“ fest, welche Vorlage
+(falls überhaupt eine) automatisch angewendet wird, sobald du die
+Übersicht öffnest – inklusive der zur Vorlage gehörenden Sortierung.
+„Keine“ lässt die Übersicht wie bisher ungefiltert starten. Diese
+Auswahl wird erst mit „Speichern“ unten übernommen.
 
 **Ø-Vergleich Toleranz**: Beim [Ø-Vergleich](#35-die-tabelle) in der
 Übersicht gilt normalerweise jeder Wert unter dem Durchschnitt als

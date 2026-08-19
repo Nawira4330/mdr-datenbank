@@ -632,6 +632,32 @@ const CHANGE_FIELD_LABELS = {
   tags: 'Schlagwörter',
 };
 
+// Strukturell-rekursiver Vergleich für JSONB-Werte: Objekt-Schlüssel
+// werden UNABHÄNGIG von ihrer Reihenfolge verglichen (ein Objekt wie
+// {Western: [...], Barock: [...]} bedeutet dasselbe, unabhängig davon, in
+// welcher Reihenfolge die Kategorien eingetragen wurden - Postgres/JSONB
+// garantiert diese Reihenfolge ohnehin nicht über mehrere Updates hinweg
+// stabil), Array-Einträge dagegen IN Reihenfolge (dort ist die Position
+// echte Information, z.B. beim Stammbaum: Position = welcher Vorfahre).
+// Ersetzt einen früheren, reinen "JSON.stringify(a) !== JSON.stringify(b)"-
+// Vergleich, der bei identischem Inhalt in anderer Schlüssel-Reihenfolge
+// (z.B. weil ein erneut eingefügter Kopiertext dieselben Werte einfach in
+// anderer Reihenfolge zusammenstellt) fälschlich "geändert" meldete, obwohl
+// nur derselbe Stand erneut erfasst wurde.
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    return a.length === b.length && a.every((v, i) => deepEqual(v, b[i]));
+  }
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  return aKeys.length === bKeys.length
+    && aKeys.every((k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
+}
+
 // Ob sich ein einzelner Feldwert gegenüber dem vorherigen Datensatz
 // tatsächlich geändert hat - bei JSONB-Feldern (Objekte/Arrays) über
 // isEmptyValue normalisiert, damit z.B. "{}" und "null" nicht fälschlich
@@ -642,7 +668,7 @@ function isFieldChanged(key, beforeValue, afterValue) {
   const afterIsObject = afterValue !== null && typeof afterValue === 'object';
   if (beforeIsObject || afterIsObject) {
     if (isEmptyValue(key, beforeValue) && isEmptyValue(key, afterValue)) return false;
-    return JSON.stringify(beforeValue) !== JSON.stringify(afterValue);
+    return !deepEqual(beforeValue, afterValue);
   }
   const before = beforeValue == null || beforeValue === '' ? null : beforeValue;
   const after = afterValue == null || afterValue === '' ? null : afterValue;

@@ -2,6 +2,17 @@ let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
 let lastRenderedRows = [];
 let pendingDeleteIds = [];
+// Id der in den Einstellungen gewählten Standard-Filtervorlage (siehe
+// migration_028_default_filter_preset.sql) - null = keine, Übersicht
+// startet wie bisher ungefiltert (dann greift höchstens noch
+// LAST_SORT_STORAGE_KEY als Fallback für die Sortierung, siehe init()).
+let defaultFilterPresetId = null;
+// localStorage-Schlüssel für die zuletzt manuell gewählte Sortierung
+// (Spaltenklick oder mobiles Sortier-Dropdown, siehe wireSortableHeaders) -
+// rein geräte-lokal (kein Server-Roundtrip bei jedem Klick nötig), wird nur
+// angewendet, wenn keine Standard-Filtervorlage gesetzt ist (die bringt
+// ihre eigene, mit gespeicherte Sortierung schon mit, siehe applyFilterState).
+const LAST_SORT_STORAGE_KEY = 'mdr_last_sort';
 // Bevorzugte Rassen aus den persönlichen Einstellungen (siehe
 // einstellungen.html) - null/leer = keine Einschränkung. Nur bei der
 // Standardauswahl "Alle" im Rasse-Filter wirksam (siehe
@@ -58,6 +69,45 @@ async function init() {
   await loadTagSuggestions();
   await populateFilterOptions();
   await loadFilterPresets();
+  await applyInitialFilterState();
+}
+
+// Entscheidet, mit welchem Zustand die Übersicht startet - in dieser
+// Reihenfolge:
+// 1. Standard-Filtervorlage aus den Einstellungen (siehe
+//    defaultFilterPresetId/migration_028), falls gesetzt - bringt ihre
+//    eigene, mit gespeicherte Sortierung gleich mit.
+// 2. Sonst die zuletzt manuell gewählte Sortierung aus diesem Browser
+//    (siehe LAST_SORT_STORAGE_KEY/saveLastSort), ohne Filter.
+// 3. Sonst der Programmstandard (Name aufsteigend, keine Filter).
+async function applyInitialFilterState() {
+  if (defaultFilterPresetId) {
+    const { data, error } = await supabaseClient
+      .from('filter_presets')
+      .select('filters')
+      .eq('id', defaultFilterPresetId)
+      .maybeSingle();
+    if (!error && data?.filters) {
+      await applyFilterState(data.filters);
+      // Zeigt in "Vorlage laden…" an, welche Vorlage gerade aktiv ist -
+      // nur kosmetisch, wirkt sich nicht auf die Filterung selbst aus.
+      const presetSelect = document.querySelector('#filter-preset-select');
+      if ([...presetSelect.options].some((o) => o.value === defaultFilterPresetId)) {
+        presetSelect.value = defaultFilterPresetId;
+      }
+      return;
+    }
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_SORT_STORAGE_KEY));
+    if (saved?.field) {
+      currentSort = saved;
+      syncMobileSortControls();
+    }
+  } catch {
+    // Ungültiger/fehlender localStorage-Wert - beim Programmstandard bleiben.
+  }
   await loadHorses();
 }
 
@@ -70,11 +120,12 @@ async function init() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
   compareTolerances = (!error && data?.compare_tolerances) || {};
+  defaultFilterPresetId = (!error && data?.default_filter_preset_id) || null;
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -1018,6 +1069,13 @@ function onOnlyMyHorses() {
   loadHorses();
 }
 
+// Für die meisten Spalten ist beim ersten Klick aufsteigend (A-Z, 1-x) der
+// sinnvollere Start - bei "Zuletzt bearbeitet" dagegen absteigend (neuste
+// Änderung zuerst, Nutzerwunsch): sortValue liefert dafür ein Datum, "die
+// neusten zuerst" ist praktisch immer das, was man nach einer Änderung
+// sehen will, nicht "die am längsten unveränderten".
+const SORT_FIELDS_DESC_FIRST = new Set(['updated_at']);
+
 function wireSortableHeaders() {
   document.querySelectorAll('th[data-sort]').forEach((th) => {
     th.addEventListener('click', () => {
@@ -1025,9 +1083,10 @@ function wireSortableHeaders() {
       if (currentSort.field === field) {
         currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
       } else {
-        currentSort = { field, dir: 'asc' };
+        currentSort = { field, dir: SORT_FIELDS_DESC_FIRST.has(field) ? 'desc' : 'asc' };
       }
       syncMobileSortControls();
+      saveLastSort();
       loadHorses();
     });
   });
@@ -1039,10 +1098,23 @@ function wireSortableHeaders() {
   [fieldSel, dirSel].forEach((sel) => {
     sel.addEventListener('change', () => {
       currentSort = { field: fieldSel.value, dir: dirSel.value };
+      saveLastSort();
       loadHorses();
     });
   });
   syncMobileSortControls();
+}
+
+// Merkt sich die aktuelle Sortierung geräte-lokal (siehe
+// LAST_SORT_STORAGE_KEY) - greift beim nächsten Öffnen der Übersicht nur,
+// wenn keine Standard-Filtervorlage gesetzt ist (siehe init()).
+function saveLastSort() {
+  try {
+    localStorage.setItem(LAST_SORT_STORAGE_KEY, JSON.stringify(currentSort));
+  } catch {
+    // localStorage kann z.B. im privaten Modus mancher Browser fehlschlagen -
+    // dann bleibt die Sortierung einfach unsaved, kein harter Fehler.
+  }
 }
 
 function syncMobileSortControls() {

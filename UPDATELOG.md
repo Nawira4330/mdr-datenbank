@@ -8,6 +8,28 @@ drin.
 
 ## 17.08.2026
 
+- **Bugfix: "Geändert: ..."-Hinweis beim Speichern zeigte manchmal
+  Felder, die gar nicht wirklich geändert wurden** - nur erneut erfasst
+  (z.B. Turnierwerte/Disziplinen/Eigenschaften/Körperbau per erneut
+  eingefügtem Kopiertext). Der Vergleich verglich JSONB-Felder bisher als
+  reinen Text, der schon bei anderer Schlüssel-Reihenfolge (gleicher
+  Inhalt!) als "geändert" galt. Vergleicht jetzt strukturell statt als
+  Text - Objekt-Schlüssel unabhängig von ihrer Reihenfolge, Listen
+  weiterhin in ihrer Reihenfolge (dort ist die Position echte Information,
+  z.B. beim Stammbaum).
+- **Standard-Filtervorlage + Sortierung merken**: In den Einstellungen
+  lässt sich jetzt eine gespeicherte Filter-Vorlage als Standard beim
+  Öffnen der Übersicht festlegen (inkl. der dazugehörigen Sortierung)
+  - Migration `migration_028_default_filter_preset.sql` einmalig im
+    Supabase-Dashboard ausführen, sonst zeigt die Einstellungen-Seite
+    vorübergehend nur Standardwerte und "Speichern" schlägt fehl.
+  - Ohne Standard-Vorlage merkt sich die Übersicht jetzt trotzdem die
+    zuletzt manuell gewählte Sortierung geräte-lokal und startet beim
+    nächsten Öffnen direkt damit, statt immer auf "Name aufsteigend"
+    zurückzufallen.
+  - "Zuletzt bearbeitet" startet beim ersten Klick jetzt absteigend
+    (neuste Änderungen zuerst) statt aufsteigend - ein weiterer Klick
+    zeigt die ältesten Änderungen zuerst.
 - **Bugfix: manuell bestätigte "nicht vorhanden"-Gene wurden bei manchen
   Pferden ignoriert** (z.B. "4Leafs Prisma Phantom Rose"): war ein
   Genort wie Cream/KIT/Agouti manuell auf "nicht vorhanden" gesetzt (z.B.
