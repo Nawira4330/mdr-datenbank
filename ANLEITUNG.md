@@ -108,7 +108,10 @@ ohne Wirkung löschen). Dieser Kasten ist für alle Konten sichtbar, nicht
 nur für die eigenen Pferde.
 
 **Alters-Hinweise**: Drei weitere Hinweiskästen, ebenfalls nur für deine
-eigenen Pferde und auf dem [Geburtsdatum](#42-stammdaten) basierend:
+eigenen Pferde und auf dem [Geburtsdatum](#42-stammdaten) basierend. Jeder
+gelistete Eintrag hat neben dem ✏️-Bearbeiten-Button zusätzlich einen
+🔗-Button zur Pferdeseite im Spiel (nur falls dort eine ID hinterlegt
+ist):
 
 - **„X Fohlen ist/sind 6 Monate alt“** – Fohlen brauchen ab 6 Monaten
   einen eigenen Stall, dieser Hinweis erinnert daran. Verschwindet von

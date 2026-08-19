@@ -173,7 +173,7 @@ async function checkAgeNotices(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('id, name, birthdate, tags, created_at, updated_at')
+    .select('id, name, birthdate, tags, created_at, updated_at, external_id')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -239,7 +239,12 @@ function renderAgeNotice(selector, horses, summaryText, introHtml) {
     return;
   }
   const list = horses
-    .map((h) => `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)}</li>`)
+    .map((h) => {
+      const linkBtn = h.external_id
+        ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
+        : '';
+      return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} ${linkBtn}</li>`;
+    })
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;

@@ -8,6 +8,10 @@ drin.
 
 ## 17.08.2026
 
+- **Spiel-Link in den Alters-Hinweisen** (Fohlen-Stall/"3 Jahre alt
+  geworden"/über 25 Jahre, siehe [3.2](#32-hinweis-auf-fehlende-daten)):
+  jeder Eintrag zeigt jetzt neben dem ✏️-Bearbeiten-Button zusätzlich den
+  🔗-Button zur Pferdeseite im Spiel (nur falls eine ID hinterlegt ist).
 - **Bugfix: "Geändert: ..."-Hinweis beim Speichern zeigte manchmal
   Felder, die gar nicht wirklich geändert wurden** - nur erneut erfasst
   (z.B. Turnierwerte/Disziplinen/Eigenschaften/Körperbau per erneut
