@@ -6,6 +6,20 @@ drin.
 
 ---
 
+## 19.08.2026
+
+- **Bugfix: "Geändert: Eigenschaften" beim Speichern, obwohl nur im
+  Spiel weitertrainiert wurde**: "Eigenschaften" (Grundlagen/Gangarten)
+  speicherte bisher zusätzlich zum Potenzial auch den aktuellen
+  Trainingsstand mit ("current") - der wird nirgends angezeigt, ändert
+  sich aber durch bloßes Training im Spiel, ohne dass sich am Pferd aus
+  Zuchtsicht etwas geändert hätte. Wird jetzt gar nicht mehr gespeichert,
+  nur noch das Potenzial. Beim ersten erneuten Speichern eines bereits
+  vorhandenen Pferds erscheint "Eigenschaften" dadurch einmalig noch in
+  der Geändert-Liste (die alten Datensätze verlieren dann das
+  "current"-Feld) - danach nicht mehr, solange sich das Potenzial nicht
+  wirklich ändert.
+
 ## 17.08.2026
 
 - **Spiel-Link in den Alters-Hinweisen** (Fohlen-Stall/"3 Jahre alt

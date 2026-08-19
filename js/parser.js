@@ -114,7 +114,15 @@ function parseHorseText(rawText) {
   // anzeigen?". Diese Zwischenzeilen enthalten keine Prozent-Paare und
   // werden vom Gruppen-Erkenner automatisch übersprungen.
   result.disciplines = extractDisciplineGroups(lines);
-  result.traits = extractPercentGroupsByLabel(lines, 'Eigenschaften', 'Papiere');
+  // Nur das Potenzial wird gespeichert, nicht der aktuelle Trainingsstand
+  // ("current") - der wird in der Anzeige ohnehin nie gebraucht (siehe
+  // percentGroupsHtml(..., true) in horseForm.js, immer mit
+  // potentialOnly) und ändert sich durch bloßes Training im Spiel, ohne
+  // dass sich am Pferd selbst (aus Zuchtsicht) etwas geändert hätte -
+  // sonst meldete "Geändert: Eigenschaften" beim Speichern auch dann
+  // etwas, wenn sich nur der Trainingsfortschritt seit der letzten
+  // Erfassung erhöht hat.
+  result.traits = potentialOnlyGroups(extractPercentGroupsByLabel(lines, 'Eigenschaften', 'Papiere'));
 
   result.tournament_potential = parseTournamentPotential(lines);
   result.pedigree = parsePedigree(lines, result.breed);
@@ -312,6 +320,17 @@ function extractPercentGroups(lines, startIdx, endIdx) {
     }
   }
   return result;
+}
+
+// Entfernt "current" (aktueller Trainingsstand) aus jedem Eintrag eines
+// extractPercentGroups-Ergebnisses, behält nur { name, potential } - siehe
+// result.traits in parseHorseText.
+function potentialOnlyGroups(groups) {
+  const out = {};
+  for (const [group, entries] of Object.entries(groups)) {
+    out[group] = entries.map(({ name, potential }) => ({ name, potential }));
+  }
+  return out;
 }
 
 // Einfacher Fall (Eigenschaften): ein zusammenhängender Bereich zwischen
