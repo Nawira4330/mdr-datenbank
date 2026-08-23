@@ -567,6 +567,14 @@ function mergeFieldValue(key, oldValue, newValue) {
   // decideTagsMerge) - aber nur, wenn es dabei wirklich etwas zu
   // entscheiden gibt.
   if (key === 'tags') return decideTagsMerge(oldValue, newValue);
+  // "pedigree": zeigt das Spiel den Stammbaum-Abschnitt nicht vollständig
+  // aufgeklappt (z.B. nur Eltern statt aller 3 Generationen), liefert ein
+  // erneut eingefügter Text zwar NICHT leer, aber weniger Vorfahren als
+  // bereits gespeichert - ein reines "neu ist nicht leer -> übernehmen"
+  // würde den bereits vollständigen Stammbaum dann durch einen
+  // unvollständigeren ersetzen. Deshalb hier zusätzlich die Anzahl der
+  // Vorfahren vergleichen statt nur auf leer/nicht-leer zu prüfen.
+  if (key === 'pedigree' && pedigreeAncestorCount(newValue) < pedigreeAncestorCount(oldValue)) return oldValue;
   if (isEmptyValue(key, newValue) && !isEmptyValue(key, oldValue)) return oldValue;
   return newValue;
 }

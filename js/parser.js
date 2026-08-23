@@ -867,6 +867,17 @@ function hasPedigreeData(pedigree) {
   return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
 }
 
+// Anzahl der Vorfahren (ohne das Pferd selbst) - dient in horseForm.js
+// (mergeFieldValue) als Vergleichsgrundlage, um beim erneuten Einfügen
+// eines kürzeren Texts (z.B. Stammbaum im Spiel nicht aufgeklappt) einen
+// bereits vollständiger erfassten Stammbaum nicht durch einen
+// unvollständigeren zu ersetzen.
+function pedigreeAncestorCount(pedigree) {
+  if (!pedigree) return 0;
+  if (Array.isArray(pedigree)) return Math.max(0, pedigree.length - 1);
+  return pedigree.ancestors?.length || 0;
+}
+
 // Ein vollständig ausgelesenes Pferd hat 7 Disziplin-Kategorien mit je 4
 // Einzeldisziplinen (Western wird zuerst offen angezeigt, die übrigen 6
 // erst hinter "Alle Disziplinen anzeigen?" - siehe extractDisciplineGroups).
