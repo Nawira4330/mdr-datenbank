@@ -61,7 +61,8 @@ auszuwählen.
 „Ø GP”, „Zur Zucht zugelassen”, „Favoriten”) Zahlen zur gerade
 gefilterten/sortierten Tabelle – nicht zum Gesamtbestand. Welche Kacheln
 in welcher Reihenfolge angezeigt werden, legst du in den
-[Einstellungen](#9-einstellungen) fest.
+[Einstellungen](#9-einstellungen) fest – „⚙ Kacheln anpassen” ganz
+rechts in der Kachelreihe bringt dich direkt dorthin.
 
 ### 3.1 Kopfzeile
 
@@ -211,7 +212,7 @@ eigene Sortierung schon mit).
 
 ### 3.5 Die Tabelle
 
-Von links nach rechts: Auswahl-Kästchen, ☆/★-Stern (eigene Favoriten
+Von links nach rechts: Auswahl-Kästchen, ♡/♥-Herz (eigene Favoriten
 markieren, siehe unten), Mini-Bild (nur wenn eine Bild-URL hinterlegt ist
 – Klick öffnet die Ansichtsseite), 🔗-Link (nur wenn eine Spiel-ID
 hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
@@ -223,8 +224,8 @@ Geburtsdatum, siehe [4.2](#42-stammdaten) – 30 reale Tage entsprechen
 dabei 1 Spieljahr), Zuletzt bearbeitet und Besitzer, sowie Aktionen
 (✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
 
-**Favoriten**: Klick auf den ☆-Stern markiert ein Pferd als Favorit
-(wird zu ★) – rein persönlich für dein eigenes Konto, wirkt sich nur auf
+**Favoriten**: Klick auf das ♡-Herz markiert ein Pferd als Favorit (wird
+zu ♥, rot) – rein persönlich für dein eigenes Konto, wirkt sich nur auf
 dieses Symbol und die „Favoriten“-Kachel über den Filtern aus.
 
 **Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste

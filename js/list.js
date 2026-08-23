@@ -1008,7 +1008,7 @@ function rowHtml(h) {
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
-    <td data-label="Favorit"><button type="button" class="icon-btn favorite-btn${isFavorite ? ' is-favorite' : ''}" data-favorite="${h.id}" title="${isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}">${isFavorite ? '★' : '☆'}</button></td>
+    <td data-label="Favorit"><button type="button" class="icon-btn favorite-btn${isFavorite ? ' is-favorite' : ''}" data-favorite="${h.id}" title="${isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}">${isFavorite ? '♥' : '♡'}</button></td>
     <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
@@ -1409,7 +1409,7 @@ async function confirmBulkOwnerChange() {
   await loadHorses();
 }
 
-// --- Favoriten (★/☆-Spalte, siehe migration_031_favorites_dashboard_tiles.sql) ---
+// --- Favoriten (♥/♡-Spalte, siehe migration_031_favorites_dashboard_tiles.sql) ---
 
 // Delegiert auf die Tabelle statt je Zeile einzeln, da loadHorses() das
 // tbody-Innere bei jedem Neuladen komplett neu aufbaut (analog zu
@@ -1431,7 +1431,7 @@ async function onToggleFavorite(id) {
   if (btn) {
     const isFavorite = favoriteHorseIds.has(id);
     btn.classList.toggle('is-favorite', isFavorite);
-    btn.textContent = isFavorite ? '★' : '☆';
+    btn.textContent = isFavorite ? '♥' : '♡';
     btn.title = isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren';
   }
   renderDashboardTiles(lastRenderedRows);
@@ -1515,13 +1515,14 @@ const DASHBOARD_TILE_DEFS = {
 function renderDashboardTiles(rows) {
   const container = document.querySelector('#dashboard-tiles');
   if (!container) return;
-  container.innerHTML = dashboardTiles
+  const tilesHtml = dashboardTiles
     .filter((t) => t.visible && DASHBOARD_TILE_DEFS[t.id])
     .map((t) => {
       const def = DASHBOARD_TILE_DEFS[t.id];
       return `<div class="dashboard-tile"><span class="dashboard-tile-value">${def.compute(rows)}</span><span class="dashboard-tile-label">${escapeHtml(def.label)}</span></div>`;
     })
     .join('');
+  container.innerHTML = tilesHtml + '<a class="dashboard-tile-customize" href="einstellungen.html">⚙<br>Kacheln anpassen</a>';
 }
 
 function onRowSelect(id, checked, refreshBar = true) {
