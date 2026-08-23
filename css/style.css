@@ -943,7 +943,13 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 .gene-value-text { flex: 1; min-width: 0; }
 .gene-badges { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; }
 
-.group-heading { font-weight: 600; margin: 0.6rem 0 0.2rem; color: var(--accent-dark); }
+.group-heading { font-weight: 700; margin: 1.1rem 0 0.4rem; color: var(--text); font-size: 0.85rem; }
+
+/* Inline-Code (z.B. Login-E-Mail-Muster in verwaltung.html) - ohne
+   eigene Regel fiel <code> bisher auf den Browser-Standard zurück
+   (reine Monospace-Schrift ohne Hintergrund), statt wie im Mockup als
+   dezentes, hinterlegtes Badge. */
+code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 0.8em; }
 
 /* --- Anleitung (anleitung.html) - rendert ANLEITUNG.md client-seitig
    per marked.js, damit der Text nur an einer Stelle (der Markdown-Datei)
