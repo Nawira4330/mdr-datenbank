@@ -861,9 +861,9 @@ td.keep-foal-cell { white-space: nowrap; }
 /* --- Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in js/parser.js) --- */
 .horse-tag-badge {
   display: inline-block;
-  padding: 0.05rem 0.5rem;
+  padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
