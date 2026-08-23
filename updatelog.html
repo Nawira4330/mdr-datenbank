@@ -18,7 +18,7 @@
   </header>
 
   <main class="container">
-    <div id="updatelog-content" class="markdown-content">
+    <div id="updatelog-content" class="updatelog">
       <p class="muted small">Update-Log wird geladen…</p>
     </div>
   </main>
@@ -28,6 +28,43 @@
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
   <script>
+    // Baut aus dem geparsten UPDATELOG.md-HTML (Struktur: Absätze, dann je
+    // Tag eine "## Datum"-Überschrift gefolgt von einer Aufzählung mit
+    // einem Änderungspunkt je <li>) den Zeitstrahl aus Datums-Pille +
+    // Karten je Änderungspunkt (siehe MixDUpdatelog.dc.html) - eigene
+    // Struktur statt generischem .markdown-content, da das Mockup hier
+    // bewusst kein Fließtext-Dokument, sondern eine Chronik zeigt.
+    function buildUpdatelogTimeline(html) {
+      const src = document.createElement('div');
+      src.innerHTML = html;
+
+      const introParts = [];
+      const days = [];
+      let currentDay = null;
+
+      for (const node of [...src.children]) {
+        const tag = node.tagName;
+        if (tag === 'H1' || tag === 'HR') continue;
+        if (tag === 'H2') {
+          currentDay = { date: node.textContent, entries: [] };
+          days.push(currentDay);
+        } else if (tag === 'UL' && currentDay) {
+          for (const li of node.children) currentDay.entries.push(li.innerHTML);
+        } else if (tag === 'P' && !currentDay) {
+          introParts.push(node.innerHTML);
+        }
+      }
+
+      const introHtml = introParts.length ? `<p class="intro">${introParts.join(' ')}</p>` : '';
+      const daysHtml = days.map((day) => `
+        <div class="day">
+          <span class="day-date">${day.date}</span>
+          ${day.entries.map((entry) => `<div class="entry">${entry}</div>`).join('')}
+        </div>
+      `).join('');
+      return introHtml + daysHtml;
+    }
+
     (async function () {
       const session = await requireSession();
       if (!session) return;
@@ -38,7 +75,7 @@
         const res = await fetch('UPDATELOG.md');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const markdown = await res.text();
-        container.innerHTML = marked.parse(markdown);
+        container.innerHTML = buildUpdatelogTimeline(marked.parse(markdown));
       } catch (err) {
         container.innerHTML = '<p class="error">Update-Log konnte nicht geladen werden: ' + err.message + '</p>';
       }
