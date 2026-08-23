@@ -76,12 +76,33 @@ function average(values) {
   return { avg: nums.reduce((a, b) => a + b, 0) / nums.length, count: nums.length };
 }
 
-function fmtStat(stat, suffix, total) {
-  if (stat.avg == null) return '-';
-  const note = stat.count === total
-    ? ''
-    : ` <span class="muted small">(aus ${stat.count} von ${total} Pferden mit Wert)</span>`;
-  return `${stat.avg.toFixed(2)}${suffix}${note}`;
+function statCardHtml(label, stat, suffix, total) {
+  const value = stat.avg == null ? '–' : `${stat.avg.toFixed(2)}${suffix}`;
+  const sub = stat.avg != null && stat.count !== total
+    ? `<div class="avg-stat-sub">aus ${stat.count} von ${total} Pferden mit Wert</div>`
+    : '';
+  return `<div class="avg-stat"><div class="avg-stat-label">${label}</div><div class="avg-stat-value">${escapeHtml(value)}</div>${sub}</div>`;
+}
+
+// Menschlich lesbare Beschreibung der aktuell gewählten Filter für den
+// Ergebnis-Hinweis ("N Pferde entsprechen ... (Rasse: X)") - analog zum
+// Filter-Hinweis-Badge in der Übersicht (siehe activeFilterDescriptions
+// in list.js), hier aber mit dem tatsächlich gewählten Wert statt nur
+// dem Feldnamen, da hier nur eine Handvoll Filterfelder existiert.
+function activeFilterSummary() {
+  const parts = [];
+  const addSelect = (sel, label) => {
+    const el = document.querySelector(sel);
+    if (el.value) parts.push(`${label}: ${el.selectedOptions[0].textContent}`);
+  };
+  addSelect('#d-owner', 'Besitzer');
+  addSelect('#d-breed', 'Rasse');
+  addSelect('#d-gender', 'Geschlecht');
+  const zzl = document.querySelector('#d-zzl');
+  if (zzl.value) parts.push(`ZZL: ${zzl.selectedOptions[0].textContent}`);
+  const tags = getCheckDropdownSelected('d-tag-drop');
+  if (tags.length) parts.push(`Schlagwörter: ${tags.join(', ')}`);
+  return parts.length ? ` (${parts.join(', ')})` : '';
 }
 
 async function calculate() {
@@ -112,16 +133,15 @@ async function calculate() {
   const extpct = average(derived.map((d) => d.extPercent));
   const intAvg = average(derived.map((d) => d.intAvg));
 
+  const pferdeWort = total === 1 ? 'Pferd entspricht' : 'Pferde entsprechen';
   resultEl.innerHTML = `
-    <table class="detail-table">
-      <tbody>
-        <tr><th>Anzahl Pferde</th><td>${total}</td></tr>
-        <tr><th>Ø GP</th><td>${fmtStat(gp, '', total)}</td></tr>
-        <tr><th>Ø Ext</th><td>${fmtStat(ext, '', total)}</td></tr>
-        <tr><th>Ø Ext%</th><td>${fmtStat(extpct, '%', total)}</td></tr>
-        <tr><th>Ø Int</th><td>${fmtStat(intAvg, '', total)}</td></tr>
-      </tbody>
-    </table>
+    <p class="result-note">${total} ${pferdeWort} den gewählten Filtern${activeFilterSummary()}.</p>
+    <div class="avg-stats">
+      ${statCardHtml('Ø GP', gp, '', total)}
+      ${statCardHtml('Ø Ext', ext, '', total)}
+      ${statCardHtml('Ø Ext%', extpct, '%', total)}
+      ${statCardHtml('Ø Int', intAvg, '', total)}
+    </div>
   `;
 }
 
