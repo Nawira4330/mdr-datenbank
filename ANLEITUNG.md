@@ -58,7 +58,7 @@ dazu Filter, Sortierung und die Möglichkeit, mehrere Pferde auf einmal
 auszuwählen.
 
 Über den Filtern zeigen **Kennzahlen-Kacheln** (z.B. „Pferde gesamt”,
-„Ø GP”, „Zur Zucht zugelassen”, „Favoriten”) Zahlen zur gerade
+„Ø Gesamtpotential”, „ZZL-Pferde”, „Favoriten”) Zahlen zur gerade
 gefilterten/sortierten Tabelle – nicht zum Gesamtbestand. Welche Kacheln
 in welcher Reihenfolge angezeigt werden, legst du in den
 [Einstellungen](#9-einstellungen) fest – „⚙ Kacheln anpassen” ganz
@@ -197,6 +197,8 @@ eigene Sortierung schon mit).
   [4.3](#43-weitere-angaben)); die Liste zeigt Pferde, die **mindestens
   eines** der ausgewählten Schlagwörter tragen. „Kein Schlagwort“ zeigt
   stattdessen gezielt Pferde ganz ohne Schlagwort.
+- **♥ Nur Favoriten** – zeigt ausschließlich deine eigenen, mit dem
+  ♡/♥-Herz markierten Favoriten (siehe [3.5](#35-die-tabelle)).
 
 **Genetik & Gesundheit**
 - **Genetik** – wähle ein oder mehrere Merkmale aus (z.B. Champagne,
@@ -713,12 +715,12 @@ erst mit „Speichern“ unten übernommen.
 **Dashboard-Kacheln**: Wähle per Kästchen aus, welche der
 Kennzahlen-Kacheln über den Filtern der
 [Übersicht](#3-übersicht-pferdeliste) angezeigt werden (Pferde gesamt,
-Ø GP, Ø Ext, Ø Ext%, Ø Int, Zur Zucht zugelassen, Favoriten, Stuten,
+Ø Gesamtpotential, Ø Ext, Ø Ext%, Ø Int, ZZL-Pferde, Favoriten, Stuten,
 Hengste, Fohlen, Erbkrankheitsfrei) – beliebig viele gleichzeitig, nicht
 auf eine feste Anzahl begrenzt. Mit den ▲/▼-Pfeilen legst du zusätzlich
 die Reihenfolge fest, in der die aktivierten Kacheln erscheinen.
-Standardmäßig aktiv sind Pferde gesamt, Ø GP, Zur Zucht zugelassen und
-Favoriten. Diese Auswahl wird erst mit „Speichern” unten übernommen.
+Standardmäßig aktiv sind Pferde gesamt, Ø Gesamtpotential, ZZL-Pferde
+und Favoriten. Diese Auswahl wird erst mit „Speichern” unten übernommen.
 
 **Ø-Vergleich Toleranz**: Beim [Ø-Vergleich](#35-die-tabelle) in der
 Übersicht gilt normalerweise jeder Wert unter dem Durchschnitt als

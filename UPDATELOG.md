@@ -9,14 +9,16 @@ drin.
 ## 23.08.2026
 
 - **Favoriten, Dashboard-Kacheln, Besitzer wechseln, einklappbare
-  Filter**: die Übersicht bekommt einen ☆/★-Stern je Pferd zum Merken
-  eigener Favoriten, frei konfigurierbare Kennzahlen-Kacheln über den
-  Filtern (Pferde gesamt, Ø GP/Ext/Ext%/Int, ZZL, Favoriten, Stuten,
-  Hengste, Fohlen, Erbkrankheitsfrei - Auswahl und Reihenfolge per ▲/▼ in
-  den [Einstellungen](#9-einstellungen)), einklappbare Filter- und
-  Ø-Vergleich-Bereiche sowie einen neuen Sammel-Button "🔄 Besitzer
-  wechseln" für mehrere ausgewählte Pferde auf einmal. Die Spalte
-  "Besitzer" steht in der Tabelle jetzt ganz hinten, nach "Zuletzt
+  Filter**: die Übersicht bekommt ein ♡/♥-Herz je Pferd zum Merken
+  eigener Favoriten (dazu einen neuen Filter "♥ Nur Favoriten"), frei
+  konfigurierbare Kennzahlen-Kacheln über den Filtern (Pferde gesamt,
+  Ø Gesamtpotential/Ext/Ext%/Int, ZZL-Pferde, Favoriten, Stuten, Hengste,
+  Fohlen, Erbkrankheitsfrei - Auswahl und Reihenfolge per ▲/▼ in den
+  [Einstellungen](#9-einstellungen), Schnellzugriff über "⚙ Kacheln
+  anpassen" direkt in der Kachelreihe), einklappbare Filter- und
+  Ø-Vergleich-Bereiche (mit Farb-Legende) sowie einen neuen Sammel-Button
+  "🔄 Besitzer wechseln" für mehrere ausgewählte Pferde auf einmal. Die
+  Spalte "Besitzer" steht in der Tabelle jetzt ganz hinten, nach "Zuletzt
   bearbeitet". Die Massenerfassung-Karte ("In dieser Sitzung erfasst")
   beim Anlegen mehrerer Pferde hintereinander steht jetzt oben statt
   unten. Migration `migration_031_favorites_dashboard_tiles.sql` einmalig

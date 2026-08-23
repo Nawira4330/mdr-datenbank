@@ -1138,11 +1138,11 @@ function tagColor(label) {
 // (ausgeblendet) ergänzt werden, siehe mergeDashboardTiles.
 const DASHBOARD_TILE_OPTIONS = [
   { id: 'total', label: 'Pferde gesamt', defaultVisible: true },
-  { id: 'avgGp', label: 'Ø GP', defaultVisible: true },
+  { id: 'avgGp', label: 'Ø Gesamtpotential', defaultVisible: true },
   { id: 'avgExt', label: 'Ø Ext', defaultVisible: false },
   { id: 'avgExtPercent', label: 'Ø Ext%', defaultVisible: false },
   { id: 'avgInt', label: 'Ø Int', defaultVisible: false },
-  { id: 'zzl', label: 'Zur Zucht zugelassen', defaultVisible: true },
+  { id: 'zzl', label: 'ZZL-Pferde', defaultVisible: true },
   { id: 'favorites', label: 'Favoriten', defaultVisible: true },
   { id: 'mares', label: 'Stuten', defaultVisible: false },
   { id: 'stallions', label: 'Hengste', defaultVisible: false },

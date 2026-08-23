@@ -873,9 +873,12 @@ function applyClientFilters(rows) {
   const extpctVal = document.querySelector('#f-extpct-val').value;
   const intOp = document.querySelector('#f-int-op').value;
   const intVal = document.querySelector('#f-int-val').value;
+  const favoritesOnly = document.querySelector('#f-favorites').checked;
 
   return rows.filter((row) => {
     const d = computeDerived(row);
+
+    if (favoritesOnly && !favoriteHorseIds.has(row.id)) return false;
 
     // Nur bei der Standardauswahl "Alle" (kein konkreter Rasse-Filter
     // gewählt) wirken die bevorzugten Rassen aus den Einstellungen -
@@ -1192,6 +1195,7 @@ function collectFilterState() {
     gender: document.querySelector('#f-gender').value,
     breed: document.querySelector('#f-breed').value,
     zzl: document.querySelector('#f-zzl').value,
+    favorites: document.querySelector('#f-favorites').checked,
     tags: getCheckDropdownSelected('f-tag-drop'),
     genetik: getCheckDropdownSelected('f-genetik-drop'),
     ekh: getCheckDropdownSelected('f-ekh-drop'),
@@ -1223,6 +1227,7 @@ async function applyFilterState(state) {
   document.querySelector('#f-gender').value = state.gender || '';
   document.querySelector('#f-breed').value = state.breed || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
+  document.querySelector('#f-favorites').checked = !!state.favorites;
   setCheckDropdownSelected('f-tag-drop', state.tags);
   setCheckDropdownSelected('f-genetik-drop', state.genetik);
   setCheckDropdownSelected('f-ekh-drop', state.ekh);
@@ -1463,7 +1468,7 @@ const DASHBOARD_TILE_DEFS = {
     compute: (rows) => String(rows.length),
   },
   avgGp: {
-    label: 'Ø GP',
+    label: 'Ø Gesamtpotential',
     compute: (rows) => avgDerived(rows, 'gp'),
   },
   avgExt: {
@@ -1482,7 +1487,7 @@ const DASHBOARD_TILE_DEFS = {
     compute: (rows) => avgDerived(rows, 'intAvg', 2),
   },
   zzl: {
-    label: 'Zur Zucht zugelassen',
+    label: 'ZZL-Pferde',
     compute: (rows) => String(rows.filter((h) => h.breeding_allowed).length),
   },
   favorites: {
