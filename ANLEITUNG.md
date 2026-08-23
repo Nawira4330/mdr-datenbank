@@ -251,6 +251,8 @@ unten rechts ein ↑-Button, der dich direkt wieder an den Anfang bringt.
   andere Schlagwörter bleiben unangetastet. Ein Zusatztext (siehe
   [4.3](#43-weitere-angaben)) lässt sich dabei nicht mitgeben – dafür das
   Pferd einzeln bearbeiten.
+- Angehakte Zeilen werden zusätzlich grün hinterlegt, damit auf einen
+  Blick erkennbar ist, welche/wie viele Pferde gerade ausgewählt sind.
 - **Mehreren Pferden auf einmal den Besitzer ändern** – Kästchen anhaken,
   „🔄 Besitzer wechseln“ öffnet ein Popup mit einem Textfeld (schlägt
   bereits bekannte Besitzernamen vor, erlaubt aber auch neue); bestätigen

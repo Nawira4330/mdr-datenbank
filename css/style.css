@@ -591,7 +591,7 @@ table { border-collapse: collapse; width: 100%; table-layout: fixed; }
    dann mittig in der hohen Zeile schweben statt oben bündig mit dem
    Zeilenanfang, wodurch die untere Trennlinie im Vergleich zu ihrem
    Inhalt verrutscht wirkt. */
-th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.88rem; vertical-align: top; }
+th, td { padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; overflow-wrap: break-word; font-size: 0.85rem; vertical-align: top; }
 /* Zellen duerfen normal umbrechen - alle Zellen EINER Zeile teilen sich im
    Tabellen-Layout ohnehin dieselbe Hoehe, die Trennlinie "springt" also
    nie innerhalb einer Zeile, auch wenn Zeilen UNTEREINANDER unterschiedlich
@@ -608,8 +608,27 @@ th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-al
    ("Bil"/"d") statt nur an Wortgrenzen - fuer Kopfzeilen unerwuenscht,
    die duerfen bei Bedarf lieber auf 2 Zeilen umbrechen (white-space:
    normal reicht dafuer bei mehrteiligen Namen wie "Zuletzt bearbeitet"). */
-th { background: var(--th-bg-solid); cursor: pointer; user-select: none; overflow-wrap: normal; word-break: normal; }
+th {
+  background: var(--th-bg-solid);
+  cursor: pointer;
+  user-select: none;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-dark);
+}
 tr:hover td { background: rgba(107, 157, 0, 0.05); }
+/* Markiert per Kästchen ausgewählte Zeilen auch farblich, nicht nur am
+   angehakten Kästchen selbst - leichter zu überblicken, welche/wie viele
+   Zeilen gerade für eine Sammelaktion ausgewählt sind. */
+/* :not(.cmp-*) lässt die eigene Grün/Rot/Teal-Einfärbung des Ø-Vergleichs
+   (siehe weiter unten, cmpClass) unangetastet - sonst würde die
+   Auswahl-Markierung die wichtigere Vergleichsfarbe überdecken. */
+tr:has([data-select]:checked) td:not(.cmp-good):not(.cmp-tolerance):not(.cmp-bad) { background: rgba(107, 157, 0, 0.07); }
+tr:has([data-select]:checked):hover td:not(.cmp-good):not(.cmp-tolerance):not(.cmp-bad) { background: rgba(107, 157, 0, 0.1); }
 /* Bewusst KEIN "display: flex" auf <td> selbst - das entzieht die
    Zelle dem normalen Tabellenzeilen-Layout (border-collapse berechnet
    Zeilenhoehe/Randlinie dann pro Zelle statt pro Zeile, was zu einer
@@ -664,12 +683,19 @@ td.keep-foal-cell { white-space: nowrap; }
   padding: 0.05rem 0.5rem;
   border-radius: 999px;
   font-size: 0.7rem;
+  font-weight: 700;
   color: #fff;
   white-space: nowrap;
 }
 /* Name-Zelle der Übersicht (siehe rowHtml in list.js) - Name-Link und
    Schlagwort-Badges nebeneinander/umbrechend statt gequetscht. */
 .name-cell-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+/* Namens-Link ohne Ø-Vergleich-Mehrheitsverdikt (siehe overallCmpClass in
+   list.js) bewusst neutral/dunkel statt der globalen Link-Akzentfarbe -
+   Farbe bleibt so dem Ø-Vergleich-Ergebnis vorbehalten (grün/teal/rot,
+   siehe td.cmp-good & Co. weiter unten, die dank höherer Spezifität
+   Vorrang behalten) statt bei jedem Namen dekorativ grün zu sein. */
+.name-cell a { color: var(--text); font-weight: 700; }
 
 /* Schlagwort-Zuweisung im Pferd-Formular (horse.html) - je Zeile eine
    Checkbox mit Farbpunkt und optionalem Zusatztext-Feld. */

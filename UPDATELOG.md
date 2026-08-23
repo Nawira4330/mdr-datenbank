@@ -24,6 +24,12 @@ drin.
   unten. Migration `migration_031_favorites_dashboard_tiles.sql` einmalig
   im Supabase-Dashboard ausführen, sonst bleiben Favoriten und
   Dashboard-Kacheln bei der Standardauswahl.
+- **Tabelle: dichter, näher am Design-Vorschlag**: Kopfzeile jetzt klein,
+  grün, fett und in Großbuchstaben statt normalem Text; Pferdenamen ohne
+  Ø-Vergleich-Ergebnis sind neutral statt grün eingefärbt (Farbe bleibt
+  dem tatsächlichen Vergleichsergebnis vorbehalten); ausgewählte Zeilen
+  werden grün hinterlegt; Schlagwort-Badges jetzt fett; insgesamt etwas
+  kompakter (weniger Innenabstand).
 - **Bugfix: Stammbaum wurde beim erneuten Einfügen manchmal verkürzt**:
   wurde beim Bearbeiten eines Pferds der Freitext erneut eingefügt, aber
   der Stammbaum-Abschnitt diesmal nicht vollständig aufgeklappt (z.B. nur
