@@ -39,7 +39,7 @@ async function renderSharedNav(session) {
   const identity = session.user.email.split('@')[0];
 
   const mdrPlanerItems = MDR_PLANER_LINKS
-    .map(({ label, url }) => `<a href="${url}" target="_blank" rel="noopener">${navEscapeHtml(label)} ↗</a>`)
+    .map(({ label, url }) => `<a href="${url}" target="_blank" rel="noopener">${navEscapeHtml(label)} <span class="nav-ext">↗</span></a>`)
     .join('');
 
   const wrap = document.createElement('div');

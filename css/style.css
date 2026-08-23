@@ -599,6 +599,7 @@ label {
 .nav-dropdown-menu a:hover,
 .nav-dropdown-menu button:hover { background: rgba(107, 157, 0, 0.12); }
 .nav-dropdown-menu hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0; }
+.nav-ext { opacity: 0.55; font-size: 0.7rem; }
 /* Pfeil-Symbol + hervorgehobener Zustand bei aufgeklapptem Menü (wie im
    Design-Vorschlag, siehe .btn.secondary.caret/.open in MixDMenu) -
    fehlte bisher komplett, der Knopf sah offen/geschlossen identisch aus. */
