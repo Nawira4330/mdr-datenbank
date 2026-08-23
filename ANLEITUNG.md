@@ -555,13 +555,18 @@ die neu angehakten dazu, „Abbrechen“ entfernt die nicht angehakten und
 
 Klickst du in der Übersicht auf den Namen eines Pferds, öffnet sich eine
 reine Ansichtsseite – alle Felder sind hier nur zum Lesen, nichts lässt
-sich versehentlich verändern. Ist ein Bild hinterlegt, erscheint es groß
-oben auf der Seite; darunter stehen, wann das Pferd zuletzt bearbeitet
-wurde und (bei eingetragenem Geburtsdatum) sein Alter in Spieljahren.
-Dieselben 4 Reiter wie beim Bearbeiten
-(siehe [Abschnitt 4](#4-pferd-anlegen-oder-bearbeiten)) gliedern auch
-hier die Ansicht.
+sich versehentlich verändern. Links steht das Bild (falls hinterlegt)
+mit dem ♡/♥-Favoriten-Herz darauf, darunter die ←/→-Pfeile zum
+alphabetischen Blättern, Schlagwörter, der Zeitpunkt der letzten
+Bearbeitung und der „🗑️ Löschen“-Button. Rechts stehen der Name groß als
+Überschrift, eine Kurzzeile (Geschlecht · Rasse · Farbe · Geburtsdatum)
+sowie Kennzahlen-Kacheln (GP/Ext/Ext%/Int/ZZL) auf einen Blick. Dieselben
+4 Reiter wie beim Bearbeiten (siehe
+[Abschnitt 4](#4-pferd-anlegen-oder-bearbeiten)) gliedern auch hier die
+Ansicht darunter.
 
+- **♡/♥ Favorit** – wie in der Übersicht, rein persönlich für dein
+  eigenes Konto.
 - **✏️ Bearbeiten** – wechselt ins normale Bearbeiten-Formular.
 - **🔗 Zum Pferd** – nur sichtbar, wenn eine Spiel-ID hinterlegt ist,
   öffnet die Pferdeseite im Spiel in einem neuen Tab.

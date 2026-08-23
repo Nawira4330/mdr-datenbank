@@ -24,6 +24,13 @@ drin.
   unten. Migration `migration_031_favorites_dashboard_tiles.sql` einmalig
   im Supabase-Dashboard ausführen, sonst bleiben Favoriten und
   Dashboard-Kacheln bei der Standardauswahl.
+- **Pferd ansehen: neu gestaltet**: die Ansichtsseite zeigt Bild, ♡/♥-
+  Favoriten-Herz, Blättern (←/→) und Löschen jetzt links in einer
+  eigenen Spalte, rechts daneben groß den Namen, eine Kurzzeile
+  (Geschlecht/Rasse/Farbe/Geburtsdatum) sowie Kennzahlen-Kacheln
+  (GP/Ext/Ext%/Int/ZZL) auf einen Blick - vorher eine einzige,
+  zentrierte Spalte ohne diese Übersicht. "Verwaltung" (Besitzer) steht
+  jetzt als letztes Feld, passend zur Übersicht.
 - **Tabelle: dichter, näher am Design-Vorschlag**: Kopfzeile jetzt klein,
   grün, fett und in Großbuchstaben statt normalem Text; Pferdenamen ohne
   Ø-Vergleich-Ergebnis sind neutral statt grün eingefärbt (Farbe bleibt

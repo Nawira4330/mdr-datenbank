@@ -228,6 +228,82 @@ input::placeholder, textarea::placeholder { opacity: 0.5; }
 .view-mode textarea[readonly] { resize: none; }
 .view-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
 
+/* --- Profil-Layout (view.html, ".view-profile") - Bild/Favorit/Blättern
+   links in einer schmalen Spalte, Name/Kennzahlen/Formulardaten rechts,
+   statt wie vorher alles in einer einzigen, mittig zentrierten Spalte. */
+.view-profile .profile-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.4rem;
+  align-items: start;
+}
+.view-profile .hero-col { display: flex; flex-direction: column; gap: 0.6rem; }
+.view-profile .hero-col .view-actions { justify-content: flex-start; margin-bottom: 0; }
+.view-profile .hero-frame {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.view-profile .hero-frame .image-preview { max-height: 260px; margin: 0; }
+.view-profile .heart-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.view-profile .heart-btn.is-favorite { color: var(--danger); }
+.view-profile .nav-arrows { display: flex; align-items: center; justify-content: space-between; }
+.view-profile .arrow-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.view-profile .arrow-btn:hover { background: var(--border); }
+.view-profile .hname { font-family: var(--font-heading); font-weight: 400; font-size: 2rem; color: var(--text); margin: 0 0 0.15rem; }
+.view-profile .hsub { font-size: 0.85rem; color: var(--muted); margin: 0 0 1rem; }
+.view-profile .stat-row { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.view-profile .statpill {
+  flex: 1;
+  min-width: 4.5rem;
+  text-align: center;
+  padding: 0.6rem 0.3rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.view-profile .statpill .v { font-weight: 700; font-size: 1.15rem; color: var(--accent); }
+.view-profile .statpill .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.15rem; }
+
+@media (max-width: 900px) {
+  .view-profile .profile-layout { grid-template-columns: 1fr; }
+}
+
 label {
   display: block;
   font-size: 0.85rem;

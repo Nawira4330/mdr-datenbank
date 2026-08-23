@@ -16,103 +16,115 @@
     </nav>
   </header>
 
-  <main class="container view-mode">
-    <div class="view-actions">
-      <a class="btn secondary" id="edit-link" href="horse.html">✏️ Bearbeiten</a>
-      <a class="btn secondary" id="mdr-link-btn" href="#" target="_blank" rel="noopener" hidden>🔗 Zum Pferd</a>
-      <button type="button" id="delete-btn" class="danger">🗑️ Löschen</button>
-    </div>
-
-    <img id="image-preview" class="image-preview" hidden alt="Bild des Pferdes" />
-
-    <div id="tag-badges" style="margin-bottom: 0.8rem;"></div>
-    <p id="last-edited" class="muted small" style="margin: -0.4rem 0 0.8rem;"></p>
-
-    <div class="tabs">
-      <button type="button" class="tab-btn active" data-tab="stammdaten">Stammdaten</button>
-      <button type="button" class="tab-btn" data-tab="genetik">Genetik</button>
-      <button type="button" class="tab-btn" data-tab="turnier">Turnierwerte</button>
-      <button type="button" class="tab-btn" data-tab="stammbaum">Stammbaum</button>
-    </div>
-
-    <div class="tab-panel" data-tab-panel="stammdaten">
-      <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <button type="button" id="prev-horse-btn" class="secondary" title="Vorheriges Pferd (alphabetisch)">←</button>
-        <fieldset style="flex: 1; min-width: 0;">
-          <legend>Stammdaten</legend>
-          <div class="form-grid">
-            <div><label for="name">Name</label><input id="name" readonly /></div>
-            <div><label for="external_id">ID</label><input id="external_id" readonly /></div>
-            <div><label for="gender">Geschlecht</label>
-              <select id="gender" disabled>
-                <option value=""></option>
-                <option>Stute</option>
-                <option>Hengst</option>
-                <option>Wallach</option>
-                <option>Hengstfohlen</option>
-                <option>Stutfohlen</option>
-              </select>
-            </div>
-            <div><label for="breed">Rasse</label><input id="breed" readonly /></div>
-            <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" readonly /></div>
-            <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" readonly /></div>
-            <div><label for="coat_color">Fellfarbe</label><input id="coat_color" readonly /></div>
-            <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" readonly />
-              <p id="horse-age" class="muted small" style="margin: 0.2rem 0 0;"></p>
-            </div>
-            <div><label for="disease_free">Erbkrankheiten</label>
-              <select id="disease_free" disabled>
-                <option value="">unbekannt</option>
-                <option value="true">frei von Erbkrankheiten</option>
-                <option value="false">Erbkrankheit vorhanden</option>
-              </select>
-            </div>
-          </div>
-        </fieldset>
-        <button type="button" id="next-horse-btn" class="secondary" title="Nächstes Pferd (alphabetisch)">→</button>
+  <main class="container view-mode view-profile">
+    <div class="profile-layout">
+      <div class="hero-col">
+        <div class="view-actions">
+          <a class="btn secondary" id="edit-link" href="horse.html">✏️ Bearbeiten</a>
+          <a class="btn secondary" id="mdr-link-btn" href="#" target="_blank" rel="noopener" hidden>🔗 Zum Pferd</a>
+        </div>
+        <div class="hero-frame">
+          <img id="image-preview" class="image-preview" hidden alt="Bild des Pferdes" />
+          <button type="button" id="favorite-view-btn" class="heart-btn" title="Als Favorit markieren">♡</button>
+        </div>
+        <div class="nav-arrows">
+          <button type="button" id="prev-horse-btn" class="arrow-btn" title="Vorheriges Pferd (alphabetisch)">←</button>
+          <span class="small muted">alphabetisch</span>
+          <button type="button" id="next-horse-btn" class="arrow-btn" title="Nächstes Pferd (alphabetisch)">→</button>
+        </div>
+        <div id="tag-badges"></div>
+        <p id="last-edited" class="muted small"></p>
+        <button type="button" id="delete-btn" class="danger" style="width: 100%;">🗑️ Löschen</button>
       </div>
 
-      <fieldset>
-        <legend>Verwaltung</legend>
-        <div class="form-grid">
-          <div><label for="owner">Besitzer</label><input id="owner" readonly /></div>
+      <div class="main-col">
+        <h1 id="profile-name" class="hname"></h1>
+        <p id="profile-sub" class="hsub"></p>
+        <div class="stat-row" id="profile-stats"></div>
+
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="stammdaten">Stammdaten</button>
+          <button type="button" class="tab-btn" data-tab="genetik">Genetik</button>
+          <button type="button" class="tab-btn" data-tab="turnier">Turnierwerte</button>
+          <button type="button" class="tab-btn" data-tab="stammbaum">Stammbaum</button>
         </div>
-      </fieldset>
 
-      <fieldset>
-        <legend>Papiere &amp; Zucht</legend>
-        <div class="form-grid">
-          <div><label for="breeding_allowed">Zuchtzulassung</label>
-            <select id="breeding_allowed" disabled>
-              <option value="">unbekannt</option>
-              <option value="true">Ja</option>
-              <option value="false">Nein</option>
-            </select>
-          </div>
-          <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" readonly /></div>
-          <div><label for="ico">ICO (%)</label><input id="ico" type="number" readonly /></div>
+        <div class="tab-panel" data-tab-panel="stammdaten">
+          <fieldset>
+            <legend>Stammdaten</legend>
+            <div class="form-grid">
+              <div><label for="name">Name</label><input id="name" readonly /></div>
+              <div><label for="external_id">ID</label><input id="external_id" readonly /></div>
+              <div><label for="gender">Geschlecht</label>
+                <select id="gender" disabled>
+                  <option value=""></option>
+                  <option>Stute</option>
+                  <option>Hengst</option>
+                  <option>Wallach</option>
+                  <option>Hengstfohlen</option>
+                  <option>Stutfohlen</option>
+                </select>
+              </div>
+              <div><label for="breed">Rasse</label><input id="breed" readonly /></div>
+              <div><label for="purebred_pct">Reinrassigkeit (%)</label><input id="purebred_pct" type="number" readonly /></div>
+              <div id="breed-composition-field"><label for="breed_composition">Rasseanteile</label><input id="breed_composition" readonly /></div>
+              <div><label for="coat_color">Fellfarbe</label><input id="coat_color" readonly /></div>
+              <div><label for="birthdate">Geburtsdatum</label><input id="birthdate" type="date" readonly />
+                <p id="horse-age" class="muted small" style="margin: 0.2rem 0 0;"></p>
+              </div>
+              <div><label for="disease_free">Erbkrankheiten</label>
+                <select id="disease_free" disabled>
+                  <option value="">unbekannt</option>
+                  <option value="true">frei von Erbkrankheiten</option>
+                  <option value="false">Erbkrankheit vorhanden</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Papiere &amp; Zucht</legend>
+            <div class="form-grid">
+              <div><label for="breeding_allowed">Zuchtzulassung</label>
+                <select id="breeding_allowed" disabled>
+                  <option value="">unbekannt</option>
+                  <option value="true">Ja</option>
+                  <option value="false">Nein</option>
+                </select>
+              </div>
+              <div><label for="hlp_slp">HLP/SLP</label><input id="hlp_slp" readonly /></div>
+              <div><label for="ico">ICO (%)</label><input id="ico" type="number" readonly /></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Sonstiges</legend>
+            <div class="form-grid">
+              <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3" readonly></textarea></div>
+              <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" readonly /></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Verwaltung</legend>
+            <div class="form-grid">
+              <div><label for="owner">Besitzer</label><input id="owner" readonly /></div>
+            </div>
+          </fieldset>
         </div>
-      </fieldset>
 
-      <fieldset>
-        <legend>Sonstiges</legend>
-        <div class="form-grid">
-          <div style="grid-column: 1 / -1;"><label for="notes">Notizen</label><textarea id="notes" rows="3" readonly></textarea></div>
-          <div><label for="image_url">Bild-URL</label><input id="image_url" type="url" readonly /></div>
+        <div class="tab-panel" data-tab-panel="genetik" hidden>
+          <div id="detail-genetik"></div>
         </div>
-      </fieldset>
-    </div>
 
-    <div class="tab-panel" data-tab-panel="genetik" hidden>
-      <div id="detail-genetik"></div>
-    </div>
+        <div class="tab-panel" data-tab-panel="turnier" hidden>
+          <div id="detail-turnier"></div>
+        </div>
 
-    <div class="tab-panel" data-tab-panel="turnier" hidden>
-      <div id="detail-turnier"></div>
-    </div>
-
-    <div class="tab-panel" data-tab-panel="stammbaum" hidden>
-      <div id="detail-stammbaum"></div>
+        <div class="tab-panel" data-tab-panel="stammbaum" hidden>
+          <div id="detail-stammbaum"></div>
+        </div>
+      </div>
     </div>
 
     <p id="form-error" class="error"></p>
