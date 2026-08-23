@@ -896,14 +896,15 @@ legend {
    bestehender Pferde, siehe horseForm.js init) - <details>/<summary>
    statt <fieldset>/<legend>, optisch gleich gehalten. */
 details.paste-box {
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
   margin: 1rem 0;
   padding: 0.8rem 1rem 1rem;
   background: var(--surface);
 }
 details.paste-box > summary {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.84rem;
   color: var(--accent-dark);
   cursor: pointer;
   margin-bottom: 0.6rem;
@@ -1021,27 +1022,28 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
    bereits erfassten Pferde als laufende Liste, analog zur entsprechenden
    Anzeige im Discord-Bot. */
 .bulk-session-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 1rem 1.2rem;
+  padding: 0.7rem 0.9rem 0.8rem;
   margin: 1.2rem 0;
-  text-align: center;
 }
-.bulk-session-count { font-family: var(--font-heading); font-size: 2.4rem; color: var(--accent-dark); line-height: 1.1; }
-.bulk-session-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.8rem; }
-.bulk-session-items { list-style: none; margin: 0 0 1rem; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 0.3rem; }
-.bulk-session-item { display: flex; align-items: center; gap: 0.5rem; }
-.bulk-session-icon { flex: 0 0 auto; }
-.bulk-session-item a { flex: 1 1 auto; overflow-wrap: break-word; }
+.bulk-session-title { margin: 0 0 0.5rem; font-size: 0.84rem; color: var(--accent-dark); }
+.bulk-session-items { list-style: none; margin: 0 0 0.6rem; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.bulk-session-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.82rem; }
+.bulk-session-item a { overflow-wrap: break-word; }
 .bulk-session-badge {
   flex: 0 0 auto;
-  font-size: 0.72rem;
-  color: var(--info);
-  border: 1px solid var(--info);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 8px;
   border-radius: 999px;
-  padding: 0.05rem 0.5rem;
 }
+.bulk-session-badge.new { background: rgba(107,157,0,0.12); color: var(--accent-dark); }
+.bulk-session-badge.updated { background: rgba(47,127,209,0.12); color: var(--info); }
 
 .badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 0; }
 

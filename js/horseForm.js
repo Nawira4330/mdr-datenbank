@@ -1044,16 +1044,15 @@ function renderBulkSessionCard() {
   listEl.hidden = false;
   const items = bulkSessionEntries.map((entry) => `
     <li class="bulk-session-item">
-      <span class="bulk-session-icon">${entry.updated ? '🔵' : '✅'}</span>
+      <span class="bulk-session-badge ${entry.updated ? 'updated' : 'new'}">${entry.updated ? '↻ aktualisiert' : '✓ neu'}</span>
       <a href="horse.html?id=${encodeURIComponent(entry.id)}">${escapeHtml(entry.name)}</a>
-      ${entry.updated ? '<span class="bulk-session-badge">aktualisiert</span>' : ''}
     </li>
   `).join('');
+  const pferdeWort = bulkSessionEntries.length === 1 ? 'Pferd' : 'Pferde';
   listEl.innerHTML = `
-    <div class="bulk-session-count">${bulkSessionEntries.length}</div>
-    <div class="bulk-session-label">In dieser Sitzung erfasst</div>
+    <h3 class="bulk-session-title">🐎 Massenerfassung — ${bulkSessionEntries.length} ${pferdeWort} in dieser Sitzung</h3>
     <ul class="bulk-session-items">${items}</ul>
-    <button type="button" id="bulk-session-finish-btn" class="secondary">Fertig / Zur Übersicht</button>
+    <button type="button" id="bulk-session-finish-btn" class="secondary small">Fertig / Zur Übersicht</button>
   `;
   document.getElementById('bulk-session-finish-btn').addEventListener('click', onBulkSessionFinish);
 }
