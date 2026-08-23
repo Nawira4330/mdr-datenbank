@@ -1155,6 +1155,147 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
   fieldset { padding: 0.7rem 0.8rem 0.9rem; }
   details.paste-box { padding: 0.7rem 0.8rem 0.9rem; }
+
+  /* --- Übersicht (Handy): einzelne Karten statt durchgehender Liste ---
+     Übernimmt/überschreibt die generische Listen-Optik aus dem
+     @media(max-width:900px)-Block oben (dort weiterhin für Tablet
+     gültig) - jede Zeile bekommt jetzt einen eigenen Rahmen samt Abstand
+     zur nächsten, wie im Design-Vorschlag (siehe .card in MixDMobile).
+     position:relative + padding-right reserviert Platz für die absolut
+     positionierte Link/Aktionen-Spalte rechts (siehe unten), die dadurch
+     nicht mehr mit Name & Co. um die Zeilenbreite konkurriert - genau
+     das hatte beim ersten Versuch den Namen auf 4px Breite gequetscht. */
+  .table-wrap { background: transparent; border: none; box-shadow: none; }
+  #horse-table tr {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin: 0 0 0.6rem;
+    padding: 0.7rem 2.4rem 0.7rem 0.8rem;
+  }
+  #horse-table tr:last-child { margin-bottom: 0; }
+  /* Ausgewählte Karte grün umrandet + leicht getönt (wie .card.selected
+     im Design-Vorschlag) - eigene Regel statt der Desktop-Zellentönung
+     weiter oben, die hier durch die Karten-Optik nicht mehr passt. */
+  #horse-table tr:has([data-select]:checked) {
+    border-color: var(--accent);
+    background: rgba(107, 157, 0, 0.05);
+  }
+  #horse-table tr:has([data-select]:checked) td:not(.cmp-good):not(.cmp-tolerance):not(.cmp-bad) { background: transparent; }
+
+  /* Link (🔗) und Aktionen (✎/✗) als eigene, senkrecht gestapelte
+     Spalte oben rechts auf der Karte (wie im Design-Vorschlag) - per
+     position:absolute aus dem Flex-Fluss der übrigen Felder genommen,
+     damit sie nicht mit Name & Co. um die Breite konkurrieren. */
+  #horse-table td[data-label="Link"] {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.5rem;
+    padding: 0;
+  }
+  #horse-table td[data-label="Link"]::before { content: none; }
+  /* flex-basis 9rem statt 0% (siehe Kommentar bei td[data-label="Name"]
+     im @media(max-width:900px)-Block oben) - mit Basis 0% unterschätzt
+     der Umbruch-Algorithmus Names hypothetische Breite VOR dem
+     Wachsen-Schritt und lässt "Geschlecht" (nächstes Feld) fälschlich
+     noch auf dieselbe Zeile rutschen, was Name dann auf wenige Pixel
+     quetscht. 9rem ist bewusst größer als der nach Kästchen/Herz/Bild
+     tatsächlich übrig bleibende Platz, damit für Geschlecht rechnerisch
+     nichts mehr frei ist - dank flex-shrink:1 wächst/schrumpft Name
+     trotzdem auf die tatsächlich verfügbare Breite. */
+  #horse-table td[data-label="Name"] { flex: 1 1 9rem; }
+  #horse-table td[data-label="Aktionen"] {
+    position: absolute;
+    top: 2.55rem;
+    right: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0;
+  }
+  #horse-table td[data-label="Aktionen"]::before { content: none; }
+  #horse-table td[data-label="Link"] .btn,
+  #horse-table td[data-label="Aktionen"] .btn,
+  #horse-table td[data-label="Aktionen"] button {
+    width: 1.9rem;
+    min-width: 0;
+    height: 1.9rem;
+    padding: 0;
+    margin-right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* GP/Ext/Ext%/Int als kleine, eingefärbte Kacheln zu viert in einer
+     Reihe (wie .mini-stat/.stat-grid im Design-Vorschlag) statt
+     einzelner Beschriftungs-Zeilen - Wert oben, Bezeichnung klein
+     darunter (::before nach dem Wert einsortiert per order:1).
+     flex:0 0 mit exaktem calc()-Wert (Zeilenbreite minus Lücken, durch 4
+     geteilt) statt flexibler Prozentwerte - der Umbruch-Algorithmus
+     packt sonst rein nach verfügbarem Restplatz und mischt beim
+     Zeilenumbruch Felder aus benachbarten Gruppen (z.B. Genetik)
+     zwischen die vier Kacheln, statt sie sauber zu viert zu halten. */
+  #horse-table td[data-label="GP"],
+  #horse-table td[data-label="Ext"],
+  #horse-table td[data-label="Ext%"],
+  #horse-table td[data-label="Int"] {
+    flex: 0 0 calc(25% - 0.45rem);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--th-bg-solid);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.15rem;
+    gap: 0.1rem;
+    font-weight: 700;
+  }
+  #horse-table td[data-label="GP"]::before,
+  #horse-table td[data-label="Ext"]::before,
+  #horse-table td[data-label="Ext%"]::before,
+  #horse-table td[data-label="Int"]::before {
+    content: attr(data-label);
+    order: 1;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+
+  /* Übrige Felder zu zweit pro Zeile statt einzeln (label/wert nah
+     beieinander statt über die ganze Spaltenbreite verteilt), Farbe/EKH
+     über die volle Breite (wie .kv-grid im Design-Vorschlag) - Zuletzt
+     bearbeitet+Besitzer landen als letztes Paar dadurch automatisch
+     zusammen in einer gemeinsamen letzten Zeile (card-foot). Exakter
+     calc()-Wert aus demselben Grund wie bei GP & Co. oben - sonst
+     rutscht z.B. eine der vier Kennzahlen-Kacheln mit auf dieselbe Zeile
+     wie Genetik/HLP-SLP statt die beiden Gruppen sauber zu trennen. */
+  #horse-table td[data-label="Geschlecht"],
+  #horse-table td[data-label="Rasse"],
+  #horse-table td[data-label="HLP/SLP"],
+  #horse-table td[data-label="ZZL"],
+  #horse-table td[data-label="Alter"],
+  #horse-table td[data-label="Zuletzt bearbeitet"],
+  #horse-table td[data-label="Besitzer"] {
+    flex: 0 0 calc(50% - 0.3rem);
+    justify-content: flex-start;
+    gap: 0.3rem;
+  }
+  /* Genetik/Farbe/EKH über die volle Breite statt zu zweit - Genetik hat
+     im Feldreihenfolge keinen direkten 2er-Partner (die Kacheln-Gruppe
+     GP/Ext/Ext%/Int folgt direkt danach), eine eigene Zeile verhindert,
+     dass es sich stattdessen neben zwei der vier Kacheln quetscht und
+     ihnen den Platz für die Vierergruppe wegnimmt. */
+  #horse-table td[data-label="Genetik"],
+  #horse-table td[data-label="Farbe"],
+  #horse-table td[data-label="EKH"] {
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    gap: 0.3rem;
+  }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
