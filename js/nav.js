@@ -80,12 +80,15 @@ async function renderSharedNav(session) {
       const panel = toggle.nextElementSibling;
       const wasOpen = !panel.hidden;
       nav.querySelectorAll('.nav-dropdown-menu').forEach((p) => { p.hidden = true; });
+      nav.querySelectorAll('.nav-dropdown-toggle').forEach((t) => { t.classList.remove('open'); });
       panel.hidden = wasOpen;
+      toggle.classList.toggle('open', !wasOpen);
     });
   });
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.nav-dropdown')) {
       nav.querySelectorAll('.nav-dropdown-menu').forEach((p) => { p.hidden = true; });
+      nav.querySelectorAll('.nav-dropdown-toggle').forEach((t) => { t.classList.remove('open'); });
     }
   });
 
