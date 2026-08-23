@@ -295,7 +295,7 @@ function renderTagCheckboxes() {
     <label class="tag-checkbox-row">
       <input type="checkbox" data-tag-checkbox="${escapeHtml(label)}" />
       <span class="tag-dot" style="background:${color}"></span>
-      ${escapeHtml(label)}
+      <span class="tag-checkbox-label">${escapeHtml(label)}</span>
       <input type="text" class="tag-note-input" data-tag-note="${escapeHtml(label)}" placeholder="Zusatz (optional)" disabled />
     </label>
   `).join('');

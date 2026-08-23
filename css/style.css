@@ -798,9 +798,14 @@ td.keep-foal-cell { white-space: nowrap; }
 /* Schlagwort-Zuweisung im Pferd-Formular (horse.html) - je Zeile eine
    Checkbox mit Farbpunkt und optionalem Zusatztext-Feld. */
 .tag-checkbox-list { display: flex; flex-direction: column; gap: 0.4rem; margin: 0.6rem 0; }
-.tag-checkbox-row { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; }
+.tag-checkbox-row { display: flex; align-items: center; gap: 0.5rem; font-weight: normal; padding: 0.3rem 0.2rem; }
 .tag-checkbox-row input[type="checkbox"] { width: auto; }
 .tag-dot { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; flex-shrink: 0; }
+/* Feste Breite, damit die Zusatz-Eingabefelder aller Zeilen unabhängig
+   von der jeweiligen Schlagwort-Textlänge (z.B. "Verkauf" vs.
+   "Reserviert") an derselben Position beginnen (siehe .lbl in
+   MixDNeuesPferd.dc.html). */
+.tag-checkbox-label { font-size: 0.82rem; font-weight: 600; width: 5.6rem; flex-shrink: 0; }
 .tag-checkbox-row .tag-note-input { flex: 1; min-width: 120px; max-width: 260px; }
 
 /* --- Form --- Fest 3 gleich breite Spalten (statt frei umbrechend), wie
