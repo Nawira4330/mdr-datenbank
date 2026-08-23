@@ -1195,16 +1195,17 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
     padding: 0;
   }
   #horse-table td[data-label="Link"]::before { content: none; }
-  /* flex-basis 9rem statt 0% (siehe Kommentar bei td[data-label="Name"]
+  /* flex-basis 30rem statt 0% (siehe Kommentar bei td[data-label="Name"]
      im @media(max-width:900px)-Block oben) - mit Basis 0% unterschätzt
      der Umbruch-Algorithmus Names hypothetische Breite VOR dem
-     Wachsen-Schritt und lässt "Geschlecht" (nächstes Feld) fälschlich
-     noch auf dieselbe Zeile rutschen, was Name dann auf wenige Pixel
-     quetscht. 9rem ist bewusst größer als der nach Kästchen/Herz/Bild
-     tatsächlich übrig bleibende Platz, damit für Geschlecht rechnerisch
-     nichts mehr frei ist - dank flex-shrink:1 wächst/schrumpft Name
-     trotzdem auf die tatsächlich verfügbare Breite. */
-  #horse-table td[data-label="Name"] { flex: 1 1 9rem; }
+     Wachsen-Schritt und lässt das jeweils nächste Feld (Geschlecht, nach
+     der Kacheln-Umsortierung sogar das kleinere GP) fälschlich noch auf
+     dieselbe Zeile rutschen, was Name dann auf wenige Pixel quetscht.
+     30rem ist bewusst weit größer als jede realistische Kartenbreite,
+     damit garantiert NICHTS mehr auf die Namenszeile passt - dank
+     flex-shrink:1 wächst/schrumpft Name trotzdem auf die tatsächlich
+     verfügbare Breite. */
+  #horse-table td[data-label="Name"] { flex: 1 1 30rem; }
   #horse-table td[data-label="Aktionen"] {
     position: absolute;
     top: 2.55rem;
@@ -1241,14 +1242,17 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   #horse-table td[data-label="Ext"],
   #horse-table td[data-label="Ext%"],
   #horse-table td[data-label="Int"] {
+    order: 0;
     flex: 0 0 calc(25% - 0.45rem);
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     background: var(--th-bg-solid);
+    border: none;
     border-radius: var(--radius);
     padding: 0.35rem 0.15rem;
+    margin: 0.3rem 0;
     gap: 0.1rem;
     font-weight: 700;
   }
@@ -1266,36 +1270,72 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   }
 
   /* Übrige Felder zu zweit pro Zeile statt einzeln (label/wert nah
-     beieinander statt über die ganze Spaltenbreite verteilt), Farbe/EKH
-     über die volle Breite (wie .kv-grid im Design-Vorschlag) - Zuletzt
-     bearbeitet+Besitzer landen als letztes Paar dadurch automatisch
-     zusammen in einer gemeinsamen letzten Zeile (card-foot). Exakter
-     calc()-Wert aus demselben Grund wie bei GP & Co. oben - sonst
-     rutscht z.B. eine der vier Kennzahlen-Kacheln mit auf dieselbe Zeile
-     wie Genetik/HLP-SLP statt die beiden Gruppen sauber zu trennen. */
+     beieinander statt über die ganze Spaltenbreite verteilt wie beim
+     Rest der Karte), Farbe/EKH über die volle Breite (wie .kv-grid im
+     Design-Vorschlag) - explizite order-Werte statt der Feldreihenfolge
+     aus rowHtml, damit die Paare genau wie im Design-Vorschlag
+     zusammenstehen (Geschlecht+Rasse, Genetik+ZZL, Alter+HLP/SLP), statt
+     wie die Datenbank-Spalten es zufällig hergeben. Kein Trennstrich
+     mehr unter jedem einzelnen Feld (border-bottom:none) - das kam
+     bisher von der allgemeinen th/td-Regel für die Desktop-Tabelle und
+     sah in der Kartenansicht wie ein Strich unter jeder einzelnen Zeile
+     aus statt der sauberen, linienlosen Liste im Design-Vorschlag. */
   #horse-table td[data-label="Geschlecht"],
   #horse-table td[data-label="Rasse"],
-  #horse-table td[data-label="HLP/SLP"],
+  #horse-table td[data-label="Genetik"],
   #horse-table td[data-label="ZZL"],
   #horse-table td[data-label="Alter"],
-  #horse-table td[data-label="Zuletzt bearbeitet"],
-  #horse-table td[data-label="Besitzer"] {
+  #horse-table td[data-label="HLP/SLP"] {
     flex: 0 0 calc(50% - 0.3rem);
     justify-content: flex-start;
     gap: 0.3rem;
+    border-bottom: none;
+    padding: 0.2rem 0;
   }
-  /* Genetik/Farbe/EKH über die volle Breite statt zu zweit - Genetik hat
-     im Feldreihenfolge keinen direkten 2er-Partner (die Kacheln-Gruppe
-     GP/Ext/Ext%/Int folgt direkt danach), eine eigene Zeile verhindert,
-     dass es sich stattdessen neben zwei der vier Kacheln quetscht und
-     ihnen den Platz für die Vierergruppe wegnimmt. */
-  #horse-table td[data-label="Genetik"],
   #horse-table td[data-label="Farbe"],
   #horse-table td[data-label="EKH"] {
     flex: 0 0 100%;
     justify-content: flex-start;
     gap: 0.3rem;
+    border-bottom: none;
+    padding: 0.2rem 0;
   }
+  #horse-table td[data-label="Geschlecht"] { order: 1; }
+  #horse-table td[data-label="Rasse"] { order: 2; }
+  #horse-table td[data-label="Genetik"] { order: 3; }
+  #horse-table td[data-label="ZZL"] { order: 4; }
+  #horse-table td[data-label="Farbe"] { order: 5; }
+  #horse-table td[data-label="Alter"] { order: 6; }
+  #horse-table td[data-label="HLP/SLP"] { order: 7; }
+  #horse-table td[data-label="EKH"] { order: 8; }
+
+  /* Besitzer + Zuletzt bearbeitet als gemeinsame Fußzeile der Karte
+     (wie im Design-Vorschlag) statt zweier gewöhnlicher Kacheln-Felder -
+     eigene, dezentere Optik (kein fetter Wert, kein Label-Präfix vor dem
+     Zeitstempel) mit Trennstrich darüber. */
+  #horse-table td[data-label="Besitzer"],
+  #horse-table td[data-label="Zuletzt bearbeitet"] {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.2rem 0;
+  }
+  /* border-top auf beiden statt nur auf Besitzer - da beide eigene,
+     auto-breite Flex-Items in derselben Zeile sind (kein gemeinsamer
+     Container für einen einzelnen durchgehenden Strich), ergeben zwei
+     gleich hohe Trennstriche nebeneinander optisch eine durchgehende
+     Linie über der ganzen Fußzeile. */
+  #horse-table td[data-label="Besitzer"],
+  #horse-table td[data-label="Zuletzt bearbeitet"] {
+    border-top: 1px solid var(--border);
+    margin-top: 0.4rem;
+    padding-top: 0.5rem;
+  }
+  #horse-table td[data-label="Besitzer"] { order: 9; flex-grow: 1; }
+  #horse-table td[data-label="Besitzer"]::before { content: "Besitzer:"; }
+  #horse-table td[data-label="Zuletzt bearbeitet"] { order: 10; }
+  #horse-table td[data-label="Zuletzt bearbeitet"]::before { content: none; }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
