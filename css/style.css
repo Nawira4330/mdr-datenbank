@@ -634,6 +634,7 @@ details.collapsible > summary {
   font-weight: 700;
   font-size: 0.85rem;
 }
+details.collapsible > summary .hint-badge { font-weight: 400; color: var(--muted); font-size: 0.78rem; }
 details.collapsible > summary::-webkit-details-marker { display: none; }
 details.collapsible > summary::after { content: '▾'; margin-left: auto; font-size: 0.7rem; color: var(--muted); }
 details.collapsible[open] > summary { border-bottom: 1px solid var(--border); }
@@ -824,9 +825,17 @@ fieldset {
   padding: 0.8rem 1rem 1rem;
   background: var(--surface);
 }
+/* Klein/fett/GROSSBUCHSTABEN/gesperrt wie im Design-Vorschlag (z.B.
+   MixDSettings) - galt bisher nur für .filter-group-title in der
+   Übersicht, nicht für <legend> selbst, obwohl das Muster in JEDEM
+   Formular-Fieldset der App auftaucht (Einstellungen, Neues Pferd,
+   Verpaarung, Pferd ansehen). */
 legend {
   padding: 0.1rem 0.5rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--accent-dark);
   background: var(--surface);
   border-radius: 4px;

@@ -587,11 +587,16 @@ function wireCompareAvg() {
     panel.hidden = !toggle.checked;
     compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
     renderCompareAvgValues();
+    updateCompareHintBadge();
     await loadHorses();
   });
   ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
-    document.querySelector(sel).addEventListener('change', recompute);
+    document.querySelector(sel).addEventListener('change', async () => {
+      updateCompareHintBadge();
+      await recompute();
+    });
   });
+  updateCompareHintBadge();
   toleranceToggle.addEventListener('change', async () => {
     compareToleranceEnabled = toleranceToggle.checked;
     renderCompareAvgValues();
@@ -1112,9 +1117,65 @@ function wireFilterForm() {
     resetCheckDropdown('f-ekh-drop');
     resetCheckDropdown('f-genetik-drop');
     resetCheckDropdown('f-tag-drop');
+    updateFilterHintBadge();
     loadHorses();
   });
   document.querySelector('#only-my-horses-btn').addEventListener('click', onOnlyMyHorses);
+  // "— N aktiv (Feld)"-Hinweis neben "🔍 Filter" (siehe MixD.dc.html) - auf
+  // jede Eingabe/Auswahl im Formular reagieren, nicht erst beim Filtern
+  // (Submit), damit der Hinweis den tatsächlichen Feldinhalt widerspiegelt.
+  document.querySelector('#filter-form').addEventListener('input', updateFilterHintBadge);
+  document.querySelector('#filter-form').addEventListener('change', updateFilterHintBadge);
+  updateFilterHintBadge();
+}
+
+// Menschlich lesbare Bezeichnungen der aktuell aktiven (vom Standard
+// abweichenden) Filterfelder, für den Hinweis-Badge neben "🔍 Filter".
+function activeFilterDescriptions() {
+  const val = (sel) => document.querySelector(sel).value;
+  const list = [];
+  if (val('#f-name').trim()) list.push('Name');
+  if (val('#f-owner')) list.push('Besitzer');
+  if (val('#f-gender')) list.push('Geschlecht');
+  if (val('#f-breed')) list.push('Rasse');
+  if (val('#f-zzl')) list.push('ZZL');
+  if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
+  if (getCheckDropdownSelected('f-tag-drop').length) list.push('Schlagwörter');
+  if (getCheckDropdownSelected('f-genetik-drop').length) list.push('Genetik');
+  if (getCheckDropdownSelected('f-ekh-drop').length) list.push('EKH');
+  if (val('#f-gp-val') !== '') list.push('GP');
+  if (val('#f-ext-val') !== '') list.push('Ext');
+  if (val('#f-extpct-val') !== '') list.push('Ext%');
+  if (val('#f-int-val') !== '') list.push('Int');
+  return list;
+}
+
+function updateFilterHintBadge() {
+  const badge = document.querySelector('#filter-hint-badge');
+  const active = activeFilterDescriptions();
+  if (!active.length) {
+    badge.textContent = '';
+  } else if (active.length === 1) {
+    badge.textContent = `— 1 aktiv (${active[0]})`;
+  } else {
+    badge.textContent = `— ${active.length} aktiv`;
+  }
+}
+
+// Hinweis-Badge neben "📊 Ø-Vergleich" (siehe MixD.dc.html): zeigt bei
+// aktiviertem Vergleich die gewählte Vergleichsbasis an, sonst leer.
+function updateCompareHintBadge() {
+  const badge = document.querySelector('#compare-hint-badge');
+  if (!document.querySelector('#compare-avg-toggle').checked) {
+    badge.textContent = '';
+    return;
+  }
+  const parts = [];
+  ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
+    const el = document.querySelector(sel);
+    if (el.value) parts.push(el.selectedOptions[0].textContent);
+  });
+  badge.textContent = `— an, Basis: ${parts.length ? parts.join('/') : 'alle'}`;
 }
 
 // Setzt den Besitzer-Filter auf das eigene Konto - Groß-/Kleinschreibung
@@ -1255,6 +1316,8 @@ async function applyFilterState(state) {
   document.querySelector('#cmp-gender').value = state.cmpGender || '';
   compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
   renderCompareAvgValues();
+  updateFilterHintBadge();
+  updateCompareHintBadge();
 
   loadHorses();
 }
