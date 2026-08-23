@@ -324,6 +324,7 @@ label {
   padding: 2rem;
   width: 100%;
   max-width: 360px;
+  box-shadow: 0 10px 30px rgba(30,60,20,0.12);
 }
 .auth-box h1 { margin-top: 0; font-family: var(--font-heading); font-weight: 400; font-size: 1.8rem; color: var(--accent); }
 .auth-box form { display: flex; flex-direction: column; }
