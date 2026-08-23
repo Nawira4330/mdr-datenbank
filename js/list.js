@@ -624,12 +624,12 @@ function renderCompareAvgValues() {
     return;
   }
   const part = (label, value, decimals, suffix, tolerance) => {
-    if (value == null) return `${label}: –`;
+    if (value == null) return `${label} <b>–</b>`;
     const val = value.toFixed(decimals) + (suffix || '');
     const tolText = tolerance ? ` (±${tolerance.toFixed ? tolerance.toFixed(decimals) : tolerance}${suffix || ''})` : '';
-    return `${label}: ${val}${tolText}`;
+    return `${label} <b>${val}${tolText}</b>`;
   };
-  el.textContent = [
+  el.innerHTML = [
     part('Ø GP', compareBaseline.gp, 0, '', effectiveTolerance('gp')),
     part('Ø Ext', compareBaseline.ext, 2, '', effectiveTolerance('ext')),
     part('Ø Ext%', compareBaseline.extPercent, 0, '%', effectiveTolerance('extPercent')),

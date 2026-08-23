@@ -511,7 +511,8 @@ label {
   align-self: center;
 }
 .compare-tolerance-toggle input[type="checkbox"] { width: auto; margin: 0; }
-.compare-avg-values { flex-basis: 100%; }
+.compare-avg-values { flex-basis: 100%; color: var(--text); }
+.compare-avg-values b { color: var(--text); font-weight: 700; }
 
 /* Farb-Legende für den Ø-Vergleich (grün/teal/rot, siehe cmpClass) - macht
    die Bedeutung der Einfärbung in der Tabelle direkt sichtbar, ohne den
