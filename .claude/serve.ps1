@@ -24,6 +24,9 @@ while ($listener.IsListening) {
       if (-not $contentType) { $contentType = 'application/octet-stream' }
       $bytes = [System.IO.File]::ReadAllBytes($filePath)
       $res.ContentType = $contentType
+      $res.Headers.Add('Cache-Control', 'no-cache, no-store, must-revalidate')
+      $res.Headers.Add('Pragma', 'no-cache')
+      $res.Headers.Add('Expires', '0')
       $res.ContentLength64 = $bytes.Length
       $res.OutputStream.Write($bytes, 0, $bytes.Length)
     } else {
