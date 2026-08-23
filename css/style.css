@@ -460,7 +460,19 @@ label {
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 0 0.6rem;
 }
-.filter-bar .field label { margin-top: 0; }
+/* Feldbeschriftungen in Filterleisten (Übersicht/Durchschnitt/
+   Verpaarung) klein/fett/GROSSBUCHSTABEN statt normaler Label-Optik -
+   durchgängig so in allen Filter-Mockups (.field label in
+   MixDDurchschnitt.dc.html/MixDVerpaarung.dc.html, .filter-row-label in
+   MixD.dc.html), auch wenn die Chip-basierte Filterstruktur von MixD.dc.html
+   selbst laut Nutzerentscheidung nicht übernommen wurde. */
+.filter-bar .field label {
+  margin-top: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
 .filter-bar .actions {
   flex-basis: 100%;
   display: flex;
