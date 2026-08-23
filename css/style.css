@@ -804,6 +804,11 @@ td.keep-foal-cell { white-space: nowrap; }
    exakt 4 Toleranz-Feldern im Design-Vorschlag (MixDSettings.dc.html). */
 .form-grid.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
 
+/* Gespeicherte Filter-/Sortier-Vorlagen (einstellungen.html, siehe
+   loadFilterPresetsList/loadSortPresetsList in js/einstellungen.js). */
+.list-row { display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0; }
+.list-row span { flex: 1; font-size: 0.85rem; }
+
 /* Checkbox-Liste (z.B. Rassen-Auswahl in einstellungen.html) - anders als
    .form-grid keine Label/Input-Paare in Spalten, sondern frei umbrechende
    Einzel-Checkboxen. */

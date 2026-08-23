@@ -101,8 +101,8 @@ async function loadFilterPresetsList() {
     return;
   }
   container.innerHTML = data.map((p) =>
-    `<div style="display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0;">
-      <span style="flex: 1;">${escapeHtml(p.name)}</span>
+    `<div class="list-row">
+      <span>${escapeHtml(p.name)}</span>
       <button type="button" class="danger small" data-delete-preset="${p.id}">Löschen</button>
     </div>`
   ).join('');
@@ -152,8 +152,8 @@ async function loadSortPresetsList() {
     return;
   }
   container.innerHTML = data.map((p) =>
-    `<div style="display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0;">
-      <span style="flex: 1;">${escapeHtml(p.name)}</span>
+    `<div class="list-row">
+      <span>${escapeHtml(p.name)}</span>
       <button type="button" class="danger small" data-delete-sort-preset="${p.id}">Löschen</button>
     </div>`
   ).join('');
