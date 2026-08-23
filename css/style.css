@@ -799,6 +799,11 @@ td.keep-foal-cell { white-space: nowrap; }
   gap: 0 1rem;
 }
 
+/* Ø-Vergleich-Toleranz (einstellungen.html): immer genau 4 gleich breite
+   Spalten statt frei umbrechend wie .form-grid sonst - passend zu den
+   exakt 4 Toleranz-Feldern im Design-Vorschlag (MixDSettings.dc.html). */
+.form-grid.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
 /* Checkbox-Liste (z.B. Rassen-Auswahl in einstellungen.html) - anders als
    .form-grid keine Label/Input-Paare in Spalten, sondern frei umbrechende
    Einzel-Checkboxen. */
@@ -811,7 +816,8 @@ td.keep-foal-cell { white-space: nowrap; }
    echtem Drag&Drop, damit die Reihenfolge auch auf dem Handy zuverlässig
    verschiebbar bleibt (native Drag-Events sind auf Touch unzuverlässig). */
 .dashboard-tile-list { display: flex; flex-direction: column; gap: 2px; margin: 0.6rem 0; }
-.dashboard-tile-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.2rem; }
+.dashboard-tile-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.2rem; border-radius: 6px; }
+.dashboard-tile-row:hover { background: rgba(107,157,0,0.05); }
 .dashboard-tile-row label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin: 0; }
 .dashboard-tile-row input[type="checkbox"] { width: auto; }
 .dashboard-tile-move { display: flex; gap: 2px; }
@@ -1175,6 +1181,7 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   .dashboard-tile { min-width: 0; }
 
   /* --- Formular (horse.html) --- */
+  .form-grid.form-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .form-actions { flex-direction: column; }
   .form-actions .push-right { margin-left: 0; }
   .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
