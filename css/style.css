@@ -803,16 +803,20 @@ td.keep-foal-cell { white-space: nowrap; }
 .tag-dot { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; flex-shrink: 0; }
 .tag-checkbox-row .tag-note-input { flex: 1; min-width: 120px; max-width: 260px; }
 
-/* --- Form --- */
+/* --- Form --- Fest 3 gleich breite Spalten (statt frei umbrechend), wie
+   durchgängig in den Design-Vorschlägen für Formulare mit Feldern fester
+   Breite (MixDNeuesPferd/MixDVerpaarung/MixDProfil.dc.html). Auf schmalen
+   Bildschirmen (siehe @media weiter unten) auf 1 Spalte reduziert. */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 0 1rem;
 }
 
-/* Ø-Vergleich-Toleranz (einstellungen.html): immer genau 4 gleich breite
-   Spalten statt frei umbrechend wie .form-grid sonst - passend zu den
-   exakt 4 Toleranz-Feldern im Design-Vorschlag (MixDSettings.dc.html). */
+/* Ø-Vergleich-Toleranz (einstellungen.html): 4 statt 3 gleich breite
+   Spalten - passend zu den exakt 4 Toleranz-Feldern im Design-Vorschlag
+   (MixDSettings.dc.html), das dort ausnahmsweise .form-grid-4 statt des
+   generischen .form-grid nutzt. */
 .form-grid.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 /* Gespeicherte Filter-/Sortier-Vorlagen (einstellungen.html, siehe
@@ -874,11 +878,11 @@ legend {
 .tab-btn {
   background: none;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   border-radius: 0;
   margin-bottom: -2px;
   padding: 0.6rem 1rem;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--muted);
 }
@@ -1092,6 +1096,11 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   .checkdrop-panel { max-width: calc(100vw - 3rem); }
   .nav-dropdown-menu { max-width: calc(100vw - 3rem); }
 
+  /* 3 feste Spalten (siehe .form-grid weiter unten) sind auf Tablet-
+     Breite zu eng für längere Werte (z.B. Fellfarbe) - 2 Spalten statt
+     dessen, auf dem Handy (@media max-width:640px) weiter unten dann 1. */
+  .form-grid { grid-template-columns: repeat(2, 1fr); }
+
   .mobile-select-all { display: inline-flex; }
   .mobile-sort { display: inline-flex; }
 
@@ -1235,6 +1244,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   .avg-stats { grid-template-columns: repeat(2, 1fr); }
 
   /* --- Formular (horse.html) --- */
+  .form-grid { grid-template-columns: 1fr; }
   .form-grid.form-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .form-actions { flex-direction: column; }
   .form-actions .push-right { margin-left: 0; }
