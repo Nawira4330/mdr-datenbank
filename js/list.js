@@ -7,6 +7,11 @@ let pendingDeleteIds = [];
 // startet wie bisher ungefiltert (dann greift höchstens noch
 // LAST_SORT_STORAGE_KEY als Fallback für die Sortierung, siehe init()).
 let defaultFilterPresetId = null;
+// Id der in den Einstellungen gewählten Standard-Sortier-Vorlage (siehe
+// migration_030_default_sort_preset.sql) - null = keine. Greift nur, wenn
+// KEINE Standard-Filtervorlage gesetzt ist (die bringt ihre eigene
+// Sortierung schon mit), siehe applyInitialFilterState().
+let defaultSortPresetId = null;
 // localStorage-Schlüssel für die zuletzt manuell gewählte Sortierung
 // (Spaltenklick oder mobiles Sortier-Dropdown, siehe wireSortableHeaders) -
 // rein geräte-lokal (kein Server-Roundtrip bei jedem Klick nötig), wird nur
@@ -35,6 +40,14 @@ let compareToleranceEnabled = true;
 // Eingeloggtes Konto - wird u.a. von saveFilterPreset() gebraucht (siehe
 // wireFilterPresets), sonst nur lokal in init() gebraucht.
 let currentSession = null;
+// Als Favorit markierte Pferde-IDs des eingeloggten Kontos (siehe
+// migration_031_favorites_dashboard_tiles.sql) - rein persönlich, wirkt
+// sich nur auf das ☆/★-Symbol in rowHtml und die "Favoriten"-Kachel aus.
+let favoriteHorseIds = new Set();
+// Sichtbarkeit/Reihenfolge der Kennzahlen-Kacheln (siehe
+// migration_031_favorites_dashboard_tiles.sql, renderDashboardTiles) -
+// leer = DEFAULT_DASHBOARD_TILES.
+let dashboardTiles = [];
 // Benutzername (vor dem @) des eingeloggten Kontos - fuer den
 // "Nur meine"-Schnellfilter beim Besitzer (siehe onOnlyMyHorses).
 let currentIdentity = null;
@@ -56,6 +69,7 @@ async function init() {
   wireFilterForm();
   wireSortableHeaders();
   wireSelection();
+  wireFavorites();
   wireCheckDropdowns();
   wireDeleteModal();
   wireExportCsv();
@@ -79,9 +93,11 @@ async function init() {
 // 1. Standard-Filtervorlage aus den Einstellungen (siehe
 //    defaultFilterPresetId/migration_028), falls gesetzt - bringt ihre
 //    eigene, mit gespeicherte Sortierung gleich mit.
-// 2. Sonst die zuletzt manuell gewählte Sortierung aus diesem Browser
+// 2. Sonst die Standard-Sortier-Vorlage aus den Einstellungen (siehe
+//    defaultSortPresetId/migration_030), falls gesetzt - ohne Filter.
+// 3. Sonst die zuletzt manuell gewählte Sortierung aus diesem Browser
 //    (siehe LAST_SORT_STORAGE_KEY/saveLastSort), ohne Filter.
-// 3. Sonst der Programmstandard (Name aufsteigend, keine Filter).
+// 4. Sonst der Programmstandard (Name aufsteigend, keine Filter).
 async function applyInitialFilterState() {
   if (defaultFilterPresetId) {
     const { data, error } = await supabaseClient
@@ -97,6 +113,26 @@ async function applyInitialFilterState() {
       if ([...presetSelect.options].some((o) => o.value === defaultFilterPresetId)) {
         presetSelect.value = defaultFilterPresetId;
       }
+      return;
+    }
+  }
+
+  if (defaultSortPresetId) {
+    const { data, error } = await supabaseClient
+      .from('sort_presets')
+      .select('sort_field, sort_dir')
+      .eq('id', defaultSortPresetId)
+      .maybeSingle();
+    if (!error && data?.sort_field) {
+      currentSort = { field: data.sort_field, dir: data.sort_dir };
+      syncMobileSortControls();
+      // Zeigt in "Sortierung laden…" an, welche Vorlage gerade aktiv ist -
+      // nur kosmetisch, wirkt sich nicht auf die Sortierung selbst aus.
+      const sortPresetSelect = document.querySelector('#sort-preset-select');
+      if ([...sortPresetSelect.options].some((o) => o.value === defaultSortPresetId)) {
+        sortPresetSelect.value = defaultSortPresetId;
+      }
+      await loadHorses();
       return;
     }
   }
@@ -122,12 +158,15 @@ async function applyInitialFilterState() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances, default_filter_preset_id')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
   compareTolerances = (!error && data?.compare_tolerances) || {};
   defaultFilterPresetId = (!error && data?.default_filter_preset_id) || null;
+  defaultSortPresetId = (!error && data?.default_sort_preset_id) || null;
+  favoriteHorseIds = new Set((!error && data?.favorite_horse_ids) || []);
+  dashboardTiles = mergeDashboardTiles(!error ? data?.dashboard_tiles : null);
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -397,6 +436,13 @@ async function populateFilterOptions() {
   if (error || !data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
+  // Für das Freitextfeld "Besitzer wechseln" (siehe wireBulkOwnerChange) -
+  // schlägt bekannte Besitzernamen vor, erlaubt aber auch neue.
+  const knownOwners = document.querySelector('#known-owners');
+  if (knownOwners) {
+    knownOwners.innerHTML = [...new Set(data.map((d) => d.owner).filter(Boolean))].sort()
+      .map((o) => `<option value="${escapeHtml(o)}"></option>`).join('');
+  }
   fillSelect('#f-gender', [...new Set(data.map((d) => d.gender).filter(Boolean))].sort());
   // Kürzel wie "APH" werden zusätzlich auf den vollen Namen normalisiert
   // (siehe normalizeBreed), falls noch nicht normalisierte Altdaten
@@ -896,22 +942,23 @@ function applySort(rows) {
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
-  tbody.innerHTML = '<tr><td colspan="19">Lade…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="20">Lade…</td></tr>';
   selectedIds = new Set();
   updateBulkBar();
 
   const { data, error } = await buildQuery();
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="19" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
 
   const filtered = applySort(applyClientFilters(data));
+  renderDashboardTiles(filtered);
 
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="19">Keine Pferde gefunden.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="20">Keine Pferde gefunden.</td></tr>';
     countEl.textContent = '0 Pferde';
     return;
   }
@@ -957,9 +1004,11 @@ function rowHtml(h) {
     ? `<a href="view.html?id=${h.id}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
     : '';
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
+  const isFavorite = favoriteHorseIds.has(h.id);
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
+    <td data-label="Favorit"><button type="button" class="icon-btn favorite-btn${isFavorite ? ' is-favorite' : ''}" data-favorite="${h.id}" title="${isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}">${isFavorite ? '★' : '☆'}</button></td>
     <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
@@ -974,9 +1023,9 @@ function rowHtml(h) {
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
-    <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
     <td data-label="Alter">${h.birthdate ? escapeHtml(formatAge(h.birthdate)) : ''}</td>
     <td data-label="Zuletzt bearbeitet">${h.updated_at ? escapeHtml(formatTimestamp(h.updated_at)) : ''}</td>
+    <td data-label="Besitzer" title="${escapeHtml(h.owner || '')}">${escapeHtml(h.owner || '')}</td>
     <td data-label="Aktionen" class="actions-cell">
       <a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a>
       <button class="danger icon-btn" data-delete="${h.id}" title="Löschen">✗</button>
@@ -1325,6 +1374,154 @@ function wireSelection() {
   document.querySelector('#bulk-tag-btn').addEventListener('click', () => onBulkTag('add'));
   document.querySelector('#bulk-tag-remove-btn').addEventListener('click', () => onBulkTag('remove'));
   wireBulkTagModal();
+  wireBulkOwnerChange();
+}
+
+// --- Besitzer wechseln (mehrere ausgewählte Pferde auf einmal) ---
+
+function wireBulkOwnerChange() {
+  document.querySelector('#bulk-owner-btn').addEventListener('click', onBulkOwnerChange);
+  document.querySelector('#bulk-owner-cancel').addEventListener('click', () => {
+    document.querySelector('#bulk-owner-modal').hidden = true;
+  });
+  document.querySelector('#bulk-owner-confirm').addEventListener('click', confirmBulkOwnerChange);
+}
+
+function onBulkOwnerChange() {
+  const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
+  if (!rows.length) return;
+  document.querySelector('#bulk-owner-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
+  document.querySelector('#bulk-owner-name').value = '';
+  document.querySelector('#bulk-owner-modal').hidden = false;
+}
+
+async function confirmBulkOwnerChange() {
+  const newOwner = document.querySelector('#bulk-owner-name').value.trim();
+  document.querySelector('#bulk-owner-modal').hidden = true;
+  if (!newOwner) return;
+
+  const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
+  const results = await Promise.all(
+    rows.map((row) => supabaseClient.from('horses').update({ owner: newOwner }).eq('id', row.id)),
+  );
+  const failed = results.filter((r) => r.error);
+  if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].error.message}`);
+  await loadHorses();
+}
+
+// --- Favoriten (★/☆-Spalte, siehe migration_031_favorites_dashboard_tiles.sql) ---
+
+// Delegiert auf die Tabelle statt je Zeile einzeln, da loadHorses() das
+// tbody-Innere bei jedem Neuladen komplett neu aufbaut (analog zu
+// wireBulkTagModal).
+function wireFavorites() {
+  document.querySelector('#horse-table tbody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-favorite]');
+    if (btn) onToggleFavorite(btn.dataset.favorite);
+  });
+}
+
+async function onToggleFavorite(id) {
+  if (favoriteHorseIds.has(id)) favoriteHorseIds.delete(id);
+  else favoriteHorseIds.add(id);
+  // Optimistisch: Symbol + Kachel sofort aktualisieren, DB-Fehler zeigt
+  // sich nur per alert() statt die UI wieder zurückzudrehen (bleibt so
+  // einfach wie die übrigen Bulk-Aktionen dieser Seite).
+  const btn = document.querySelector(`[data-favorite="${CSS.escape(id)}"]`);
+  if (btn) {
+    const isFavorite = favoriteHorseIds.has(id);
+    btn.classList.toggle('is-favorite', isFavorite);
+    btn.textContent = isFavorite ? '★' : '☆';
+    btn.title = isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren';
+  }
+  renderDashboardTiles(lastRenderedRows);
+  const { error } = await supabaseClient
+    .from('user_settings')
+    .upsert({ user_id: currentSession.user.id, favorite_horse_ids: [...favoriteHorseIds] });
+  if (error) alert('Favorit konnte nicht gespeichert werden: ' + error.message);
+}
+
+// --- Dashboard-Kacheln (Kennzahlen über den Filtern, siehe
+// migration_031_favorites_dashboard_tiles.sql und einstellungen.html) ---
+
+// Durchschnitt einer Kennzahl über computeDerived(h)[key], ignoriert
+// Pferde ohne Wert (analog zu avgGp) - gemeinsame Hilfsfunktion für
+// avgExt/avgExtPercent/avgInt unten.
+function avgDerived(rows, key, decimals) {
+  const values = rows.map((h) => computeDerived(h)[key]).filter((v) => v != null);
+  if (!values.length) return '–';
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  return decimals != null ? avg.toFixed(decimals) : String(Math.round(avg));
+}
+
+// Berechnungen je Kachel-Id aus DASHBOARD_TILE_OPTIONS (parser.js) - hier
+// statt dort, da sie Zugriff auf die geladenen Pferde-Zeilen sowie
+// computeDerived/favoriteHorseIds brauchen, die nur in list.js existieren.
+const DASHBOARD_TILE_DEFS = {
+  total: {
+    label: 'Pferde gesamt',
+    compute: (rows) => String(rows.length),
+  },
+  avgGp: {
+    label: 'Ø GP',
+    compute: (rows) => avgDerived(rows, 'gp'),
+  },
+  avgExt: {
+    label: 'Ø Ext',
+    compute: (rows) => avgDerived(rows, 'extAvg', 2),
+  },
+  avgExtPercent: {
+    label: 'Ø Ext%',
+    compute: (rows) => {
+      const result = avgDerived(rows, 'extPercent', 1);
+      return result === '–' ? result : result + '%';
+    },
+  },
+  avgInt: {
+    label: 'Ø Int',
+    compute: (rows) => avgDerived(rows, 'intAvg', 2),
+  },
+  zzl: {
+    label: 'Zur Zucht zugelassen',
+    compute: (rows) => String(rows.filter((h) => h.breeding_allowed).length),
+  },
+  favorites: {
+    label: 'Favoriten',
+    compute: (rows) => String(rows.filter((h) => favoriteHorseIds.has(h.id)).length),
+  },
+  mares: {
+    label: 'Stuten',
+    compute: (rows) => String(rows.filter((h) => h.gender === 'Stute').length),
+  },
+  stallions: {
+    label: 'Hengste',
+    compute: (rows) => String(rows.filter((h) => h.gender === 'Hengst').length),
+  },
+  foals: {
+    label: 'Fohlen',
+    compute: (rows) => String(rows.filter((h) => h.gender === 'Hengstfohlen' || h.gender === 'Stutfohlen').length),
+  },
+  diseaseFree: {
+    label: 'Erbkrankheitsfrei',
+    compute: (rows) => String(rows.filter((h) => h.disease_free === true).length),
+  },
+};
+
+// Zeigt Kennzahlen zur aktuell gefilterten/sortierten Tabelle (rows =
+// lastRenderedRows) - passt sich also mit der Tabelle mit, statt fest den
+// Gesamtbestand zu zeigen. dashboardTiles kommt bereits vollständig
+// (alle bekannten Ids, siehe mergeDashboardTiles in parser.js) und in der
+// vom Konto gewählten Reihenfolge aus loadUserSettings.
+function renderDashboardTiles(rows) {
+  const container = document.querySelector('#dashboard-tiles');
+  if (!container) return;
+  container.innerHTML = dashboardTiles
+    .filter((t) => t.visible && DASHBOARD_TILE_DEFS[t.id])
+    .map((t) => {
+      const def = DASHBOARD_TILE_DEFS[t.id];
+      return `<div class="dashboard-tile"><span class="dashboard-tile-value">${def.compute(rows)}</span><span class="dashboard-tile-label">${escapeHtml(def.label)}</span></div>`;
+    })
+    .join('');
 }
 
 function onRowSelect(id, checked, refreshBar = true) {

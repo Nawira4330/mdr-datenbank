@@ -83,6 +83,14 @@
       <div id="sort-presets-list">
         <p class="muted small">Lade Sortierungen…</p>
       </div>
+      <label for="default-sort-preset-select">Standard-Sortierung beim Öffnen der Übersicht</label>
+      <select id="default-sort-preset-select">
+        <option value="">Keine (letzte Sortierung auf diesem Gerät)</option>
+      </select>
+      <p class="muted small">
+        Greift nur, wenn oben KEINE Standard-Filtervorlage gesetzt ist -
+        die bringt ihre eigene Sortierung schon mit.
+      </p>
     </fieldset>
 
     <fieldset>
@@ -102,6 +110,19 @@
         <div><label for="tolerance-extpct">Ext%-Toleranz</label><input id="tolerance-extpct" type="number" min="0" step="0.01" /></div>
         <div><label for="tolerance-int">Int-Toleranz</label><input id="tolerance-int" type="number" min="0" step="0.01" /></div>
       </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dashboard-Kacheln</legend>
+      <p class="muted small">
+        Legt fest, welche Kennzahlen-Kacheln oben in der Übersicht (über
+        den Filtern) angezeigt werden, und in welcher Reihenfolge. Die
+        Kacheln beziehen sich immer auf die gerade gefilterte/sortierte
+        Tabelle, nicht auf den Gesamtbestand. Mit ▲/▼ verschieben, Häkchen
+        blendet ein/aus - beliebig viele gleichzeitig möglich. Gilt nur für
+        dein eigenes Konto.
+      </p>
+      <div id="dashboard-tile-list" class="dashboard-tile-list"></div>
     </fieldset>
 
     <fieldset>

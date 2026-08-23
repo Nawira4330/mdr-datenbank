@@ -471,9 +471,58 @@ body.hide-delete #bulk-delete-btn {
 .mobile-sort label { margin: 0; }
 .mobile-sort select { width: auto; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
 
+/* Kennzahlen-Kacheln über den Filtern (siehe #dashboard-tiles in
+   index.html, renderDashboardTiles in list.js) - Auswahl/Reihenfolge
+   konfigurierbar in einstellungen.html, siehe
+   migration_031_favorites_dashboard_tiles.sql. */
+.dashboard-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.dashboard-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  min-width: 6rem;
+}
+.dashboard-tile-value { font-size: 1.3rem; font-weight: 600; }
+.dashboard-tile-label { font-size: 0.78rem; color: var(--muted); }
+
+/* Einklappbare Filter/Ø-Vergleich-Bereiche (siehe #filter-details/
+   #compare-avg-details in index.html) - gleiches Muster wie
+   details.paste-box/.missing-data-notice weiter oben/unten. */
+details.collapsible > summary {
+  cursor: pointer;
+  list-style: revert;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+details.collapsible:not([open]) > summary { margin-bottom: 0; }
+
+/* Favoriten-Stern (☆/★-Spalte, siehe data-favorite in list.js) - eigene,
+   dezente Optik statt der Standard-Buttonrahmen, da er in jeder Zeile
+   auftaucht und sonst zu viel Gewicht in der ohnehin schon breiten
+   Tabelle bekäme. */
+.favorite-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.2rem;
+  color: var(--muted);
+}
+.favorite-btn.is-favorite { color: #d9a441; }
+
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html):
-   bei 19 Spalten reicht die Breite unterhalb von ca. 1400px (siehe
+   bei 20 Spalten reicht die Breite unterhalb von ca. 1400px (siehe
    #horse-table min-width weiter unten) nicht mehr, ohne dass Inhalte in
    mehreren Spalten gleichzeitig umbrechen - je nachdem, welche Felder
    bei einem Pferd zufällig länger sind, macht das einzelne Zeilen
@@ -589,6 +638,18 @@ td.keep-foal-cell { white-space: nowrap; }
 .checkbox-list { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; margin: 0.6rem 0; }
 .checkbox-list label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin-top: 0; }
 .checkbox-list input[type="checkbox"] { width: auto; }
+
+/* Dashboard-Kacheln-Auswahl (einstellungen.html, siehe
+   renderDashboardTileList in js/einstellungen.js) - Häkchen + ▲/▼ statt
+   echtem Drag&Drop, damit die Reihenfolge auch auf dem Handy zuverlässig
+   verschiebbar bleibt (native Drag-Events sind auf Touch unzuverlässig). */
+.dashboard-tile-list { display: flex; flex-direction: column; gap: 2px; margin: 0.6rem 0; }
+.dashboard-tile-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.2rem; }
+.dashboard-tile-row label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin: 0; }
+.dashboard-tile-row input[type="checkbox"] { width: auto; }
+.dashboard-tile-move { display: flex; gap: 2px; }
+.dashboard-tile-move button { padding: 0.15rem 0.4rem; font-size: 0.75rem; min-width: 1.8rem; }
+.dashboard-tile-move button:disabled { opacity: 0.3; cursor: default; }
 
 fieldset {
   border: 1px solid var(--border);
@@ -850,6 +911,14 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
     border-bottom: 1px solid var(--border);
   }
   #horse-table td[data-label="Auswählen"]::before { content: none; }
+  #horse-table td[data-label="Favorit"] {
+    order: -1;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Favorit"]::before { content: none; }
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
@@ -888,11 +957,41 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
   #horse-table td.small { font-size: 0.85rem; }
 }
 
+/* Tablet (641-900px): dieselbe Karten-Logik wie beim Handy oben, aber
+   zwei Karten nebeneinander statt einer durchgehenden Liste, und die
+   Felder je Karte brechen zu zweit pro Zeile um statt einzeln - nutzt die
+   zusätzliche Breite, ohne die Handy-spezifischen Regeln oben zu
+   verdoppeln (diese Regeln bauen bewusst nur auf ihnen auf, siehe
+   Nutzer-Feedback "Tabletübersicht wie beim Handy, nur breiter"). */
+@media (min-width: 641px) and (max-width: 900px) {
+  #horse-table tbody { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  #horse-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+    align-content: flex-start;
+  }
+  #horse-table tr:last-child { border-bottom: 1px solid var(--border); }
+  /* Restliche Felder (nicht Auswählen/Favorit/Bild/Name/Aktionen, die
+     bereits oben eine eigene volle Zeile bekommen) zu zweit pro Zeile
+     statt einzeln - dichter als die Handy-Liste, ohne die Beschriftung
+     durch echtes kv-Grid-Markup zu ersetzen. */
+  #horse-table td:not([data-label="Auswählen"]):not([data-label="Favorit"]):not([data-label="Bild"]):not([data-label="Name"]):not([data-label="Aktionen"]) {
+    flex: 1 1 45%;
+  }
+}
+
 @media (max-width: 640px) {
   main.container { padding: 0.75rem; }
   .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
   .topbar h1 { font-size: 1.3rem; }
   .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
+
+  /* Dashboard-Kacheln (siehe #dashboard-tiles weiter oben) - als fester
+     2-Spalten-Grid statt flex-wrap, sonst reißt die letzte Kachel bei
+     ungerader Anzahl allein in eine eigene, unruhige Zeile. */
+  .dashboard-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .dashboard-tile { min-width: 0; }
 
   /* --- Formular (horse.html) --- */
   .form-actions { flex-direction: column; }

@@ -57,6 +57,12 @@ Das ist die Startseite nach dem Anmelden: eine Tabelle mit allen Pferden,
 dazu Filter, Sortierung und die Möglichkeit, mehrere Pferde auf einmal
 auszuwählen.
 
+Über den Filtern zeigen **Kennzahlen-Kacheln** (z.B. „Pferde gesamt”,
+„Ø GP”, „Zur Zucht zugelassen”, „Favoriten”) Zahlen zur gerade
+gefilterten/sortierten Tabelle – nicht zum Gesamtbestand. Welche Kacheln
+in welcher Reihenfolge angezeigt werden, legst du in den
+[Einstellungen](#9-einstellungen) fest.
+
 ### 3.1 Kopfzeile
 
 Oben rechts findest du auf jeder Seite dieselben drei Menüs zum
@@ -139,7 +145,10 @@ klickst oder etwas änderst.
 
 Es gibt drei Filter-Bereiche, die sich beliebig kombinieren lassen. Mit
 „Filtern“ wendest du sie an, mit „Zurücksetzen“ leerst du alle Felder auf
-einmal.
+einmal. Der ganze Filter-Bereich (🔍) lässt sich per Klick auf die
+Überschrift einklappen, ebenso der Ø-Vergleich-Bereich (📊) weiter unten
+– beide merken sich ihren Auf-/Zugeklappt-Zustand nicht über einen
+Seitenwechsel hinaus, der Filter-Bereich startet aber immer aufgeklappt.
 
 **Filter-Vorlagen**: Häufig genutzte Filterkombinationen lassen sich
 als Vorlage speichern – „💾 Als Vorlage speichern“ fragt nach einem
@@ -163,7 +172,10 @@ nur die aktuelle Sortierung (Spalte + Richtung) benannt speichern –
 Speicherst du erneut unter demselben Namen, wird sie überschrieben.
 Über das Dropdown „Sortierung laden…“ wendest du eine gespeicherte
 Sortierung sofort an (ändert nur die Sortierung, keine Filter). Löschen
-geht nur über [Einstellungen](#9-einstellungen).
+geht nur über [Einstellungen](#9-einstellungen), dort lässt sich auch
+eine Sortier-Vorlage als **Standard beim Öffnen** festlegen – sie greift
+aber nur, wenn keine Standard-Filtervorlage gesetzt ist (die bringt ihre
+eigene Sortierung schon mit).
 
 **Suche**
 - **Name** – findet auch Teiltreffer, Groß-/Kleinschreibung spielt keine
@@ -199,17 +211,21 @@ geht nur über [Einstellungen](#9-einstellungen).
 
 ### 3.5 Die Tabelle
 
-Von links nach rechts: Auswahl-Kästchen, Mini-Bild (nur wenn eine
-Bild-URL hinterlegt ist – Klick öffnet die Ansichtsseite), 🔗-Link (nur
-wenn eine Spiel-ID hinterlegt ist – öffnet die Pferdeseite direkt im
-Spiel), Name
+Von links nach rechts: Auswahl-Kästchen, ☆/★-Stern (eigene Favoriten
+markieren, siehe unten), Mini-Bild (nur wenn eine Bild-URL hinterlegt ist
+– Klick öffnet die Ansichtsseite), 🔗-Link (nur wenn eine Spiel-ID
+hinterlegt ist – öffnet die Pferdeseite direkt im Spiel), Name
 (klicken öffnet die Ansichtsseite, siehe [Abschnitt 5](#5-pferd-ansehen))
 mit den zugewiesenen Schlagwörtern als farbige Badges direkt daneben,
 Geschlecht, Rasse, Farbe, Genetik (kurze Zusammenfassung der bekannten
-Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Besitzer, Alter (berechnet
-aus dem Geburtsdatum, siehe [4.2](#42-stammdaten) – 30 reale Tage
-entsprechen dabei 1 Spieljahr) und Zuletzt bearbeitet, sowie Aktionen
+Gene), GP, Ext, Ext%, Int, HLP/SLP, ZZL, EKH, Alter (berechnet aus dem
+Geburtsdatum, siehe [4.2](#42-stammdaten) – 30 reale Tage entsprechen
+dabei 1 Spieljahr), Zuletzt bearbeitet und Besitzer, sowie Aktionen
 (✏️ Bearbeiten immer, ✗ Löschen nur mit Verwaltungszugriff).
+
+**Favoriten**: Klick auf den ☆-Stern markiert ein Pferd als Favorit
+(wird zu ★) – rein persönlich für dein eigenes Konto, wirkt sich nur auf
+dieses Symbol und die „Favoriten“-Kachel über den Filtern aus.
 
 **Sortieren**: Klick auf eine Spaltenüberschrift sortiert die Liste
 danach, ein weiterer Klick dreht die Richtung um. Startrichtung ist bei
@@ -232,6 +248,10 @@ unten rechts ein ↑-Button, der dich direkt wieder an den Anfang bringt.
   andere Schlagwörter bleiben unangetastet. Ein Zusatztext (siehe
   [4.3](#43-weitere-angaben)) lässt sich dabei nicht mitgeben – dafür das
   Pferd einzeln bearbeiten.
+- **Mehreren Pferden auf einmal den Besitzer ändern** – Kästchen anhaken,
+  „🔄 Besitzer wechseln“ öffnet ein Popup mit einem Textfeld (schlägt
+  bereits bekannte Besitzernamen vor, erlaubt aber auch neue); bestätigen
+  überträgt den neuen Besitzer auf alle ausgewählten Pferde.
 - **Mehrere Pferde auf einmal löschen** – über dieselbe Leiste,
   „Ausgewählte löschen“; dieser Button ist nur mit Verwaltungszugriff
   sichtbar.
@@ -681,6 +701,23 @@ Auswahl wird erst mit „Speichern“ unten übernommen.
 **Sortier-Vorlagen**: Liste deiner in der Übersicht gespeicherten,
 benannten Sortierungen (siehe [3.4](#34-filtern-und-suchen)) – unabhängig
 von den Filter-Vorlagen oben. „Löschen“ wirkt sofort und unwiderruflich.
+Darunter legst du mit „Standard-Sortierung beim Öffnen der Übersicht“
+fest, welche Sortierung (falls überhaupt eine) automatisch angewendet
+wird, sobald du die Übersicht öffnest – greift aber nur, wenn oben KEINE
+Standard-Filtervorlage gesetzt ist, da die ihre eigene Sortierung schon
+mitbringt. „Keine“ lässt stattdessen die zuletzt manuell gewählte
+Sortierung auf diesem Gerät greifen (wie bisher). Diese Auswahl wird
+erst mit „Speichern“ unten übernommen.
+
+**Dashboard-Kacheln**: Wähle per Kästchen aus, welche der
+Kennzahlen-Kacheln über den Filtern der
+[Übersicht](#3-übersicht-pferdeliste) angezeigt werden (Pferde gesamt,
+Ø GP, Ø Ext, Ø Ext%, Ø Int, Zur Zucht zugelassen, Favoriten, Stuten,
+Hengste, Fohlen, Erbkrankheitsfrei) – beliebig viele gleichzeitig, nicht
+auf eine feste Anzahl begrenzt. Mit den ▲/▼-Pfeilen legst du zusätzlich
+die Reihenfolge fest, in der die aktivierten Kacheln erscheinen.
+Standardmäßig aktiv sind Pferde gesamt, Ø GP, Zur Zucht zugelassen und
+Favoriten. Diese Auswahl wird erst mit „Speichern” unten übernommen.
 
 **Ø-Vergleich Toleranz**: Beim [Ø-Vergleich](#35-die-tabelle) in der
 Übersicht gilt normalerweise jeder Wert unter dem Durchschnitt als

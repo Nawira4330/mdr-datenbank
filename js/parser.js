@@ -1128,6 +1128,43 @@ function tagColor(label) {
   return HORSE_TAG_OPTIONS.find((t) => t.label === label)?.color || 'var(--muted)';
 }
 
+// Verfügbare Kennzahlen-Kacheln für die Übersicht (siehe #dashboard-tiles
+// in index.html, DASHBOARD_TILE_DEFS in list.js) - hier nur Id+Label+
+// Standardsichtbarkeit, da die eigentliche Berechnung je Kachel Zugriff
+// auf die geladenen Pferde-Zeilen braucht (nur in list.js vorhanden).
+// Wird sowohl in list.js (Rendern) als auch einstellungen.js (Auswahl +
+// Reihenfolge konfigurieren) als gemeinsame Referenzliste gebraucht, damit
+// neu hinzugekommene Kacheln bei bereits gespeicherter Auswahl automatisch
+// (ausgeblendet) ergänzt werden, siehe mergeDashboardTiles.
+const DASHBOARD_TILE_OPTIONS = [
+  { id: 'total', label: 'Pferde gesamt', defaultVisible: true },
+  { id: 'avgGp', label: 'Ø GP', defaultVisible: true },
+  { id: 'avgExt', label: 'Ø Ext', defaultVisible: false },
+  { id: 'avgExtPercent', label: 'Ø Ext%', defaultVisible: false },
+  { id: 'avgInt', label: 'Ø Int', defaultVisible: false },
+  { id: 'zzl', label: 'Zur Zucht zugelassen', defaultVisible: true },
+  { id: 'favorites', label: 'Favoriten', defaultVisible: true },
+  { id: 'mares', label: 'Stuten', defaultVisible: false },
+  { id: 'stallions', label: 'Hengste', defaultVisible: false },
+  { id: 'foals', label: 'Fohlen', defaultVisible: false },
+  { id: 'diseaseFree', label: 'Erbkrankheitsfrei', defaultVisible: false },
+];
+
+// Ergänzt eine gespeicherte Kachel-Auswahl (dashboard_tiles, siehe
+// migration_031_favorites_dashboard_tiles.sql) um neu hinzugekommene
+// Kacheln aus DASHBOARD_TILE_OPTIONS, die darin noch fehlen (angehängt,
+// standardmäßig ausgeblendet außer sie sind neu und defaultVisible) -
+// damit ältere gespeicherte Reihenfolgen nicht durch neue Programmversionen
+// invalidiert werden. Leere/fehlende Auswahl ergibt die Standardauswahl.
+function mergeDashboardTiles(stored) {
+  const result = (stored || []).filter((t) => DASHBOARD_TILE_OPTIONS.some((o) => o.id === t.id));
+  const known = new Set(result.map((t) => t.id));
+  for (const opt of DASHBOARD_TILE_OPTIONS) {
+    if (!known.has(opt.id)) result.push({ id: opt.id, visible: stored?.length ? false : opt.defaultVisible });
+  }
+  return result;
+}
+
 // Rendert die zugewiesenen Schlagwörter eines Pferds als farbige Badges -
 // gemeinsam genutzt von list.js (Übersicht), horseView.js (Ansichtsseite)
 // und horseForm.js (Vorschau im Formular). "escapeHtml" wird erst beim

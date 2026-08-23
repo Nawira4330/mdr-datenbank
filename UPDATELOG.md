@@ -6,6 +6,46 @@ drin.
 
 ---
 
+## 23.08.2026
+
+- **Favoriten, Dashboard-Kacheln, Besitzer wechseln, einklappbare
+  Filter**: die Übersicht bekommt einen ☆/★-Stern je Pferd zum Merken
+  eigener Favoriten, frei konfigurierbare Kennzahlen-Kacheln über den
+  Filtern (Pferde gesamt, Ø GP/Ext/Ext%/Int, ZZL, Favoriten, Stuten,
+  Hengste, Fohlen, Erbkrankheitsfrei - Auswahl und Reihenfolge per ▲/▼ in
+  den [Einstellungen](#9-einstellungen)), einklappbare Filter- und
+  Ø-Vergleich-Bereiche sowie einen neuen Sammel-Button "🔄 Besitzer
+  wechseln" für mehrere ausgewählte Pferde auf einmal. Die Spalte
+  "Besitzer" steht in der Tabelle jetzt ganz hinten, nach "Zuletzt
+  bearbeitet". Die Massenerfassung-Karte ("In dieser Sitzung erfasst")
+  beim Anlegen mehrerer Pferde hintereinander steht jetzt oben statt
+  unten. Migration `migration_031_favorites_dashboard_tiles.sql` einmalig
+  im Supabase-Dashboard ausführen, sonst bleiben Favoriten und
+  Dashboard-Kacheln bei der Standardauswahl.
+- **Bugfix: Stammbaum wurde beim erneuten Einfügen manchmal verkürzt**:
+  wurde beim Bearbeiten eines Pferds der Freitext erneut eingefügt, aber
+  der Stammbaum-Abschnitt diesmal nicht vollständig aufgeklappt (z.B. nur
+  Eltern statt aller 3 Generationen), ersetzte das den bereits
+  vollständig gespeicherten Stammbaum durch den kürzeren. Ein erneutes
+  Einfügen ergänzt/überschreibt den Stammbaum jetzt nur noch, wenn der
+  neue Text mindestens genauso viele Vorfahren liefert wie bereits
+  gespeichert sind - sonst bleibt der bisherige, vollständigere
+  Stammbaum stehen.
+
+---
+
+## 20.08.2026
+
+- **Standard-Sortierung in den Einstellungen**: analog zur
+  Standard-Filtervorlage lässt sich jetzt auch eine der gespeicherten
+  [Sortier-Vorlagen](#9-einstellungen) als Standard beim Öffnen der
+  Übersicht festlegen - greift nur, wenn keine Standard-Filtervorlage
+  gesetzt ist (die bringt ihre eigene Sortierung schon mit). Migration
+  `migration_030_default_sort_preset.sql` einmalig im Supabase-Dashboard
+  ausführen, sonst lässt sich keine Standard-Sortierung speichern.
+
+---
+
 ## 19.08.2026
 
 - **Sortier-Vorlagen**: mehrere eigene, benannte Sortierungen (Spalte +
