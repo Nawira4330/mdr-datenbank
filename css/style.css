@@ -241,7 +241,7 @@ input::placeholder, textarea::placeholder { opacity: 0.5; }
 .view-profile .hero-col .view-actions { justify-content: flex-start; margin-bottom: 0; }
 .view-profile .hero-frame {
   position: relative;
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   min-height: 260px;
