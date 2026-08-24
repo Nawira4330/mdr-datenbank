@@ -343,6 +343,23 @@
       </div>
     </div>
 
+    <!-- Ersatz für window.prompt() (siehe showPromptModal in js/parser.js) -
+         native prompt()-Dialoge werden in manchen Browsern/Kontexten
+         stillschweigend unterdrückt, ohne Fehler und ohne dass überhaupt
+         ein Dialog erscheint (Nutzer-Feedback "als Vorlage speichern geht
+         nicht"). Wiederverwendet für Filter-/Sortier-Vorlage speichern. -->
+    <div id="prompt-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2 id="prompt-modal-title">Eingabe</h2>
+        <label for="prompt-modal-input" id="prompt-modal-label"></label>
+        <input type="text" id="prompt-modal-input" />
+        <div class="modal-actions">
+          <button type="button" id="prompt-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="prompt-modal-ok">OK</button>
+        </div>
+      </div>
+    </div>
+
     <button type="button" id="scroll-top-btn" class="scroll-top-btn" hidden title="Nach oben">↑</button>
   </main>
 

@@ -1429,6 +1429,46 @@ async function fetchAllRows(queryBuilder, pageSize = 1000) {
   return { data: rows, error: null };
 }
 
+// Ersatz für window.prompt() - native prompt()-Dialoge werden in manchen
+// Browsern/Kontexten (z.B. eingebettete Ansichten, manche mobile Browser,
+// nach "Diese Seite daran hindern, weitere Dialoge zu erstellen") ohne
+// jede Fehlermeldung stillschweigend unterdrückt, der Dialog erscheint
+// dann einfach nie (Nutzer-Feedback "als Vorlage speichern geht nicht").
+// Erwartet ein #prompt-modal mit #prompt-modal-title/-label/-input/
+// -ok/-cancel im aktuellen HTML (siehe index.html/verpaarung.html).
+// Verhält sich wie prompt(): löst mit dem eingegebenen Text auf, oder mit
+// null bei "Abbrechen"/Escape.
+function showPromptModal(title, label, defaultValue) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('prompt-modal');
+    document.getElementById('prompt-modal-title').textContent = title;
+    document.getElementById('prompt-modal-label').textContent = label;
+    const input = document.getElementById('prompt-modal-input');
+    const okBtn = document.getElementById('prompt-modal-ok');
+    const cancelBtn = document.getElementById('prompt-modal-cancel');
+    input.value = defaultValue || '';
+    modal.hidden = false;
+    input.focus();
+    input.select();
+
+    const cleanup = () => {
+      modal.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKeydown);
+    };
+    const onOk = () => { const value = input.value; cleanup(); resolve(value); };
+    const onCancel = () => { cleanup(); resolve(null); };
+    const onKeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+      else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    };
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKeydown);
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, gameAgeYearsMonths, matchesTags };
 }

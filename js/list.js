@@ -1421,7 +1421,7 @@ function wireFilterPresets() {
 }
 
 async function saveFilterPreset() {
-  const name = prompt('Name für diese Filter-Vorlage:');
+  const name = await showPromptModal('Vorlage speichern', 'Name für diese Filter-Vorlage:', '');
   if (!name || !name.trim()) return;
   const { error } = await supabaseClient
     .from('filter_presets')
@@ -1475,7 +1475,7 @@ function wireSortPresets() {
 }
 
 async function saveSortPreset() {
-  const name = prompt('Name für diese Sortierung:');
+  const name = await showPromptModal('Sortierung speichern', 'Name für diese Sortierung:', '');
   if (!name || !name.trim()) return;
   const { error } = await supabaseClient
     .from('sort_presets')

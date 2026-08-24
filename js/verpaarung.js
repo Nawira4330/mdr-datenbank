@@ -254,10 +254,11 @@ function rowHtml(p) {
 
 // Abfohldatum nachtraeglich aendern (z.B. per Decksprung-Button aus dem
 // mdr-Planer automatisch auf Verpaarungsdatum + 30 Tage gesetzt, aber
-// spaeter bekannt/korrigiert). Einfaches prompt() statt eigenem Modal,
-// analog zum bestehenden confirm() bei onDeletePairing.
+// spaeter bekannt/korrigiert). showPromptModal statt window.prompt() -
+// letzteres wird in manchen Browsern/Kontexten stillschweigend
+// unterdrueckt (siehe Kommentar bei showPromptModal in parser.js).
 async function onEditDate(pairing) {
-  const input = prompt('Abfohldatum (JJJJ-MM-TT), leer lassen zum Entfernen:', pairing.pairing_date || '');
+  const input = await showPromptModal('Abfohldatum ändern', 'Abfohldatum (JJJJ-MM-TT), leer lassen zum Entfernen:', pairing.pairing_date || '');
   if (input === null) return; // abgebrochen
   const trimmed = input.trim();
   if (trimmed && !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
