@@ -1588,6 +1588,9 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   }
   body.list-page .flash-banner,
   body.list-page .missing-data-notice,
+  body.list-page .dashboard-tiles,
+  body.list-page #filter-details,
+  body.list-page #compare-avg-details,
   body.list-page .filter-bar,
   body.list-page .compare-avg-block,
   body.list-page .list-header {
