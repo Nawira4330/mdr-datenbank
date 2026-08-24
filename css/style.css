@@ -555,7 +555,14 @@ label {
   border-radius: var(--radius);
   padding: 0.4rem;
   min-width: 200px;
-  max-height: 240px;
+  /* 240px reichte bei den größeren Touch-Zeilen (siehe .checkdrop-item
+     unten, @media max-width:640px) nicht mehr für die komplette
+     Schlagwörter-Liste (7 Einträge) - der Rest wurde ohne sichtbare
+     Bildlaufleiste abgeschnitten ("Tags werden abgeschnitten"). Etwas
+     großzügiger, aber weiterhin mit vh-Deckel, damit das Panel auf
+     niedrigen Bildschirmen nicht über den Viewport hinausragt (bei
+     längeren Listen wie Genetik/EKH wird ohnehin weiter gescrollt). */
+  max-height: min(320px, 70vh);
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
