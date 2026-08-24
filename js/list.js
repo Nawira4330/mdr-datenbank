@@ -185,7 +185,10 @@ async function loadUserSettings(session) {
 // computeCustomTileValue) - nur, wenn tatsächlich eigene Kacheln existieren,
 // um den zusätzlichen Request im Normalfall zu vermeiden.
 async function loadAllHorsesCache() {
-  const { data, error } = await supabaseClient.from('horses').select('*');
+  // fetchAllRows statt einer einzelnen .select() - der Gesamtbestand kann
+  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
+  // sonst würden angepinnte Kacheln stillschweigend zu niedrig zählen.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('*'));
   allHorsesCache = !error && data ? data : [];
 }
 

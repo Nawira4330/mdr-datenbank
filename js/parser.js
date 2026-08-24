@@ -1408,6 +1408,27 @@ function setCheckDropdownSelected(rootId, values) {
   updateCheckDropdownLabel(rootId);
 }
 
+// Holt ALLE Zeilen einer Supabase-Abfrage über .range()-Seiten, statt sich
+// auf das serverseitige Standardlimit (PostgREST: 1000 Zeilen je Anfrage)
+// zu verlassen - bei über 1000 Pferden im Gesamtbestand (siehe
+// Nutzerfeedback bei der Pferd-Navigation, "count: 1082" trotz
+// unfilterter Abfrage) fehlten sonst stillschweigend die hintersten
+// Zeilen. queryBuilder muss ein noch nicht ausgeführter Supabase-Query
+// sein (z.B. supabaseClient.from('horses').select('*')) - .range() wird
+// hier je Seite selbst angehängt.
+async function fetchAllRows(queryBuilder, pageSize = 1000) {
+  let rows = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
+    if (error) return { data: rows.length ? rows : null, error };
+    rows = rows.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { data: rows, error: null };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, gameAgeYearsMonths, matchesTags };
 }

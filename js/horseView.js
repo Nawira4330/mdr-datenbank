@@ -169,7 +169,10 @@ async function onNavigateView(direction) {
 
   const field = document.getElementById('nav-sort-field').value || 'name';
   const columns = field === 'gp' ? 'id, name, tournament_potential' : `id, name, ${field}`;
-  const { data, error } = await supabaseClient.from('horses').select(columns);
+  // fetchAllRows statt einer einzelnen .select() - der Gesamtbestand kann
+  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
+  // sonst fehlten die hintersten Pferde beim Blättern stillschweigend.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(columns));
   if (error || !data) {
     errorEl.textContent = 'Navigation fehlgeschlagen.';
     return;
