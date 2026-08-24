@@ -1012,7 +1012,20 @@ details.paste-box:not([open]) > summary { margin-bottom: 0; }
 
 .detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .detail-table th, .detail-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; overflow-wrap: break-word; }
-.detail-table th { color: var(--muted); font-weight: 600; width: 40%; }
+/* Reset der allgemeinen th-Regel (Großbuchstaben/grün/Cursor/Hintergrund
+   - für die sortierbare Übersicht-Kopfzeile gedacht, siehe th weiter
+   unten) - hier dient <th> nur als Stil-Trick für eine fett/dezent
+   hervorgehobene Zeilenbeschriftung, keine echte Tabellen-Kopfzeile. */
+.detail-table th {
+  color: var(--muted);
+  font-weight: 600;
+  width: 40%;
+  background: none;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: default;
+  font-size: inherit;
+}
 
 /* Klick-Button je nicht getestetem Farbgenetik-Locus, um manuell "1x
    vorhanden" / "2x vorhanden" / "nicht vorhanden" / "unbekannt"
