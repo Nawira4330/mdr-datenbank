@@ -6,6 +6,54 @@ drin.
 
 ---
 
+## 24.08.2026
+
+- **Genetik-/EKH-/Schlagwörter-Filter: an- und ausschließen statt nur
+  anwählen**: ein Klick auf eine Option zyklt jetzt zwischen neutral,
+  anwählen (grün) und ausschließen (rot) statt nur an/aus - z.B. gezielt
+  Pferde OHNE ein bestimmtes Merkmal finden. Neues Textfeld
+  "Schlagwort-Notiz" durchsucht zusätzlich die optionalen Zusatztexte der
+  Schlagwörter (z.B. "Bella_99" findet alle mit "Reserviert: Bella_99").
+  Migration `migration_033_custom_dashboard_tiles.sql` (siehe unten) wird
+  hierfür nicht gebraucht, betrifft nur die Kacheln.
+- **Übersicht: Schlagwörter als eigene Spalte**, nicht mehr neben dem
+  Namen. Auf Tablet/Handy stehen sie weiterhin direkt unter dem Namen.
+- **Eigene, angepinnte Dashboard-Kacheln**: in den
+  [Einstellungen](#9-einstellungen) unter Dashboard-Kacheln lässt sich
+  jetzt mit "+ Kachel hinzufügen" eine eigene Kachel anlegen, die
+  entweder das Ergebnis einer gespeicherten Filtervorlage oder direkt
+  gewählter Kriterien (Rasse/Geschlecht/ZZL/Alter) als Anzahl oder als
+  Ø-Wert (GP/Ext/Ext%/Int) zeigt - unabhängig davon, was gerade in der
+  Übersicht gefiltert ist. Kacheln-Text jetzt zentriert, Kachelbreite
+  passt sich der tatsächlichen Anzahl sichtbarer Kacheln an. Migration
+  `migration_033_custom_dashboard_tiles.sql` einmalig ausführen.
+- **Pferd ansehen: Blättern nach Kriterium**: das ←/→-Blättern lässt sich
+  jetzt per Dropdown auf Name/Alter/Zuletzt bearbeitet/GP/Ext/Ext%/Int
+  umstellen (vorher immer alphabetisch), pro Gerät gemerkt. Kontoweiter
+  Standard dafür neu unter Einstellungen → Pferd-Navigation. Rahmen um
+  das Pferdebild entfernt, Schlagwort-Badges dort größer. Migration
+  `migration_032_profile_nav_sort.sql` einmalig ausführen.
+- **Übersicht auf Tablet an Handy angeglichen**: Karten stehen jetzt auch
+  auf Tablet-Breite einzeln untereinander (breiter statt in zwei
+  schmaleren Kacheln nebeneinander), mit identischer Feldaufteilung wie
+  auf dem Handy.
+- **Alter-Anzeige verkürzt**: "19 J, 2 M" statt "19 Jahre, 2 Monate".
+- **Browser-Tab-Icon** (🐴) ergänzt.
+- **Bugfix: Abfragen übersahen Pferde jenseits von 1000**: bei mittlerweile
+  über 1000 Pferden im Gesamtbestand lieferte Supabase bei unfilterten
+  oder breiten Abfragen serverseitig nur die ersten 1000 zurück - betraf
+  u.a. die Übersicht-Tabelle selbst bei weiten Filtern, den
+  Durchschnittsrechner, die Ø-Vergleich-Basis "Alle", Filter-Dropdown-
+  Optionen (Besitzer/Rasse/Genetik/EKH) sowie die Namensvorschläge und
+  den Stammbaum-Abgleich im Verpaarungs-Log. Betroffene Pferde fehlten
+  bisher stillschweigend statt eines Fehlers.
+- **Kleinere Korrekturen**: Stammbaum-Vorfahrennamen erscheinen wieder in
+  korrekter Groß-/Kleinschreibung (waren fälschlich komplett groß);
+  `<legend>`-Beschriftungen app-weit einheitlich klein/fett/groß;
+  Login-Karte mit Schlagschatten; diverse weitere Design-Feinheiten
+  gegenüber dem Design-Vorschlag angeglichen (Filter-Feldbeschriftungen,
+  Ø-Vergleich-Werte, Kacheln-Sortier-Vorlagen-Textgröße u.a.).
+
 ## 23.08.2026
 
 - **Favoriten, Dashboard-Kacheln, Besitzer wechseln, einklappbare
