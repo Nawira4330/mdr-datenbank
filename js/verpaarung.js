@@ -40,7 +40,9 @@ async function init() {
 // angelegten Pferden (keine feste Verknüpfung, damit auch Pferde
 // außerhalb dieser Datenbank eingetragen werden können).
 async function populateHorseNames() {
-  const { data } = await supabaseClient.from('horses').select('name, breed').order('name');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnten Pferde
+  // jenseits der ersten 1000 Zeilen in den Namensvorschlägen fehlen.
+  const { data } = await fetchAllRows(supabaseClient.from('horses').select('name, breed').order('name'));
   const datalist = document.querySelector('#horse-names');
   nameToBreed = new Map();
   (data || []).forEach((h) => {
@@ -57,7 +59,10 @@ async function populateHorseNames() {
 // vollen Namen normalisiert (siehe normalizeBreed), falls noch nicht
 // normalisierte Altdaten vorkommen.
 async function populateBreedFilter() {
-  const { data } = await supabaseClient.from('horses').select('breed');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
+  // Rassen, die nur bei Pferden jenseits der ersten 1000 Zeilen vorkommen,
+  // in der Auswahl fehlen.
+  const { data } = await fetchAllRows(supabaseClient.from('horses').select('breed'));
   const breeds = new Set((data || []).map((h) => normalizeBreed(h.breed)).filter(Boolean));
   breeds.delete('American Paint Horse');
   breeds.delete('Rasselos');
@@ -347,7 +352,9 @@ function closeFoalModal() {
 // als "Fohlen_Mutter X Vater" angelegt und später unter ihrem echten
 // Namen erneut eingetragen wurden.
 async function findPedigreeCandidate(stallion, mare, excludeName) {
-  const { data, error } = await supabaseClient.from('horses').select('id, name, pedigree');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnte ein
+  // passendes Fohlen jenseits der ersten 1000 Zeilen übersehen werden.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('id, name, pedigree'));
   if (error || !data) return null;
   const norm = (s) => (s || '').trim().toLowerCase();
   return data.find((h) => {

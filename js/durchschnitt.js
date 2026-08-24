@@ -12,7 +12,10 @@ async function init() {
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('owner, gender, breed');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
+  // Besitzer-/Rasse-Werte, die nur bei Pferden jenseits der ersten 1000
+  // Zeilen vorkommen, in den Filter-Dropdowns fehlen.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('owner, gender, breed'));
   if (error || !data) return;
 
   fillSelect('#d-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
@@ -109,7 +112,11 @@ async function calculate() {
   const resultEl = document.querySelector('#avg-result');
   resultEl.innerHTML = '<p class="muted small">Lade…</p>';
 
-  const { data: allData, error } = await buildQuery();
+  // fetchAllRows statt eines einzelnen .select() - der Gesamtbestand kann
+  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
+  // sonst wäre der Durchschnitt bei ungefilterter/wenig eingeschränkter
+  // Auswahl auf Basis unvollständiger Daten berechnet.
+  const { data: allData, error } = await fetchAllRows(buildQuery());
   if (error) {
     resultEl.innerHTML = `<p class="error">Fehler beim Laden: ${escapeHtml(error.message)}</p>`;
     return;

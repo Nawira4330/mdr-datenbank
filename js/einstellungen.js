@@ -276,7 +276,10 @@ async function onDeleteSortPreset(id) {
 // längst nicht mehr vorkommende angeboten wird.
 async function populateBreedCheckboxes() {
   const container = document.getElementById('breed-checkboxes');
-  const { data, error } = await supabaseClient.from('horses').select('breed');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
+  // Rassen, die nur bei Pferden jenseits der ersten 1000 Zeilen vorkommen,
+  // in der Auswahl fehlen.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('breed'));
   if (error || !data) {
     container.innerHTML = '<p class="error">Rassen konnten nicht geladen werden.</p>';
     return;

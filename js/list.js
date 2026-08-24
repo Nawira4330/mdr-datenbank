@@ -455,7 +455,10 @@ function showFlashBanner() {
 }
 
 async function populateFilterOptions() {
-  const { data, error } = await supabaseClient.from('horses').select('owner, gender, breed, genetic_diseases, colors');
+  // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
+  // Besitzer-/Rasse-/Krankheits-/Locus-Werte, die nur bei Pferden jenseits
+  // der ersten 1000 Zeilen vorkommen, in den Filter-Dropdowns fehlen.
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('owner, gender, breed, genetic_diseases, colors'));
   if (error || !data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
@@ -701,7 +704,10 @@ async function computeCompareBaseline() {
   if (owner) q = q.eq('owner', owner);
   if (gender) q = q.eq('gender', gender);
 
-  const { data, error } = await q;
+  // fetchAllRows statt eines einzelnen .select() - bei breiter/leerer
+  // Vergleichsbasis (z.B. "Alle") sonst ein auf den ersten 1000 Zeilen
+  // verfälschter Ø-Wert.
+  const { data, error } = await fetchAllRows(q);
   if (error || !data || !data.length) return null;
 
   const avg = (values) => {
@@ -989,7 +995,11 @@ async function loadHorses() {
   selectedIds = new Set();
   updateBulkBar();
 
-  const { data, error } = await buildQuery();
+  // fetchAllRows statt eines einzelnen .select() - der Gesamtbestand kann
+  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
+  // sonst fehlten bei breiten/leeren Filtern stillschweigend Pferde in der
+  // Tabelle (siehe Nutzerfeedback bei der Pferd-Navigation, "count: 1082").
+  const { data, error } = await fetchAllRows(buildQuery());
 
   if (error) {
     tbody.innerHTML = `<tr><td colspan="20" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
