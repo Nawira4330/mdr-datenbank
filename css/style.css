@@ -665,6 +665,8 @@ body.hide-delete #bulk-delete-btn {
 .dashboard-tile {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 0.1rem;
   padding: 0.5rem 0.9rem;
   border: 1px solid var(--border);
