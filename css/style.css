@@ -270,7 +270,18 @@ input::placeholder, textarea::placeholder { opacity: 0.5; }
   cursor: pointer;
 }
 .view-profile .heart-btn.is-favorite { color: var(--danger); }
-.view-profile .nav-arrows { display: flex; align-items: center; justify-content: space-between; }
+.view-profile .nav-arrows { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+/* Sortierkriterium fürs Blättern (siehe #nav-sort-field in horseView.js) -
+   ersetzt den früher reinen "alphabetisch"-Text, soll aber genauso
+   schmal/unauffällig zwischen den Pfeilen sitzen statt der globalen
+   input/select-Regel (width:100%) zu folgen. */
+.view-profile .nav-arrows select {
+  width: auto;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-color: var(--border);
+}
 .view-profile .arrow-btn {
   width: 2rem;
   height: 2rem;
@@ -937,7 +948,12 @@ td.keep-foal-cell { white-space: nowrap; }
 .dashboard-tile-list { display: flex; flex-direction: column; gap: 2px; margin: 0.6rem 0; }
 .dashboard-tile-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.2rem; border-radius: 6px; }
 .dashboard-tile-row:hover { background: rgba(107,157,0,0.05); }
-.dashboard-tile-row label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin: 0; }
+.dashboard-tile-row label { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; margin: 0; flex: 1; }
+/* Eigene, angepinnte Kachel (siehe customDashboardTiles in
+   einstellungen.js) - Löschen-Button rechts, unauffällig bis zum Hover. */
+.dashboard-tile-row [data-tile-delete] { opacity: 0.5; }
+.dashboard-tile-row [data-tile-delete]:hover { opacity: 1; }
+.custom-tile-form { border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; }
 .dashboard-tile-row input[type="checkbox"] { width: auto; }
 .dashboard-tile-move { display: flex; gap: 2px; }
 .dashboard-tile-move button { padding: 0.15rem 0.4rem; font-size: 0.75rem; min-width: 1.8rem; }

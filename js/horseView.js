@@ -6,6 +6,13 @@
 
 let viewHorseId = null;
 
+// Sortierkriterium für das <-/->-Blättern (siehe #nav-sort-field) -
+// geräte-lokal gemerkt (wie LAST_SORT_STORAGE_KEY in list.js), sofern in
+// den Einstellungen kein kontoweiter Standard (user_settings.
+// profile_nav_sort) gesetzt ist - dieser hat beim ersten Aufruf Vorrang,
+// siehe initNavSortField().
+const NAV_SORT_STORAGE_KEY = 'mdr_profile_nav_sort';
+
 document.addEventListener('DOMContentLoaded', initView);
 
 async function initView() {
@@ -24,6 +31,7 @@ async function initView() {
   document.getElementById('delete-btn').addEventListener('click', onDeleteView);
   document.getElementById('prev-horse-btn').addEventListener('click', () => onNavigateView('prev'));
   document.getElementById('next-horse-btn').addEventListener('click', () => onNavigateView('next'));
+  await initNavSortField(session);
   wireTabs();
 
   await loadHorse(viewHorseId);
@@ -121,28 +129,83 @@ async function onDeleteView() {
   window.location.href = 'index.html';
 }
 
-// Navigiert alphabetisch durch ALLE Pferde - anders als beim Bearbeiten
-// (horseForm.js/findAdjacentHorseId, dort auf die eigenen Pferde
+// Setzt #nav-sort-field beim Laden: kontoweiter Standard (Einstellungen,
+// siehe migration_032_profile_nav_sort.sql) hat Vorrang vor der zuletzt
+// auf diesem Gerät gewählten Sortierung (analog zu applyInitialFilterState
+// in list.js) - Änderungen am Dropdown selbst werden nur geräte-lokal
+// gemerkt, den kontoweiten Standard ändert man bewusst separat in den
+// Einstellungen.
+async function initNavSortField(session) {
+  const select = document.getElementById('nav-sort-field');
+  const { data } = await supabaseClient
+    .from('user_settings')
+    .select('profile_nav_sort')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  let field = data?.profile_nav_sort;
+  if (!field) {
+    try { field = localStorage.getItem(NAV_SORT_STORAGE_KEY); } catch { /* siehe list.js saveLastSort */ }
+  }
+  if (field && [...select.options].some((o) => o.value === field)) select.value = field;
+
+  select.addEventListener('change', () => {
+    try { localStorage.setItem(NAV_SORT_STORAGE_KEY, select.value); } catch { /* siehe list.js saveLastSort */ }
+  });
+}
+
+// Navigiert per Auswahl in #nav-sort-field (Name/Alter/Zuletzt bearbeitet/
+// GP) durch ALLE Pferde - anders als beim Bearbeiten (horseForm.js/
+// findAdjacentHorseId, dort immer alphabetisch und auf die eigenen Pferde
 // eingeschraenkt), da man beim reinen Ansehen durch die komplette Liste
 // blättern koennen soll, nicht nur durch die eigenen.
+const NAV_SORT_LABELS = { name: 'alphabetischen', birthdate: 'nach Alter sortierten', updated_at: 'nach Bearbeitungsdatum sortierten', gp: 'nach GP sortierten' };
+// Wie SORT_FIELDS_DESC_FIRST in list.js - "zuletzt bearbeitet" beginnt
+// sinnvollerweise mit dem neuesten Eintrag zuerst.
+const NAV_SORT_DESC_FIRST = new Set(['updated_at']);
+
 async function onNavigateView(direction) {
   const errorEl = document.getElementById('form-error');
   errorEl.textContent = '';
 
-  const { data, error } = await supabaseClient.from('horses').select('id, name');
+  const field = document.getElementById('nav-sort-field').value || 'name';
+  const columns = field === 'gp' ? 'id, name, tournament_potential' : `id, name, ${field}`;
+  const { data, error } = await supabaseClient.from('horses').select(columns);
   if (error || !data) {
     errorEl.textContent = 'Navigation fehlgeschlagen.';
     return;
   }
-  data.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase(), 'de'));
+
+  const sortValue = (h) => {
+    if (field === 'name') return (h.name || '').toLowerCase();
+    if (field === 'gp') {
+      const raw = h.tournament_potential?.['Gesamtpotenzial'];
+      return raw != null && raw !== '' ? Number(raw) : null;
+    }
+    return h[field] || null;
+  };
+  // Pferde ohne Wert (z.B. kein Geburtsdatum) ans Ende, unabhängig von der
+  // Richtung - sonst würden sie bei absteigender Sortierung fälschlich
+  // ganz vorne einsortiert (null/undefined vor jedem echten Wert).
+  const desc = NAV_SORT_DESC_FIRST.has(field);
+  data.sort((a, b) => {
+    const va = sortValue(a);
+    const vb = sortValue(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (field === 'name') return va.localeCompare(vb, 'de') * (desc ? -1 : 1);
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (desc ? -1 : 1);
+  });
+
   const idx = data.findIndex((h) => h.id === viewHorseId);
   if (idx === -1) return;
 
   const adjacent = data[direction === 'next' ? idx + 1 : idx - 1];
+  const listLabel = NAV_SORT_LABELS[field] || 'alphabetischen';
   if (!adjacent) {
     errorEl.textContent = direction === 'next'
-      ? 'Kein weiteres Pferd (Ende der alphabetischen Liste).'
-      : 'Kein vorheriges Pferd (Anfang der alphabetischen Liste).';
+      ? `Kein weiteres Pferd (Ende der ${listLabel} Liste).`
+      : `Kein vorheriges Pferd (Anfang der ${listLabel} Liste).`;
     return;
   }
   window.location.href = `view.html?id=${adjacent.id}`;

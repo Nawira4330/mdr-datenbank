@@ -1156,11 +1156,19 @@ const DASHBOARD_TILE_OPTIONS = [
 // standardmäßig ausgeblendet außer sie sind neu und defaultVisible) -
 // damit ältere gespeicherte Reihenfolgen nicht durch neue Programmversionen
 // invalidiert werden. Leere/fehlende Auswahl ergibt die Standardauswahl.
-function mergeDashboardTiles(stored) {
-  const result = (stored || []).filter((t) => DASHBOARD_TILE_OPTIONS.some((o) => o.id === t.id));
+// customTiles (siehe migration_033_custom_dashboard_tiles.sql) sind die
+// vom Konto selbst angelegten Kacheln - deren Ids stehen nicht in
+// DASHBOARD_TILE_OPTIONS, müssen aber genauso in der Reihenfolge-Liste
+// erhalten bleiben (neu angelegte werden ans Ende angehängt, sichtbar).
+function mergeDashboardTiles(stored, customTiles) {
+  const customIds = new Set((customTiles || []).map((t) => t.id));
+  const result = (stored || []).filter((t) => DASHBOARD_TILE_OPTIONS.some((o) => o.id === t.id) || customIds.has(t.id));
   const known = new Set(result.map((t) => t.id));
   for (const opt of DASHBOARD_TILE_OPTIONS) {
     if (!known.has(opt.id)) result.push({ id: opt.id, visible: stored?.length ? false : opt.defaultVisible });
+  }
+  for (const custom of customTiles || []) {
+    if (!known.has(custom.id)) result.push({ id: custom.id, visible: true });
   }
   return result;
 }

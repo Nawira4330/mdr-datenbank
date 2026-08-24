@@ -28,9 +28,14 @@
           <button type="button" id="favorite-view-btn" class="heart-btn" title="Als Favorit markieren">♡</button>
         </div>
         <div class="nav-arrows">
-          <button type="button" id="prev-horse-btn" class="arrow-btn" title="Vorheriges Pferd (alphabetisch)">←</button>
-          <span class="small muted">alphabetisch</span>
-          <button type="button" id="next-horse-btn" class="arrow-btn" title="Nächstes Pferd (alphabetisch)">→</button>
+          <button type="button" id="prev-horse-btn" class="arrow-btn" title="Vorheriges Pferd">←</button>
+          <select id="nav-sort-field" class="small" title="Sortierung für das Blättern">
+            <option value="name">alphabetisch</option>
+            <option value="birthdate">Alter</option>
+            <option value="updated_at">zuletzt bearbeitet</option>
+            <option value="gp">GP</option>
+          </select>
+          <button type="button" id="next-horse-btn" class="arrow-btn" title="Nächstes Pferd">→</button>
         </div>
         <div id="tag-badges"></div>
         <p id="last-edited" class="muted small"></p>

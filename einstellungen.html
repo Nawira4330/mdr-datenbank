@@ -113,16 +113,97 @@
     </fieldset>
 
     <fieldset>
+      <legend>Pferd-Navigation</legend>
+      <p class="muted small">
+        Legt fest, nach welchem Kriterium das ←/→-Blättern auf der
+        Ansichtsseite eines Pferds standardmäßig durch alle Pferde
+        wechselt. Lässt sich dort im Dropdown jederzeit für dieses Gerät
+        umschalten - hier wird nur der Standard beim ersten Aufruf
+        festgelegt.
+      </p>
+      <label for="profile-nav-sort-select">Standard-Sortierung beim Blättern</label>
+      <select id="profile-nav-sort-select">
+        <option value="name">alphabetisch (Name)</option>
+        <option value="birthdate">Alter</option>
+        <option value="updated_at">zuletzt bearbeitet</option>
+        <option value="gp">GP</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
       <legend>Dashboard-Kacheln</legend>
       <p class="muted small">
         Legt fest, welche Kennzahlen-Kacheln oben in der Übersicht (über
         den Filtern) angezeigt werden, und in welcher Reihenfolge. Die
-        Kacheln beziehen sich immer auf die gerade gefilterte/sortierte
-        Tabelle, nicht auf den Gesamtbestand. Mit ▲/▼ verschieben, Häkchen
-        blendet ein/aus - beliebig viele gleichzeitig möglich. Gilt nur für
-        dein eigenes Konto.
+        eingebauten Kacheln beziehen sich immer auf die gerade gefilterte/
+        sortierte Tabelle, nicht auf den Gesamtbestand. Mit ▲/▼ verschieben,
+        Häkchen blendet ein/aus - beliebig viele gleichzeitig möglich.
+        Eigene Kacheln (🗑️ zum Löschen) zeigen dagegen immer dieselbe,
+        angepinnte Teilmenge - unabhängig davon, was gerade in der
+        Übersicht gefiltert ist. Gilt nur für dein eigenes Konto.
       </p>
       <div id="dashboard-tile-list" class="dashboard-tile-list"></div>
+      <button type="button" id="add-custom-tile-btn" class="secondary small">+ Kachel hinzufügen</button>
+
+      <div id="custom-tile-form" class="custom-tile-form" hidden>
+        <div class="form-grid">
+          <div>
+            <label for="custom-tile-label">Name der Kachel</label>
+            <input type="text" id="custom-tile-label" placeholder="z.B. Meine Paints" />
+          </div>
+          <div>
+            <label for="custom-tile-metric">Anzeigen als</label>
+            <select id="custom-tile-metric">
+              <option value="count">Anzahl Pferde</option>
+              <option value="gp">Ø GP</option>
+              <option value="ext">Ø Ext</option>
+              <option value="extpct">Ø Ext%</option>
+              <option value="int">Ø Int</option>
+            </select>
+          </div>
+          <div>
+            <label for="custom-tile-source">Teilmenge festlegen über</label>
+            <select id="custom-tile-source">
+              <option value="preset">Gespeicherte Filtervorlage</option>
+              <option value="custom">Rasse/Geschlecht/ZZL/Alter</option>
+            </select>
+          </div>
+        </div>
+        <div id="custom-tile-preset-fields" class="form-grid">
+          <div>
+            <label for="custom-tile-preset-select">Filtervorlage</label>
+            <select id="custom-tile-preset-select"><option value="">Bitte wählen…</option></select>
+          </div>
+        </div>
+        <div id="custom-tile-adhoc-fields" class="form-grid" hidden>
+          <div><label for="custom-tile-breed">Rasse</label><select id="custom-tile-breed"><option value="">Alle</option></select></div>
+          <div>
+            <label for="custom-tile-gender">Geschlecht</label>
+            <select id="custom-tile-gender">
+              <option value="">Alle</option>
+              <option value="Stute">Stute</option>
+              <option value="Hengst">Hengst</option>
+              <option value="Wallach">Wallach</option>
+              <option value="Hengstfohlen">Hengstfohlen</option>
+              <option value="Stutfohlen">Stutfohlen</option>
+            </select>
+          </div>
+          <div>
+            <label for="custom-tile-zzl">ZZL</label>
+            <select id="custom-tile-zzl">
+              <option value="">Alle</option>
+              <option value="true">Ja</option>
+              <option value="false">Nein</option>
+            </select>
+          </div>
+          <div><label for="custom-tile-age-min">Alter von (Jahre)</label><input type="number" id="custom-tile-age-min" min="0" /></div>
+          <div><label for="custom-tile-age-max">Alter bis (Jahre)</label><input type="number" id="custom-tile-age-max" min="0" /></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="save-custom-tile-btn" class="secondary small">Kachel hinzufügen</button>
+          <button type="button" id="cancel-custom-tile-btn" class="secondary small">Abbrechen</button>
+        </div>
+      </div>
     </fieldset>
 
     <fieldset>

@@ -48,6 +48,16 @@ let favoriteHorseIds = new Set();
 // migration_031_favorites_dashboard_tiles.sql, renderDashboardTiles) -
 // leer = DEFAULT_DASHBOARD_TILES.
 let dashboardTiles = [];
+// Selbst angelegte, angepinnte Kacheln (Filtervorlage oder direkte
+// Rasse/Geschlecht/ZZL/Alter-Kriterien, siehe
+// migration_033_custom_dashboard_tiles.sql) - Definitionen (Kriterien +
+// Metrik), unabhängig von dashboardTiles (das nur Reihenfolge/Sichtbarkeit
+// alle Kacheln-Ids hält, siehe mergeDashboardTiles in parser.js).
+let customDashboardTiles = [];
+// Ungefilterter Gesamtbestand für die Berechnung angepinnter Kacheln (die
+// unabhängig vom gerade aktiven Tabellenfilter sein sollen) - einmalig
+// geladen (siehe loadAllHorsesCache), nicht bei jedem Tabellen-Filtern neu.
+let allHorsesCache = null;
 // Benutzername (vor dem @) des eingeloggten Kontos - fuer den
 // "Nur meine"-Schnellfilter beim Besitzer (siehe onOnlyMyHorses).
 let currentIdentity = null;
@@ -158,7 +168,7 @@ async function applyInitialFilterState() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
@@ -166,7 +176,17 @@ async function loadUserSettings(session) {
   defaultFilterPresetId = (!error && data?.default_filter_preset_id) || null;
   defaultSortPresetId = (!error && data?.default_sort_preset_id) || null;
   favoriteHorseIds = new Set((!error && data?.favorite_horse_ids) || []);
-  dashboardTiles = mergeDashboardTiles(!error ? data?.dashboard_tiles : null);
+  customDashboardTiles = (!error && data?.custom_dashboard_tiles) || [];
+  dashboardTiles = mergeDashboardTiles(!error ? data?.dashboard_tiles : null, customDashboardTiles);
+  if (customDashboardTiles.length) await loadAllHorsesCache();
+}
+
+// Einmaliger, ungefilterter Voll-Abruf für angepinnte Kacheln (siehe
+// computeCustomTileValue) - nur, wenn tatsächlich eigene Kacheln existieren,
+// um den zusätzlichen Request im Normalfall zu vermeiden.
+async function loadAllHorsesCache() {
+  const { data, error } = await supabaseClient.from('horses').select('*');
+  allHorsesCache = !error && data ? data : [];
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -1609,19 +1629,118 @@ const DASHBOARD_TILE_DEFS = {
   },
 };
 
+// Prüft die einfachen, direkt gewählten Kriterien einer eigenen Kachel
+// (source:'custom', siehe migration_033_custom_dashboard_tiles.sql) -
+// bewusst nur Rasse/Geschlecht/ZZL/Alter (kein volles Filterformular),
+// das deckt den Nutzerwunsch "nach Rasse, Alter, Geschlecht, etc.
+// separieren" ab, ohne beim Kachel-Anlegen ein komplettes Filterformular
+// nachzubauen.
+function matchesCustomTileFilters(h, filters) {
+  const f = filters || {};
+  if (f.breed) {
+    const b = normalizeBreed(h.breed) || 'Rasselos';
+    if (b !== f.breed) return false;
+  }
+  if (f.gender && h.gender !== f.gender) return false;
+  if (f.zzl === 'true' && h.breeding_allowed !== true) return false;
+  if (f.zzl === 'false' && h.breeding_allowed) return false;
+  if (f.ageMin != null || f.ageMax != null) {
+    const age = h.birthdate ? gameAgeYears(h.birthdate) : null;
+    if (age == null) return false;
+    if (f.ageMin != null && age < f.ageMin) return false;
+    if (f.ageMax != null && age > f.ageMax) return false;
+  }
+  return true;
+}
+
+// Prüft eine ANGEPINNTE Filtervorlage (source:'preset') gegen ein Pferd -
+// eigenständig statt Wiederverwendung von applyClientFilters, da dort
+// Name/Besitzer/Geschlecht/Rasse/ZZL bewusst NICHT geprüft werden (die
+// laufen normalerweise serverseitig in buildQuery gegen die aktuellen
+// Formularfelder, siehe dort) - hier gibt es aber kein Formular, nur die
+// gespeicherten Vorlagen-Kriterien gegen den kompletten, ungefilterten
+// Bestand (allHorsesCache).
+function matchesPresetFilters(h, state) {
+  const s = state || {};
+  if (s.name && !(h.name || '').toLowerCase().includes(s.name.toLowerCase())) return false;
+  if (s.owner && h.owner !== s.owner) return false;
+  if (s.gender && h.gender !== s.gender) return false;
+  if (s.breed === 'Rasselos') {
+    if ((normalizeBreed(h.breed) || 'Rasselos') !== 'Rasselos') return false;
+  } else if (s.breed && s.breed !== '__unrestricted__') {
+    if (normalizeBreed(h.breed) !== s.breed) return false;
+  }
+  if (s.zzl === 'true' && h.breeding_allowed !== true) return false;
+  if (s.zzl === 'false' && h.breeding_allowed) return false;
+  if (s.favorites && !favoriteHorseIds.has(h.id)) return false;
+  const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
+  const genetik = toTristate(s.genetik);
+  if (genetik.include.length && !genetik.include.every((locus) => matchesGenetikLocus(h, locus))) return false;
+  if (genetik.exclude.some((locus) => matchesGenetikLocus(h, locus))) return false;
+  const ekh = toTristate(s.ekh);
+  if (ekh.include.length && !matchesEkh(h, ekh.include)) return false;
+  if (ekh.exclude.some((code) => matchesEkh(h, [code]))) return false;
+  const tags = toTristate(s.tags);
+  if (tags.include.length && !matchesTags(h, tags.include)) return false;
+  if (tags.exclude.some((label) => matchesTags(h, [label]))) return false;
+  if (s.tagNote && !(h.tags || []).some((t) => (t.note || '').toLowerCase().includes(s.tagNote.toLowerCase()))) return false;
+  const d = computeDerived(h);
+  if (!compareValue(d.gp, s.gpOp, s.gpVal)) return false;
+  if (!compareValue(d.extAvg, s.extOp, s.extVal)) return false;
+  if (!compareValue(d.extPercent, s.extpctOp, s.extpctVal)) return false;
+  if (!compareValue(d.intAvg, s.intOp, s.intVal)) return false;
+  return true;
+}
+
+const CUSTOM_TILE_METRICS = {
+  count: null,
+  gp: ['gp', 0, ''],
+  ext: ['extAvg', 2, ''],
+  extpct: ['extPercent', 1, '%'],
+  int: ['intAvg', 2, ''],
+};
+
+// Berechnet den Wert einer angepinnten Kachel über den kompletten,
+// ungefilterten Bestand (allHorsesCache) - unabhängig vom gerade aktiven
+// Tabellenfilter, siehe Nutzerwunsch "Ergebnisse meiner Filtervorlagen
+// anpinnen". "…" solange der Bestand noch lädt (siehe loadAllHorsesCache).
+function computeCustomTileValue(tile) {
+  if (!allHorsesCache) return '…';
+  let subset;
+  if (tile.source === 'preset') {
+    const option = document.querySelector(`#filter-preset-select option[value="${CSS.escape(tile.presetId || '')}"]`);
+    if (!option) return '–';
+    const state = JSON.parse(option.dataset.filters);
+    subset = allHorsesCache.filter((h) => matchesPresetFilters(h, state));
+  } else {
+    subset = allHorsesCache.filter((h) => matchesCustomTileFilters(h, tile.filters));
+  }
+  if (tile.metric === 'count' || !CUSTOM_TILE_METRICS[tile.metric]) return String(subset.length);
+  const [key, decimals, suffix] = CUSTOM_TILE_METRICS[tile.metric];
+  const result = avgDerived(subset, key, decimals);
+  return result === '–' ? result : result + suffix;
+}
+
 // Zeigt Kennzahlen zur aktuell gefilterten/sortierten Tabelle (rows =
 // lastRenderedRows) - passt sich also mit der Tabelle mit, statt fest den
 // Gesamtbestand zu zeigen. dashboardTiles kommt bereits vollständig
 // (alle bekannten Ids, siehe mergeDashboardTiles in parser.js) und in der
-// vom Konto gewählten Reihenfolge aus loadUserSettings.
+// vom Konto gewählten Reihenfolge aus loadUserSettings. Eigene, angepinnte
+// Kacheln (customDashboardTiles) ignorieren "rows" bewusst - sie berechnen
+// sich aus ihren eigenen Kriterien über den Gesamtbestand.
 function renderDashboardTiles(rows) {
   const container = document.querySelector('#dashboard-tiles');
   if (!container) return;
   const tilesHtml = dashboardTiles
-    .filter((t) => t.visible && DASHBOARD_TILE_DEFS[t.id])
+    .filter((t) => t.visible)
     .map((t) => {
-      const def = DASHBOARD_TILE_DEFS[t.id];
-      return `<div class="dashboard-tile"><span class="dashboard-tile-value">${def.compute(rows)}</span><span class="dashboard-tile-label">${escapeHtml(def.label)}</span></div>`;
+      if (DASHBOARD_TILE_DEFS[t.id]) {
+        const def = DASHBOARD_TILE_DEFS[t.id];
+        return `<div class="dashboard-tile"><span class="dashboard-tile-value">${def.compute(rows)}</span><span class="dashboard-tile-label">${escapeHtml(def.label)}</span></div>`;
+      }
+      const custom = customDashboardTiles.find((c) => c.id === t.id);
+      if (!custom) return '';
+      return `<div class="dashboard-tile" title="Angepinnt: unabhängig vom aktuellen Filter"><span class="dashboard-tile-value">${escapeHtml(computeCustomTileValue(custom))}</span><span class="dashboard-tile-label">${escapeHtml(custom.label)}</span></div>`;
     })
     .join('');
   container.innerHTML = tilesHtml;

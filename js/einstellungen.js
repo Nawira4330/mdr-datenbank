@@ -6,6 +6,10 @@ let currentUserId = null;
 // per ▲/▼ und Häkchen in renderDashboardTileList direkt verändert und erst
 // mit "Speichern" (onSave) übernommen.
 let dashboardTiles = [];
+// Arbeitskopie der selbst angelegten, angepinnten Kacheln (Definitionen:
+// Kriterien + Metrik, siehe migration_033_custom_dashboard_tiles.sql) -
+// wie dashboardTiles nur eine Kopie, erst mit "Speichern" übernommen.
+let customDashboardTiles = [];
 
 async function init() {
   const session = await requireSession();
@@ -14,13 +18,15 @@ async function init() {
   currentUserId = session.user.id;
 
   await populateBreedCheckboxes();
+  populateCustomTileBreedSelect();
   // Muss vor loadCurrentSettings laufen, da diese Dropdown-Optionen dort
   // erst gesetzt (ausgewählt) werden.
   await loadFilterPresetsList();
   await loadSortPresetsList();
-  dashboardTiles = mergeDashboardTiles(null);
+  dashboardTiles = mergeDashboardTiles(null, customDashboardTiles);
   renderDashboardTileList();
   wireDashboardTileList();
+  wireCustomTileForm();
   await loadCurrentSettings();
 
   document.getElementById('save-settings-btn').addEventListener('click', onSave);
@@ -28,12 +34,20 @@ async function init() {
 
 // Baut die Dashboard-Kacheln-Liste aus dashboardTiles (Reihenfolge +
 // Sichtbarkeit) neu auf - bei jeder ▲/▼-Verschiebung sowie initial nach
-// dem Laden der gespeicherten Auswahl.
+// dem Laden der gespeicherten Auswahl. Eigene, angepinnte Kacheln (siehe
+// customDashboardTiles) stehen gleichberechtigt in derselben Liste,
+// bekommen aber zusätzlich einen Löschen-Button (🗑️) statt nur die feste
+// Auswahl aus DASHBOARD_TILE_OPTIONS.
 function renderDashboardTileList() {
   const container = document.getElementById('dashboard-tile-list');
   container.innerHTML = dashboardTiles.map((t, i) => {
     const opt = DASHBOARD_TILE_OPTIONS.find((o) => o.id === t.id);
-    if (!opt) return '';
+    const custom = opt ? null : customDashboardTiles.find((c) => c.id === t.id);
+    if (!opt && !custom) return '';
+    const label = opt ? opt.label : custom.label;
+    const deleteBtn = custom
+      ? `<button type="button" class="icon-btn" data-tile-delete="${escapeHtml(t.id)}" title="Kachel löschen">🗑️</button>`
+      : '';
     return `
       <div class="dashboard-tile-row">
         <div class="dashboard-tile-move">
@@ -42,8 +56,9 @@ function renderDashboardTileList() {
         </div>
         <label>
           <input type="checkbox" data-tile-visible="${i}" style="width: auto;" ${t.visible ? 'checked' : ''} />
-          ${escapeHtml(opt.label)}
+          ${escapeHtml(label)}
         </label>
+        ${deleteBtn}
       </div>`;
   }).join('');
 }
@@ -52,6 +67,7 @@ function wireDashboardTileList() {
   document.getElementById('dashboard-tile-list').addEventListener('click', (e) => {
     const upBtn = e.target.closest('[data-tile-up]');
     const downBtn = e.target.closest('[data-tile-down]');
+    const deleteBtn = e.target.closest('[data-tile-delete]');
     if (upBtn) {
       const i = Number(upBtn.dataset.tileUp);
       [dashboardTiles[i - 1], dashboardTiles[i]] = [dashboardTiles[i], dashboardTiles[i - 1]];
@@ -60,6 +76,12 @@ function wireDashboardTileList() {
       const i = Number(downBtn.dataset.tileDown);
       [dashboardTiles[i], dashboardTiles[i + 1]] = [dashboardTiles[i + 1], dashboardTiles[i]];
       renderDashboardTileList();
+    } else if (deleteBtn) {
+      const id = deleteBtn.dataset.tileDelete;
+      if (!confirm('Diese Kachel wirklich löschen?')) return;
+      customDashboardTiles = customDashboardTiles.filter((c) => c.id !== id);
+      dashboardTiles = dashboardTiles.filter((t) => t.id !== id);
+      renderDashboardTileList();
     }
   });
   document.getElementById('dashboard-tile-list').addEventListener('change', (e) => {
@@ -67,6 +89,80 @@ function wireDashboardTileList() {
     if (!cb) return;
     dashboardTiles[Number(cb.dataset.tileVisible)].visible = cb.checked;
   });
+}
+
+// --- "+ Kachel hinzufügen": eigene, angepinnte Kachel anlegen ---
+
+function populateCustomTileBreedSelect() {
+  const select = document.getElementById('custom-tile-breed');
+  // Rassen aus den bereits geladenen Rassen-Checkboxen übernehmen (siehe
+  // populateBreedCheckboxes) statt eines eigenen Datenbankzugriffs.
+  document.querySelectorAll('#breed-checkboxes input[type="checkbox"]').forEach((cb) => {
+    const opt = document.createElement('option');
+    opt.value = cb.value;
+    opt.textContent = cb.value;
+    select.appendChild(opt);
+  });
+}
+
+function wireCustomTileForm() {
+  const addBtn = document.getElementById('add-custom-tile-btn');
+  const form = document.getElementById('custom-tile-form');
+  const sourceSelect = document.getElementById('custom-tile-source');
+  const presetFields = document.getElementById('custom-tile-preset-fields');
+  const adhocFields = document.getElementById('custom-tile-adhoc-fields');
+
+  addBtn.addEventListener('click', () => {
+    form.hidden = !form.hidden;
+  });
+  sourceSelect.addEventListener('change', () => {
+    presetFields.hidden = sourceSelect.value !== 'preset';
+    adhocFields.hidden = sourceSelect.value !== 'custom';
+  });
+  document.getElementById('cancel-custom-tile-btn').addEventListener('click', () => {
+    form.hidden = true;
+  });
+  document.getElementById('save-custom-tile-btn').addEventListener('click', onAddCustomTile);
+}
+
+function onAddCustomTile() {
+  const labelInput = document.getElementById('custom-tile-label');
+  const label = labelInput.value.trim();
+  if (!label) {
+    alert('Bitte einen Namen für die Kachel eingeben.');
+    return;
+  }
+  const metric = document.getElementById('custom-tile-metric').value;
+  const source = document.getElementById('custom-tile-source').value;
+
+  const tile = { id: `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`, label, metric, source };
+  if (source === 'preset') {
+    const presetId = document.getElementById('custom-tile-preset-select').value;
+    if (!presetId) {
+      alert('Bitte eine Filtervorlage auswählen.');
+      return;
+    }
+    tile.presetId = presetId;
+  } else {
+    const ageMinVal = document.getElementById('custom-tile-age-min').value;
+    const ageMaxVal = document.getElementById('custom-tile-age-max').value;
+    tile.filters = {
+      breed: document.getElementById('custom-tile-breed').value || null,
+      gender: document.getElementById('custom-tile-gender').value || null,
+      zzl: document.getElementById('custom-tile-zzl').value || null,
+      ageMin: ageMinVal !== '' ? Number(ageMinVal) : null,
+      ageMax: ageMaxVal !== '' ? Number(ageMaxVal) : null,
+    };
+  }
+
+  customDashboardTiles.push(tile);
+  dashboardTiles.push({ id: tile.id, visible: true });
+  renderDashboardTileList();
+
+  labelInput.value = '';
+  document.getElementById('custom-tile-age-min').value = '';
+  document.getElementById('custom-tile-age-max').value = '';
+  document.getElementById('custom-tile-form').hidden = true;
 }
 
 // Gespeicherte Filter-Vorlagen aus der Übersicht (siehe
@@ -81,6 +177,8 @@ async function loadFilterPresetsList() {
   const container = document.getElementById('filter-presets-list');
   const defaultSelect = document.getElementById('default-filter-preset-select');
   defaultSelect.innerHTML = '<option value="">Keine (Übersicht startet ungefiltert)</option>';
+  const customTileSelect = document.getElementById('custom-tile-preset-select');
+  customTileSelect.innerHTML = '<option value="">Bitte wählen…</option>';
   const { data, error } = await supabaseClient
     .from('filter_presets')
     .select('id, name')
@@ -95,6 +193,7 @@ async function loadFilterPresetsList() {
     opt.value = p.id;
     opt.textContent = p.name;
     defaultSelect.appendChild(opt);
+    customTileSelect.appendChild(opt.cloneNode(true));
   }
   if (!data.length) {
     container.innerHTML = '<p class="muted small">Noch keine Filter-Vorlagen gespeichert.</p>';
@@ -192,7 +291,7 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles')
+    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles, profile_nav_sort, custom_dashboard_tiles')
     .eq('user_id', currentUserId)
     .maybeSingle();
   if (error || !data) return;
@@ -230,11 +329,17 @@ async function loadCurrentSettings() {
   document.getElementById('tolerance-extpct').value = tolerances.extPercent || '';
   document.getElementById('tolerance-int').value = tolerances.int || '';
 
+  // "profile_nav_sort" ist NULL, solange nie gespeichert wurde - dann
+  // bleibt die Auswahl beim HTML-Standard (erste Option, "alphabetisch").
+  if (data.profile_nav_sort) document.getElementById('profile-nav-sort-select').value = data.profile_nav_sort;
+
   // "dashboard_tiles" leer/fehlend = Standardauswahl (siehe
   // DASHBOARD_TILE_OPTIONS in parser.js) - mergeDashboardTiles ergänzt
   // dabei automatisch neu hinzugekommene Kacheln, die in einer älteren
-  // gespeicherten Auswahl noch fehlen.
-  dashboardTiles = mergeDashboardTiles(data.dashboard_tiles);
+  // gespeicherten Auswahl noch fehlen. customDashboardTiles muss VOR dem
+  // Merge geladen sein, da deren Ids sonst als unbekannt aussortiert würden.
+  customDashboardTiles = data.custom_dashboard_tiles || [];
+  dashboardTiles = mergeDashboardTiles(data.dashboard_tiles, customDashboardTiles);
   renderDashboardTileList();
 }
 
@@ -252,6 +357,7 @@ async function onSave() {
   };
   const defaultFilterPresetId = document.getElementById('default-filter-preset-select').value || null;
   const defaultSortPresetId = document.getElementById('default-sort-preset-select').value || null;
+  const profileNavSort = document.getElementById('profile-nav-sort-select').value || null;
   // dashboardTiles (Reihenfolge + Sichtbarkeit) ist bereits aktuell -
   // renderDashboardTileList/wireDashboardTileList halten die Arbeitskopie
   // bei jeder ▲/▼-Verschiebung bzw. jedem Häkchen synchron.
@@ -269,6 +375,8 @@ async function onSave() {
       default_filter_preset_id: defaultFilterPresetId,
       default_sort_preset_id: defaultSortPresetId,
       dashboard_tiles: dashboardTiles,
+      profile_nav_sort: profileNavSort,
+      custom_dashboard_tiles: customDashboardTiles,
     });
   statusEl.textContent = error ? 'Speichern fehlgeschlagen: ' + error.message : 'Gespeichert.';
   // Sofort anwenden, ohne dass die Seite neu geladen werden muss (siehe
