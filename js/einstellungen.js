@@ -19,6 +19,7 @@ async function init() {
 
   await populateBreedCheckboxes();
   populateCustomTileBreedSelect();
+  await populateCustomTileOwnerSelect();
   // Muss vor loadCurrentSettings laufen, da diese Dropdown-Optionen dort
   // erst gesetzt (ausgewählt) werden.
   await loadFilterPresetsList();
@@ -64,7 +65,7 @@ function renderDashboardTileList() {
 }
 
 function wireDashboardTileList() {
-  document.getElementById('dashboard-tile-list').addEventListener('click', (e) => {
+  document.getElementById('dashboard-tile-list').addEventListener('click', async (e) => {
     const upBtn = e.target.closest('[data-tile-up]');
     const downBtn = e.target.closest('[data-tile-down]');
     const deleteBtn = e.target.closest('[data-tile-delete]');
@@ -78,7 +79,7 @@ function wireDashboardTileList() {
       renderDashboardTileList();
     } else if (deleteBtn) {
       const id = deleteBtn.dataset.tileDelete;
-      if (!confirm('Diese Kachel wirklich löschen?')) return;
+      if (!(await showConfirmModal('Kachel löschen', 'Diese Kachel wirklich löschen?', 'Löschen'))) return;
       customDashboardTiles = customDashboardTiles.filter((c) => c.id !== id);
       dashboardTiles = dashboardTiles.filter((t) => t.id !== id);
       renderDashboardTileList();
@@ -103,6 +104,22 @@ function populateCustomTileBreedSelect() {
     opt.textContent = cb.value;
     select.appendChild(opt);
   });
+}
+
+// fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
+// Besitzer, die nur bei Pferden jenseits der ersten 1000 Zeilen vorkommen,
+// in der Auswahl fehlen (siehe UPDATELOG.md, 1000-Zeilen-Bugfix).
+async function populateCustomTileOwnerSelect() {
+  const select = document.getElementById('custom-tile-owner');
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('owner'));
+  if (error || !data) return;
+  const owners = [...new Set(data.map((d) => d.owner).filter(Boolean))].sort();
+  for (const owner of owners) {
+    const opt = document.createElement('option');
+    opt.value = owner;
+    opt.textContent = owner;
+    select.appendChild(opt);
+  }
 }
 
 function wireCustomTileForm() {
@@ -148,6 +165,7 @@ function onAddCustomTile() {
     const ageMaxVal = document.getElementById('custom-tile-age-max').value;
     tile.filters = {
       breed: document.getElementById('custom-tile-breed').value || null,
+      owner: document.getElementById('custom-tile-owner').value || null,
       gender: document.getElementById('custom-tile-gender').value || null,
       zzl: document.getElementById('custom-tile-zzl').value || null,
       ageMin: ageMinVal !== '' ? Number(ageMinVal) : null,
@@ -211,7 +229,7 @@ async function loadFilterPresetsList() {
 }
 
 async function onDeleteFilterPreset(id) {
-  if (!confirm('Diese Filter-Vorlage wirklich löschen?')) return;
+  if (!(await showConfirmModal('Vorlage löschen', 'Diese Filter-Vorlage wirklich löschen?', 'Löschen'))) return;
   const { error } = await supabaseClient.from('filter_presets').delete().eq('id', id);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);
@@ -262,7 +280,7 @@ async function loadSortPresetsList() {
 }
 
 async function onDeleteSortPreset(id) {
-  if (!confirm('Diese Sortierung wirklich löschen?')) return;
+  if (!(await showConfirmModal('Sortierung löschen', 'Diese Sortierung wirklich löschen?', 'Löschen'))) return;
   const { error } = await supabaseClient.from('sort_presets').delete().eq('id', id);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);

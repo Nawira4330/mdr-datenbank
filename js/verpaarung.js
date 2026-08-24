@@ -292,7 +292,7 @@ async function onSetKeepFoal(pairing, value) {
 }
 
 async function onDeletePairing(id) {
-  if (!confirm('Diese Verpaarung wirklich unwiderruflich löschen?')) return;
+  if (!(await showConfirmModal('Verpaarung löschen', 'Diese Verpaarung wirklich unwiderruflich löschen?', 'Löschen'))) return;
   const { error } = await supabaseClient.from('pairings').delete().eq('id', id);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);
@@ -452,7 +452,7 @@ async function onSaveFoal() {
       // nur ergänzen statt ihn zu leeren.
       if (existingRecord) {
         for (const key of Object.keys(payload)) {
-          payload[key] = mergeFieldValue(key, existingRecord[key], payload[key]);
+          payload[key] = await mergeFieldValue(key, existingRecord[key], payload[key]);
         }
       }
       ({ error } = await supabaseClient.from('horses').update(payload).eq('id', targetId));

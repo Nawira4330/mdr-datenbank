@@ -138,6 +138,20 @@
 
     <p id="form-error" class="error"></p>
     <input type="hidden" id="raw-text" />
+
+    <!-- Ersatz für window.confirm() (siehe showConfirmModal in
+         js/parser.js) - native confirm()-Dialoge werden in manchen
+         Browsern/Kontexten stillschweigend unterdrückt. -->
+    <div id="confirm-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2 id="confirm-modal-title">Bestätigen</h2>
+        <p id="confirm-modal-message"></p>
+        <div class="modal-actions">
+          <button type="button" id="confirm-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="confirm-modal-ok" class="danger">OK</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="js/config.js"></script>

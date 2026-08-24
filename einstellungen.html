@@ -169,7 +169,7 @@
             <label for="custom-tile-source">Teilmenge festlegen über</label>
             <select id="custom-tile-source">
               <option value="preset">Gespeicherte Filtervorlage</option>
-              <option value="custom">Rasse/Geschlecht/ZZL/Alter</option>
+              <option value="custom">Rasse/Besitzer/Geschlecht/ZZL/Alter</option>
             </select>
           </div>
         </div>
@@ -181,6 +181,7 @@
         </div>
         <div id="custom-tile-adhoc-fields" class="form-grid" hidden>
           <div><label for="custom-tile-breed">Rasse</label><select id="custom-tile-breed"><option value="">Alle</option></select></div>
+          <div><label for="custom-tile-owner">Besitzer</label><select id="custom-tile-owner"><option value="">Alle</option></select></div>
           <div>
             <label for="custom-tile-gender">Geschlecht</label>
             <select id="custom-tile-gender">
@@ -226,6 +227,20 @@
     <div class="form-actions">
       <button type="button" id="save-settings-btn">Speichern</button>
       <span id="settings-status" class="muted small"></span>
+    </div>
+
+    <!-- Ersatz für window.confirm() (siehe showConfirmModal in
+         js/parser.js) - native confirm()-Dialoge werden in manchen
+         Browsern/Kontexten stillschweigend unterdrückt. -->
+    <div id="confirm-modal" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <h2 id="confirm-modal-title">Bestätigen</h2>
+        <p id="confirm-modal-message"></p>
+        <div class="modal-actions">
+          <button type="button" id="confirm-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="confirm-modal-ok" class="danger">OK</button>
+        </div>
+      </div>
     </div>
   </main>
 

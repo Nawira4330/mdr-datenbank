@@ -218,7 +218,7 @@ async function onParse() {
   }
   const parsed = parseHorseText(text);
   fillForm(parsed);
-  extraData = mergeParsedIntoExisting(extraData, parsed);
+  extraData = await mergeParsedIntoExisting(extraData, parsed);
   await renderDetailTables(extraData);
   statusEl.textContent = 'Erkannt: ' + (parsed.name || 'kein Name gefunden') + ' — bitte Felder unten prüfen, bevor du speicherst.';
 }
@@ -232,10 +232,10 @@ async function onParse() {
 // der bisherige Wert erhalten statt geleert zu werden - siehe
 // isEmptyValue. Bei einem neuen Pferd (extraData vorher leer) hat das
 // keine Wirkung.
-function mergeParsedIntoExisting(oldData, parsed) {
+async function mergeParsedIntoExisting(oldData, parsed) {
   const merged = { ...oldData, ...parsed };
   for (const key of JSONB_KEYS) {
-    merged[key] = mergeFieldValue(key, oldData[key], parsed[key]);
+    merged[key] = await mergeFieldValue(key, oldData[key], parsed[key]);
   }
   return merged;
 }
@@ -552,7 +552,7 @@ function isEmptyValue(key, value) {
 // überschreiben, im neuen Text fehlende Werte bleiben aus dem alten Wert
 // erhalten. Für alle anderen Felder gilt weiterhin: neuer Wert leer und
 // alter nicht -> alten Wert behalten, sonst neuen Wert übernehmen.
-function mergeFieldValue(key, oldValue, newValue) {
+async function mergeFieldValue(key, oldValue, newValue) {
   if (newValue === undefined) return oldValue;
   if (key === 'disciplines' || key === 'traits' || key === 'tournament_potential') {
     return { ...(oldValue || {}), ...(newValue || {}) };
@@ -566,7 +566,7 @@ function mergeFieldValue(key, oldValue, newValue) {
   // zu entscheiden, wird beim Speichern nachgefragt (siehe
   // decideTagsMerge) - aber nur, wenn es dabei wirklich etwas zu
   // entscheiden gibt.
-  if (key === 'tags') return decideTagsMerge(oldValue, newValue);
+  if (key === 'tags') return await decideTagsMerge(oldValue, newValue);
   // "pedigree": zeigt das Spiel den Stammbaum-Abschnitt nicht vollständig
   // aufgeklappt (z.B. nur Eltern statt aller 3 Generationen), liefert ein
   // erneut eingefügter Text zwar NICHT leer, aber weniger Vorfahren als
@@ -595,16 +595,18 @@ function mergeTagsUnion(oldTags, newTags) {
 // Schlagwörter hat, die im neuen Formular NICHT angehakt sind, gibt es
 // überhaupt etwas zu entscheiden - sonst einfach zusammenführen, ohne zu
 // fragen.
-function decideTagsMerge(oldTags, newTags) {
+async function decideTagsMerge(oldTags, newTags) {
   const old = oldTags || [];
   const fresh = newTags || [];
   const freshLabels = new Set(fresh.map((t) => t.label));
   const extraOld = old.filter((t) => !freshLabels.has(t.label));
   if (!extraOld.length) return mergeTagsUnion(old, fresh);
-  const keepBoth = confirm(
+  const keepBoth = await showConfirmModal(
+    'Schlagwörter zusammenführen',
     `Das gefundene Pferd hat bereits folgende Schlagwörter: ${extraOld.map((t) => t.label).join(', ')}.\n\n` +
     `OK = behalten und mit den neu angehakten zusammenführen.\n` +
-    `Abbrechen = entfernen, nur die im Formular angehakten Schlagwörter übernehmen.`
+    `Abbrechen = entfernen, nur die im Formular angehakten Schlagwörter übernehmen.`,
+    'OK'
   );
   return keepBoth ? mergeTagsUnion(old, fresh) : fresh;
 }
@@ -817,9 +819,9 @@ async function autoUpdateParentFlaxenCarriers(payload) {
 // direkt danach würde sie fälschlich als "fehlt" melden, weil es sie in
 // payload gar nicht sieht. Deshalb hier zusätzlich aus dem bestehenden
 // Datensatz nachtragen, wenn sie in payload fehlen.
-function mergePayloadFromExisting(payload, existing) {
+async function mergePayloadFromExisting(payload, existing) {
   for (const key of Object.keys(payload)) {
-    payload[key] = mergeFieldValue(key, existing[key], payload[key]);
+    payload[key] = await mergeFieldValue(key, existing[key], payload[key]);
   }
   for (const key of JSONB_KEYS) {
     if (!(key in payload)) payload[key] = existing[key];
@@ -873,7 +875,7 @@ async function resolveSaveTarget(formData, payload) {
       // reguläten Bearbeiten (targetId = editingId, siehe unten) gilt das
       // bewusst NICHT: dort ist das Formular mit den alten Werten
       // vorbefüllt, ein leeres Feld dort also eine bewusste Änderung.
-      mergePayloadFromExisting(payload, existing);
+      await mergePayloadFromExisting(payload, existing);
     } else if (payload.external_id) {
       // Kein Namenstreffer, aber eine Spiel-ID eingetragen - die ID ist
       // eindeutig (kommt im Spiel nur einmal vor), deshalb genau wie beim
@@ -895,7 +897,7 @@ async function resolveSaveTarget(formData, payload) {
       if (idMatch) {
         targetId = idMatch.id;
         beforeRecord = idMatch;
-        mergePayloadFromExisting(payload, idMatch);
+        await mergePayloadFromExisting(payload, idMatch);
       }
     }
 
@@ -927,7 +929,7 @@ async function resolveSaveTarget(formData, payload) {
           if (isSame) {
             targetId = fullCandidate.id;
             beforeRecord = fullCandidate;
-            mergePayloadFromExisting(payload, fullCandidate);
+            await mergePayloadFromExisting(payload, fullCandidate);
           }
         }
       }
@@ -1071,7 +1073,7 @@ function onBulkSessionFinish() {
 
 async function onDelete() {
   if (!editingId) return;
-  if (!confirm('Dieses Pferd wirklich unwiderruflich löschen?')) return;
+  if (!(await showConfirmModal('Pferd löschen', 'Dieses Pferd wirklich unwiderruflich löschen?', 'Löschen'))) return;
   const { error } = await supabaseClient.from('horses').delete().eq('id', editingId);
   if (error) {
     document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message;
@@ -1399,81 +1401,9 @@ async function fetchParentRecords(pedigree) {
   return data;
 }
 
-// Reinerbig vorhandene Loci eines Elternteils - sowohl bestätigt
-// (getestet) als auch abgeleitet (z.B. aus dem Namen "Cremello" oder
-// einem doppelten Kürzel "SPLSPL" in der Notiz), siehe
-// presentGenesSummary/isDoubledAllele in parser.js. Ein reinerbiger
-// Elternteil vererbt sein Allel garantiert (100%) - beim Fohlen selbst
-// bedeutet das aber erstmal nur EINE garantierte Kopie (mischerbig),
-// nicht zwangsläufig reinerbig (siehe parentColorHints).
-function parentHomozygousLoci(parent) {
-  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name, null, parent.color_gene_overrides);
-  const map = {};
-  for (const g of genes) {
-    if (isDoubledAllele(g.alleles)) map[g.locus] = halveDoubledAllele(g.alleles);
-  }
-  return map;
-}
-
-// Ist ein Locus bei GENAU EINEM Elternteil reinerbig vorhanden, weiß man
-// beim Fohlen (falls dort selbst nicht vollständig getestet) nur, dass
-// mindestens eine Kopie davon vorhanden ist (mischerbig) - welches Allel
-// der zweite Elternteil weitergibt, ist Zufall. Sind dagegen BEIDE
-// Elternteile für denselben Locus reinerbig mit demselben Allel, ist auch
-// das Fohlen zwingend reinerbig dafür.
-function parentColorHints(parents) {
-  const perParent = parents.map(parentHomozygousLoci);
-  const loci = new Set();
-  perParent.forEach((m) => Object.keys(m).forEach((l) => loci.add(l)));
-
-  const hints = [];
-  for (const locus of loci) {
-    const values = perParent.map((m) => m[locus]).filter(Boolean);
-    const uniqueValues = [...new Set(values)];
-    if (uniqueValues.length === 1 && values.length >= 2) {
-      hints.push({ locus, alleles: uniqueValues[0] + uniqueValues[0] });
-    } else {
-      for (const v of uniqueValues) hints.push({ locus, alleles: v });
-    }
-  }
-  return hints;
-}
-
-// Sonderfall "Pinto" (siehe pintoPatternsFromColors in parser.js): allein
-// aus dem Namen lässt sich nicht sagen, welche 2 der 4 Scheckungs-Muster
-// gemeint sind - stehen bei den Eltern zusammen aber genau 2 dieser 4
-// Muster getestet vorhanden, muss ein sichtbar "Pinto" bezeichnetes Fohlen
-// genau diese geerbt haben.
-function pintoParentHints(parents, coatColorName, notes, horseName) {
-  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''} ${horseName || ''}`);
-  if (!isPinto) return [];
-
-  const combined = new Set();
-  for (const parent of parents) {
-    for (const p of pintoPatternsFromColors(parent.colors)) combined.add(p);
-  }
-  if (combined.size !== 2) return [];
-
-  return [...combined].map((allele) => ({ locus: PINTO_ALLELE_LOCUS[allele], alleles: allele }));
-}
-
-// Ob mindestens ein Elternteil überhaupt ein pl-Allel zeigt - einfach
-// (Träger) ODER reinerbig, egal ob getestet oder selbst schon abgeleitet
-// (z.B. aus "Apricot" im Namen). Anders als parentHomozygousLoci (nur
-// reinerbige Loci, für garantierte Vererbung) zählt hier bereits ein
-// einzelnes "pl". Wird für die "ambiguousCream"-Einträge in
-// PHENOTYPE_GENE_HINTS gebraucht (Cremello/Perlino/Smoky Cream/...): nur
-// wenn ein Elternteil nachweislich pl trägt, könnte das zweite "Cr" des
-// Fohlens tatsächlich ein "pl" sein (optisch nicht unterscheidbar) - sonst
-// bleibt es beim einfacheren Regelfall CrCr.
-function parentsMightHavePearl(parents) {
-  return parents.some((p) => {
-    const entry = (p.colors || []).find((c) => c.label === 'Cream');
-    if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
-    const genes = presentGenesSummary(p.colors, p.coat_color, p.notes, p.name, null, p.color_gene_overrides);
-    return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
-  });
-}
+// parentHomozygousLoci/parentColorHints/pintoParentHints/
+// parentsMightHavePearl sind jetzt in parser.js (siehe dort) - werden
+// dort UND hier gebraucht, list.js lädt aber kein horseForm.js.
 
 async function fetchParentColorHints(pedigree, coatColorName, notes, horseName) {
   const parents = await fetchParentRecords(pedigree);

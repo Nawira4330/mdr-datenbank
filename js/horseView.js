@@ -120,7 +120,7 @@ async function wireFavoriteButton(session) {
 }
 
 async function onDeleteView() {
-  if (!confirm('Dieses Pferd wirklich unwiderruflich löschen?')) return;
+  if (!(await showConfirmModal('Pferd löschen', 'Dieses Pferd wirklich unwiderruflich löschen?', 'Löschen'))) return;
   const { error } = await supabaseClient.from('horses').delete().eq('id', viewHorseId);
   if (error) {
     document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message;

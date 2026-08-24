@@ -1213,6 +1213,13 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
    ungefährlichen Popups (Schlagwort zuweisen, Besitzer wechseln), die
    die normale Akzentfarbe behalten. */
 #delete-modal h2 { color: var(--danger); }
+/* Generisches Bestätigen-Modal (siehe showConfirmModal in js/parser.js) -
+   Ersatz für window.confirm(), das wie window.prompt() in manchen
+   Browsern/Kontexten stillschweigend unterdrückt wird (kein Dialog, kein
+   Fehler - der Klick wirkt dann einfach wirkungslos, siehe
+   Nutzer-Feedback "löschen funktioniert nicht"). Rot wie #delete-modal,
+   da fast alle Aufrufe Löschbestätigungen sind. */
+#confirm-modal h2 { color: var(--danger); }
 .modal-box p { font-size: 0.84rem; }
 .modal-box ul { margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.84rem; }
 .modal-box li { margin: 0.2rem 0; font-weight: 600; }

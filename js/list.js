@@ -61,6 +61,14 @@ let allHorsesCache = null;
 // Benutzername (vor dem @) des eingeloggten Kontos - fuer den
 // "Nur meine"-Schnellfilter beim Besitzer (siehe onOnlyMyHorses).
 let currentIdentity = null;
+// Namens-Index (Name -> {colors, coat_color, notes, color_gene_overrides})
+// über den KOMPLETTEN Bestand, für die Eltern-Hinweise bei der
+// Farbgenetik (siehe genesOfRow/loadGeneIndex) - z.B. damit ein Fohlen
+// eines nachweislich flfl-Elternteils in der Übersicht/beim Filtern
+// ebenfalls (mindestens) als "fl"-Träger gilt, auch wenn das Fohlen selbst
+// keinen eigenen Text-Hinweis liefert (analog zum Genetik-Tab eines
+// einzelnen Pferds, siehe fetchParentColorHints in horseForm.js).
+let geneIndex = null;
 
 document.addEventListener('DOMContentLoaded', init);
 
@@ -89,6 +97,7 @@ async function init() {
   wireScrollTop();
   showFlashBanner();
   await loadUserSettings(session);
+  await loadGeneIndex();
   await showMissingDataNotice(session);
   await checkAgeNotices(session);
   await loadTagSuggestions();
@@ -190,6 +199,44 @@ async function loadAllHorsesCache() {
   // sonst würden angepinnte Kacheln stillschweigend zu niedrig zählen.
   const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('*'));
   allHorsesCache = !error && data ? data : [];
+}
+
+// Einmaliger, ungefilterter Voll-Abruf nur der für die Eltern-Hinweise
+// nötigen Spalten (siehe geneIndex oben) - läuft IMMER beim Laden der
+// Übersicht, unabhängig von eigenen Dashboard-Kacheln (anders als
+// loadAllHorsesCache), da Tabelle/Filter/Kacheln die Farbgenetik-Anzeige
+// gleichermaßen brauchen. Bewusst nur die schlanken Spalten statt select('*')
+// wie bei loadAllHorsesCache, um die Nutzlast klein zu halten.
+async function loadGeneIndex() {
+  const { data, error } = await fetchAllRows(
+    supabaseClient.from('horses').select('name, colors, coat_color, notes, color_gene_overrides'),
+  );
+  geneIndex = new Map((!error && data ? data : []).map((h) => [h.name, h]));
+}
+
+// Direkte Eltern eines Pferds (erste zwei Stammbaum-Einträge, siehe
+// fetchParentRecords in horseForm.js) aus dem geneIndex nachgeschlagen -
+// ohne eigene Abfrage, da geneIndex bereits den kompletten Bestand enthält.
+function parentRecordsForRow(row) {
+  if (!geneIndex) return [];
+  const ancestors = Array.isArray(row.pedigree) ? row.pedigree.slice(1) : (row.pedigree?.ancestors || []);
+  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  return parentNames.map((n) => geneIndex.get(n)).filter(Boolean);
+}
+
+// Wie presentGenesSummary, aber inklusive Eltern-Hinweisen (parentHints/
+// parentMightHavePearl, siehe parser.js) - damit z.B. ein Fohlen eines
+// flfl-Elternteils auch in der Übersichtstabelle/beim Filtern/bei den
+// Dashboard-Kacheln (mindestens) als Flaxen-Träger gilt, nicht nur im
+// Genetik-Tab des einzelnen Pferds (dort übernimmt das horseForm.js
+// eigenständig, siehe fetchParentColorHints).
+function genesOfRow(row) {
+  const parents = parentRecordsForRow(row);
+  const hints = parents.length
+    ? [...parentColorHints(parents), ...pintoParentHints(parents, row.coat_color, row.notes, row.name)]
+    : [];
+  const parentMightHavePearl = parents.length ? parentsMightHavePearl(parents) : false;
+  return presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, hints, row.color_gene_overrides, parentMightHavePearl);
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -587,7 +634,7 @@ function colorCodeOf(row) {
 // exakt dieselben Werte verwenden.
 function computeDerived(h) {
   const gpRaw = h.tournament_potential?.['Gesamtpotenzial'];
-  const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name, null, h.color_gene_overrides);
+  const genes = genesOfRow(h);
   return {
     colorCode: colorCodeOf(h),
     presentGenes: genes.map((g) => g.alleles).join(' '),
@@ -803,7 +850,7 @@ const LOCUS_DOMINANT_CHECK = {
 function hasPearlGene(row) {
   const entry = (row.colors || []).find((c) => c.label === 'Cream');
   if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  const genes = genesOfRow(row);
   return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
 }
 
@@ -812,7 +859,7 @@ function hasPearlGene(row) {
 function hasPearlGeneDoubled(row) {
   const entry = (row.colors || []).find((c) => c.label === 'Cream');
   if (entry && !isUntestedLocusValue(entry.value) && /^plpl$/i.test(entry.value)) return true;
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  const genes = genesOfRow(row);
   return genes.some((g) => g.locus === 'Cream' && /^plpl$/i.test(g.alleles));
 }
 
@@ -820,14 +867,14 @@ function hasPearlGeneDoubled(row) {
 // parser.js) - daher ausschließlich aus Fellfarbe/Notiz/Name ableitbar,
 // sowohl als Träger (fl) als auch reinerbig (flfl).
 function hasFlaxenGene(row) {
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  const genes = genesOfRow(row);
   return genes.some((g) => g.locus === 'Flaxen');
 }
 
 // Wie hasFlaxenGene, aber nur reinerbig ("flfl") - für die separate
 // "flfl"-Filteroption.
 function hasFlaxenGeneDoubled(row) {
-  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, null, row.color_gene_overrides);
+  const genes = genesOfRow(row);
   return genes.some((g) => g.locus === 'Flaxen' && /^flfl$/i.test(g.alleles));
 }
 
@@ -1657,6 +1704,7 @@ function matchesCustomTileFilters(h, filters) {
     const b = normalizeBreed(h.breed) || 'Rasselos';
     if (b !== f.breed) return false;
   }
+  if (f.owner && h.owner !== f.owner) return false;
   if (f.gender && h.gender !== f.gender) return false;
   if (f.zzl === 'true' && h.breeding_allowed !== true) return false;
   if (f.zzl === 'false' && h.breeding_allowed) return false;

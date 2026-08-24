@@ -1110,6 +1110,84 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
 }
 
+// Reinerbig vorhandene Loci eines Elternteils - sowohl bestätigt
+// (getestet) als auch abgeleitet (z.B. aus dem Namen "Cremello" oder
+// einem doppelten Kürzel "SPLSPL" in der Notiz). Ein reinerbiger
+// Elternteil vererbt sein Allel garantiert (100%) - beim Fohlen selbst
+// bedeutet das aber erstmal nur EINE garantierte Kopie (mischerbig),
+// nicht zwangsläufig reinerbig (siehe parentColorHints). Gebraucht sowohl
+// von horseForm.js (Genetik-Tab eines einzelnen Pferds) als auch von
+// list.js (Übersichtstabelle/Filter/Kacheln, über einen einmalig
+// aufgebauten Namens-Index statt Einzelabfragen, siehe dort).
+function parentHomozygousLoci(parent) {
+  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name, null, parent.color_gene_overrides);
+  const map = {};
+  for (const g of genes) {
+    if (isDoubledAllele(g.alleles)) map[g.locus] = halveDoubledAllele(g.alleles);
+  }
+  return map;
+}
+
+// Ist ein Locus bei GENAU EINEM Elternteil reinerbig vorhanden, weiß man
+// beim Fohlen (falls dort selbst nicht vollständig getestet) nur, dass
+// mindestens eine Kopie davon vorhanden ist (mischerbig) - welches Allel
+// der zweite Elternteil weitergibt, ist Zufall. Sind dagegen BEIDE
+// Elternteile für denselben Locus reinerbig mit demselben Allel, ist auch
+// das Fohlen zwingend reinerbig dafür.
+function parentColorHints(parents) {
+  const perParent = parents.map(parentHomozygousLoci);
+  const loci = new Set();
+  perParent.forEach((m) => Object.keys(m).forEach((l) => loci.add(l)));
+
+  const hints = [];
+  for (const locus of loci) {
+    const values = perParent.map((m) => m[locus]).filter(Boolean);
+    const uniqueValues = [...new Set(values)];
+    if (uniqueValues.length === 1 && values.length >= 2) {
+      hints.push({ locus, alleles: uniqueValues[0] + uniqueValues[0] });
+    } else {
+      for (const v of uniqueValues) hints.push({ locus, alleles: v });
+    }
+  }
+  return hints;
+}
+
+// Sonderfall "Pinto" (siehe pintoPatternsFromColors): allein aus dem Namen
+// lässt sich nicht sagen, welche 2 der 4 Scheckungs-Muster gemeint sind -
+// stehen bei den Eltern zusammen aber genau 2 dieser 4 Muster getestet
+// vorhanden, muss ein sichtbar "Pinto" bezeichnetes Fohlen genau diese
+// geerbt haben.
+function pintoParentHints(parents, coatColorName, notes, horseName) {
+  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''} ${horseName || ''}`);
+  if (!isPinto) return [];
+
+  const combined = new Set();
+  for (const parent of parents) {
+    for (const p of pintoPatternsFromColors(parent.colors)) combined.add(p);
+  }
+  if (combined.size !== 2) return [];
+
+  return [...combined].map((allele) => ({ locus: PINTO_ALLELE_LOCUS[allele], alleles: allele }));
+}
+
+// Ob mindestens ein Elternteil überhaupt ein pl-Allel zeigt - einfach
+// (Träger) ODER reinerbig, egal ob getestet oder selbst schon abgeleitet
+// (z.B. aus "Apricot" im Namen). Anders als parentHomozygousLoci (nur
+// reinerbige Loci, für garantierte Vererbung) zählt hier bereits ein
+// einzelnes "pl". Wird für die "ambiguousCream"-Einträge in
+// PHENOTYPE_GENE_HINTS gebraucht (Cremello/Perlino/Smoky Cream/...): nur
+// wenn ein Elternteil nachweislich pl trägt, könnte das zweite "Cr" des
+// Fohlens tatsächlich ein "pl" sein (optisch nicht unterscheidbar) - sonst
+// bleibt es beim einfacheren Regelfall CrCr.
+function parentsMightHavePearl(parents) {
+  return parents.some((p) => {
+    const entry = (p.colors || []).find((c) => c.label === 'Cream');
+    if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
+    const genes = presentGenesSummary(p.colors, p.coat_color, p.notes, p.name, null, p.color_gene_overrides);
+    return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
+  });
+}
+
 // Schlagwoerter fuers Kennzeichnen eigener Pferde (Verkaufsstatus etc.,
 // siehe horse.html "Schlagwörter"/list.js Filter+Anzeige) - bewusst eine
 // feste statt frei eintippbaren Liste, damit Farben/Filter eindeutig
@@ -1466,6 +1544,41 @@ function showPromptModal(title, label, defaultValue) {
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
     input.addEventListener('keydown', onKeydown);
+  });
+}
+
+// Ersatz für window.confirm() - dieselbe stillschweigende Unterdrückung
+// wie bei window.prompt() (siehe showPromptModal oben), betraf u.a. das
+// Löschen eigener Dashboard-Kacheln (Nutzer-Feedback "löschen
+// funktioniert nicht"). Erwartet ein #confirm-modal mit #confirm-modal-
+// title/-message/-ok/-cancel im aktuellen HTML. Verhält sich wie
+// confirm(): löst mit true (OK) oder false (Abbrechen/Escape) auf.
+function showConfirmModal(title, message, okLabel) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirm-modal');
+    document.getElementById('confirm-modal-title').textContent = title;
+    document.getElementById('confirm-modal-message').textContent = message;
+    const okBtn = document.getElementById('confirm-modal-ok');
+    const cancelBtn = document.getElementById('confirm-modal-cancel');
+    okBtn.textContent = okLabel || 'OK';
+    modal.hidden = false;
+    okBtn.focus();
+
+    const cleanup = () => {
+      modal.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKeydown);
+    };
+    const onOk = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+    const onKeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+      else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    };
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKeydown);
   });
 }
 
