@@ -1590,7 +1590,7 @@ function renderDashboardTiles(rows) {
       return `<div class="dashboard-tile"><span class="dashboard-tile-value">${def.compute(rows)}</span><span class="dashboard-tile-label">${escapeHtml(def.label)}</span></div>`;
     })
     .join('');
-  container.innerHTML = tilesHtml + '<a class="dashboard-tile-customize" href="einstellungen.html">⚙<br>Kacheln anpassen</a>';
+  container.innerHTML = tilesHtml;
 }
 
 function onRowSelect(id, checked, refreshBar = true) {

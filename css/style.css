@@ -685,26 +685,6 @@ body.hide-delete #bulk-delete-btn {
 .avg-stat-value { font-size: 1.75rem; font-weight: 700; margin-top: 0.4rem; color: var(--accent); }
 .avg-stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
 
-/* Schneller Zugang zur Kacheln-Auswahl direkt aus der Übersicht, statt
-   nur über die Einstellungen erreichbar - gestrichelter Rahmen hebt sie
-   bewusst von den Kacheln selbst ab (kein Messwert, sondern eine Aktion). */
-.dashboard-tile-customize {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15rem;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 0.5rem 0.9rem;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-}
-.dashboard-tile-customize:hover { color: var(--accent-dark); border-color: var(--accent); }
-
 /* Einklappbare Filter/Ø-Vergleich-Bereiche (siehe #filter-details/
    #compare-avg-details in index.html) - das <details>-Element selbst
    trägt jetzt die Karten-Optik (Rahmen/Hintergrund), summary ist dessen
