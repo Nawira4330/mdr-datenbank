@@ -1277,6 +1277,21 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     border-bottom: 1px solid var(--border);
   }
   #horse-table td[data-label="Name"]::before { content: none; }
+  /* Schlagwort-Badges direkt unter dem Namen, in derselben "Kopf"-Gruppe
+     (order:-1) wie Auswählen/Favorit/Bild/Name - eigene, volle Zeile statt
+     eines Label:Wert-Paares, und komplett ausgeblendet, wenn ein Pferd
+     keine Schlagwörter hat (der häufigere Fall). */
+  #horse-table td[data-label="Schlagwörter"] {
+    order: -1;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    text-align: left;
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  #horse-table td[data-label="Schlagwörter"]::before { content: none; }
+  #horse-table td[data-label="Schlagwörter"]:empty { display: none; padding: 0; border-bottom: none; }
   #horse-table td[data-label="Aktionen"] { display: block; text-align: left; padding-top: 0.5rem; }
   #horse-table td[data-label="Aktionen"]::before { content: none; }
   #horse-table td[data-label="Aktionen"] button { width: 100%; }
@@ -1302,7 +1317,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      bereits oben eine eigene volle Zeile bekommen) zu zweit pro Zeile
      statt einzeln - dichter als die Handy-Liste, ohne die Beschriftung
      durch echtes kv-Grid-Markup zu ersetzen. */
-  #horse-table td:not([data-label="Auswählen"]):not([data-label="Favorit"]):not([data-label="Bild"]):not([data-label="Name"]):not([data-label="Aktionen"]) {
+  #horse-table td:not([data-label="Auswählen"]):not([data-label="Favorit"]):not([data-label="Bild"]):not([data-label="Name"]):not([data-label="Schlagwörter"]):not([data-label="Aktionen"]) {
     flex: 1 1 45%;
   }
 }
@@ -1366,7 +1381,8 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   #horse-table td[data-label="Auswählen"],
   #horse-table td[data-label="Favorit"],
   #horse-table td[data-label="Bild"],
-  #horse-table td[data-label="Name"] {
+  #horse-table td[data-label="Name"],
+  #horse-table td[data-label="Schlagwörter"] {
     border-bottom: none;
   }
   /* Getönter Hintergrund hinter dem Mini-Bild (wie .thumb im

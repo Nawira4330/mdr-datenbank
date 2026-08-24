@@ -994,17 +994,19 @@ function rowHtml(h) {
   // Name öffnet die reine Ansichtsseite (view.html) - Bearbeiten passiert
   // über den eigenen Stift-Button in der Aktionen-Spalte, der externe
   // Spiel-Link über den eigenen 🔗-Button (nur falls external_id gesetzt).
-  // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) direkt daneben,
-  // statt einer eigenen Spalte - die Tabelle ist ohnehin schon sehr breit.
   // .name-cell selbst bleibt ein normales table-cell-Element (display:flex
   // DIREKT auf einem <td> nimmt es aus dem Tabellen-Zeilenlayout heraus -
   // es wuerde dann nicht mehr automatisch auf die Zeilenhoehe der
   // Geschwister-Zellen gestreckt, wodurch seine eigene Trennlinie
   // "hoeher" als der Rest der Zeile sass, siehe Nutzer-Feedback). Die
-  // Flex-Anordnung fuer Name+Badges sitzt deshalb auf einem inneren Span
-  // statt auf dem <td> selbst.
-  const nameCell = `<span class="name-cell-inner"><a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a>${tagsBadgesHtml(h.tags)}</span>`;
-  const nameTitle = [h.name || '(ohne Name)', ...(h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label)].join(' – ');
+  // Flex-Anordnung sitzt deshalb auf einem inneren Span statt auf dem
+  // <td> selbst.
+  const nameCell = `<span class="name-cell-inner"><a href="view.html?id=${h.id}">${escapeHtml(h.name || '(ohne Name)')}</a></span>`;
+  const nameTitle = h.name || '(ohne Name)';
+  // Schlagwort-Badges (siehe HORSE_TAG_OPTIONS in parser.js) in einer
+  // eigenen Spalte statt direkt neben dem Namen (Design-Vorschlag, siehe
+  // MixD.dc.html).
+  const tagTitle = (h.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label).join(' – ');
   const linkCell = h.external_id
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
@@ -1020,6 +1022,7 @@ function rowHtml(h) {
     <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
     <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
+    <td data-label="Schlagwörter" title="${escapeHtml(tagTitle)}">${tagsBadgesHtml(h.tags)}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
     <td data-label="Rasse" title="${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe" title="${escapeHtml(h.coat_color || '')}">${escapeHtml(h.coat_color || '')}</td>
