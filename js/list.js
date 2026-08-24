@@ -504,7 +504,7 @@ async function populateFilterOptions() {
   // HORSE_TAG_OPTIONS in parser.js) - alle Schlagwörter sollen als
   // Filteroption wählbar sein, auch wenn sie aktuell bei keinem Pferd
   // vergeben sind.
-  populateCheckDropdown('f-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label), { noneOption: 'Kein Schlagwort' });
+  populateCheckDropdown('f-tag-drop', HORSE_TAG_OPTIONS.map((t) => t.label), { noneOption: 'Kein Schlagwort', tristate: true });
 }
 
 function fillSelect(selector, values) {
@@ -869,7 +869,8 @@ function applyClientFilters(rows) {
   const breed = document.querySelector('#f-breed').value;
   const genetikState = getCheckDropdownTristate('f-genetik-drop');
   const ekhState = getCheckDropdownTristate('f-ekh-drop');
-  const tagSelected = getCheckDropdownSelected('f-tag-drop');
+  const tagState = getCheckDropdownTristate('f-tag-drop');
+  const tagNote = document.querySelector('#f-tag-note').value.trim().toLowerCase();
 
   const gpOp = document.querySelector('#f-gp-op').value;
   const gpVal = document.querySelector('#f-gp-val').value;
@@ -898,11 +899,19 @@ function applyClientFilters(rows) {
     if (genetikState.exclude.some((locus) => matchesGenetikLocus(row, locus))) return false;
     if (ekhState.include.length && !matchesEkh(row, ekhState.include)) return false;
     if (ekhState.exclude.some((code) => matchesEkh(row, [code]))) return false;
-    // Wie beim EKH-Filter: "einer der ausgewählten Schlagwörter" (ODER),
+    // Wie beim EKH-Filter: "einer der angewählten Schlagwörter" (ODER),
     // nicht "alle gleichzeitig" (UND) - sonst ließe sich z.B. "Verkauf"
     // + "Reserviert" nicht kombiniert als "eins von beiden" filtern.
-    // "Keine" (__none__) findet Pferde ganz ohne Schlagwort.
-    if (tagSelected.length && !matchesTags(row, tagSelected)) return false;
+    // "Keine" (__none__) findet Pferde ganz ohne Schlagwort. Ausschlüsse
+    // wirken dagegen einzeln (UND) - ein ausgeschlossenes Schlagwort darf
+    // nie vorkommen, unabhängig von anderen Ausschlüssen.
+    if (tagState.include.length && !matchesTags(row, tagState.include)) return false;
+    if (tagState.exclude.some((label) => matchesTags(row, [label]))) return false;
+    // Freitextsuche über die optionalen Zusatztexte der Schlagwörter (z.B.
+    // "Reserviert: Bella_99" nach "Bella_99" durchsuchen) - unabhängig von
+    // der An-/Ausschluss-Auswahl oben, findet ein Pferd sobald IRGENDEIN
+    // Schlagwort eine passende Notiz trägt.
+    if (tagNote && !(row.tags || []).some((t) => (t.note || '').toLowerCase().includes(tagNote))) return false;
     if (!compareValue(d.gp, gpOp, gpVal)) return false;
     if (!compareValue(d.extAvg, extOp, extVal)) return false;
     if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
@@ -1132,6 +1141,14 @@ function wireFilterForm() {
   // (Submit), damit der Hinweis den tatsächlichen Feldinhalt widerspiegelt.
   document.querySelector('#filter-form').addEventListener('input', updateFilterHintBadge);
   document.querySelector('#filter-form').addEventListener('change', updateFilterHintBadge);
+  // Dreifach-Auswahl-Felder (Genetik/EKH/Schlagwörter, siehe
+  // checkDropdownTristateItem in parser.js) ändern ihren Zustand per
+  // Klick statt eines nativen input-/change-Events - ohne diesen
+  // zusätzlichen Listener bliebe der Hinweis-Badge nach einem Klick
+  // dort auf altem Stand.
+  document.querySelector('#filter-form').addEventListener('click', (e) => {
+    if (e.target.closest('.checkdrop-tristate')) updateFilterHintBadge();
+  });
   updateFilterHintBadge();
 }
 
@@ -1146,7 +1163,9 @@ function activeFilterDescriptions() {
   if (val('#f-breed')) list.push('Rasse');
   if (val('#f-zzl')) list.push('ZZL');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
-  if (getCheckDropdownSelected('f-tag-drop').length) list.push('Schlagwörter');
+  const tagActive = getCheckDropdownTristate('f-tag-drop');
+  if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');
+  if (val('#f-tag-note').trim()) list.push('Schlagwort-Notiz');
   const genetikActive = getCheckDropdownTristate('f-genetik-drop');
   if (genetikActive.include.length || genetikActive.exclude.length) list.push('Genetik');
   const ekhActive = getCheckDropdownTristate('f-ekh-drop');
@@ -1265,7 +1284,8 @@ function collectFilterState() {
     breed: document.querySelector('#f-breed').value,
     zzl: document.querySelector('#f-zzl').value,
     favorites: document.querySelector('#f-favorites').checked,
-    tags: getCheckDropdownSelected('f-tag-drop'),
+    tags: getCheckDropdownTristate('f-tag-drop'),
+    tagNote: document.querySelector('#f-tag-note').value,
     genetik: getCheckDropdownTristate('f-genetik-drop'),
     ekh: getCheckDropdownTristate('f-ekh-drop'),
     gpOp: document.querySelector('#f-gp-op').value,
@@ -1297,12 +1317,13 @@ async function applyFilterState(state) {
   document.querySelector('#f-breed').value = state.breed || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
   document.querySelector('#f-favorites').checked = !!state.favorites;
-  setCheckDropdownSelected('f-tag-drop', state.tags);
-  // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/EKH)
-  // speichern hier noch ein flaches Array statt {include, exclude} - als
-  // reine "anwählen"-Liste ohne Ausschlüsse interpretieren, statt an
-  // einer alten Vorlage zu scheitern.
+  document.querySelector('#f-tag-note').value = state.tagNote || '';
+  // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/
+  // EKH/Schlagwörtern) speichern hier noch ein flaches Array statt
+  // {include, exclude} - als reine "anwählen"-Liste ohne Ausschlüsse
+  // interpretieren, statt an einer alten Vorlage zu scheitern.
   const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
+  setCheckDropdownTristate('f-tag-drop', toTristate(state.tags));
   setCheckDropdownTristate('f-genetik-drop', toTristate(state.genetik));
   setCheckDropdownTristate('f-ekh-drop', toTristate(state.ekh));
   document.querySelector('#f-gp-op').value = state.gpOp || 'gt';
