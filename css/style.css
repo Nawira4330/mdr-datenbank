@@ -242,7 +242,7 @@ input::placeholder, textarea::placeholder { opacity: 0.5; }
 .view-profile .hero-frame {
   position: relative;
   background: transparent;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   min-height: 260px;
   display: flex;
@@ -890,6 +890,10 @@ td.keep-foal-cell { white-space: nowrap; }
   white-space: normal;
   overflow-wrap: break-word;
 }
+/* Auf der Profil-Ansicht (eigener, geräumigerer Bereich statt einer
+   engen Tabellenzelle) etwas größer als in der Übersicht/Kartenansicht -
+   Nutzer-Feedback "Tag etwas größer". */
+#tag-badges .horse-tag-badge { font-size: 0.75rem; padding: 0.15rem 0.6rem; }
 /* Name-Zelle der Übersicht (siehe rowHtml in list.js) - Name-Link und
    Schlagwort-Badges nebeneinander/umbrechend statt gequetscht. */
 .name-cell-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
