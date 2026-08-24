@@ -670,7 +670,13 @@ body.hide-delete #bulk-delete-btn {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  min-width: 6rem;
+  /* Wächst gleichmäßig auf die volle Zeilenbreite statt wie bisher nur
+     inhaltsbreit mit Leerraum rechts daneben zu stehen - passt sich so
+     an die tatsächliche Anzahl sichtbarer Kacheln an (wenige Kacheln
+     werden breiter, viele brechen um und teilen sich die jeweilige
+     Zeile gleichmäßig auf). */
+  flex: 1 1 8rem;
+  min-width: 8rem;
 }
 .dashboard-tile-value { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
 .dashboard-tile-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
