@@ -158,17 +158,35 @@ async function initNavSortField(session) {
 // findAdjacentHorseId, dort immer alphabetisch und auf die eigenen Pferde
 // eingeschraenkt), da man beim reinen Ansehen durch die komplette Liste
 // blättern koennen soll, nicht nur durch die eigenen.
-const NAV_SORT_LABELS = { name: 'alphabetischen', birthdate: 'nach Alter sortierten', updated_at: 'nach Bearbeitungsdatum sortierten', gp: 'nach GP sortierten' };
+const NAV_SORT_LABELS = {
+  name: 'alphabetischen',
+  birthdate: 'nach Alter sortierten',
+  updated_at: 'nach Bearbeitungsdatum sortierten',
+  gp: 'nach GP sortierten',
+  ext: 'nach Ext sortierten',
+  extpct: 'nach Ext% sortierten',
+  int: 'nach Int sortierten',
+};
 // Wie SORT_FIELDS_DESC_FIRST in list.js - "zuletzt bearbeitet" beginnt
 // sinnvollerweise mit dem neuesten Eintrag zuerst.
 const NAV_SORT_DESC_FIRST = new Set(['updated_at']);
+// Ext/Ext%/Int sind wie GP berechnete Werte ohne eigene DB-Spalte (siehe
+// computeDerived in list.js) - hier eigene, kleine Zuordnung statt list.js
+// mitzuladen (dessen DOMContentLoaded-Handler geht von Tabellen-/
+// Filterelementen aus, die auf dieser Seite nicht existieren).
+const NAV_SORT_COLUMNS = {
+  gp: 'tournament_potential',
+  ext: 'exterior_descriptive',
+  extpct: 'exterior_genetics',
+  int: 'temperament',
+};
 
 async function onNavigateView(direction) {
   const errorEl = document.getElementById('form-error');
   errorEl.textContent = '';
 
   const field = document.getElementById('nav-sort-field').value || 'name';
-  const columns = field === 'gp' ? 'id, name, tournament_potential' : `id, name, ${field}`;
+  const columns = NAV_SORT_COLUMNS[field] ? `id, name, ${NAV_SORT_COLUMNS[field]}` : `id, name, ${field}`;
   // fetchAllRows statt einer einzelnen .select() - der Gesamtbestand kann
   // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
   // sonst fehlten die hintersten Pferde beim Blättern stillschweigend.
@@ -184,6 +202,9 @@ async function onNavigateView(direction) {
       const raw = h.tournament_potential?.['Gesamtpotenzial'];
       return raw != null && raw !== '' ? Number(raw) : null;
     }
+    if (field === 'ext') return averageScore(h.exterior_descriptive, scoreExteriorTerm);
+    if (field === 'extpct') return h.exterior_genetics?.overall?.percent ?? null;
+    if (field === 'int') return averageScore(h.temperament, scoreTemperamentTerm);
     return h[field] || null;
   };
   // Pferde ohne Wert (z.B. kein Geburtsdatum) ans Ende, unabhängig von der
