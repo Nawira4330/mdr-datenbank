@@ -475,7 +475,7 @@ async function populateFilterOptions() {
     for (const d of row.genetic_diseases || []) diseaseLabels.add(d.label);
     for (const c of row.colors || []) locusLabels.add(c.label);
   }
-  populateCheckDropdown('f-ekh-drop', [...diseaseLabels].sort(), { noneOption: 'Keine' });
+  populateCheckDropdown('f-ekh-drop', [...diseaseLabels].sort(), { noneOption: 'Keine', tristate: true });
   // "KIT" selbst wird nicht als Option angeboten, da es ein Sammel-Locus
   // für mehrere unabhängige Merkmale (Tobiano/Sabino/Roan/Dominant White)
   // ist - stattdessen einzeln als Sabino/Roan/Tobiano weiter unten.
@@ -497,6 +497,7 @@ async function populateFilterOptions() {
       { value: '__kit_rn__', label: 'Roan' },
       { value: '__kit_to__', label: 'Tobiano' },
     ],
+    tristate: true,
   });
 
   // Feste Liste statt aus vorhandenen Daten abgeleitet (siehe
@@ -850,8 +851,8 @@ function affectedDiseaseLabels(row) {
   return [...tested, ...manual];
 }
 
-function matchesEkh(row, selectedCodes) {
-  return selectedCodes.some((code) => {
+function matchesEkh(row, codes) {
+  return codes.some((code) => {
     if (code === '__none__') return row.disease_free === true;
     return affectedDiseaseLabels(row).includes(code);
   });
@@ -866,8 +867,8 @@ function compareValue(value, op, targetStr) {
 
 function applyClientFilters(rows) {
   const breed = document.querySelector('#f-breed').value;
-  const genetikSelected = getCheckDropdownSelected('f-genetik-drop');
-  const ekhSelected = getCheckDropdownSelected('f-ekh-drop');
+  const genetikState = getCheckDropdownTristate('f-genetik-drop');
+  const ekhState = getCheckDropdownTristate('f-ekh-drop');
   const tagSelected = getCheckDropdownSelected('f-tag-drop');
 
   const gpOp = document.querySelector('#f-gp-op').value;
@@ -893,8 +894,10 @@ function applyClientFilters(rows) {
       const rowBreed = normalizeBreed(row.breed) || 'Rasselos';
       if (!preferredBreeds.includes(rowBreed)) return false;
     }
-    if (genetikSelected.length && !genetikSelected.every((locus) => matchesGenetikLocus(row, locus))) return false;
-    if (ekhSelected.length && !matchesEkh(row, ekhSelected)) return false;
+    if (genetikState.include.length && !genetikState.include.every((locus) => matchesGenetikLocus(row, locus))) return false;
+    if (genetikState.exclude.some((locus) => matchesGenetikLocus(row, locus))) return false;
+    if (ekhState.include.length && !matchesEkh(row, ekhState.include)) return false;
+    if (ekhState.exclude.some((code) => matchesEkh(row, [code]))) return false;
     // Wie beim EKH-Filter: "einer der ausgewählten Schlagwörter" (ODER),
     // nicht "alle gleichzeitig" (UND) - sonst ließe sich z.B. "Verkauf"
     // + "Reserviert" nicht kombiniert als "eins von beiden" filtern.
@@ -1144,8 +1147,10 @@ function activeFilterDescriptions() {
   if (val('#f-zzl')) list.push('ZZL');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
   if (getCheckDropdownSelected('f-tag-drop').length) list.push('Schlagwörter');
-  if (getCheckDropdownSelected('f-genetik-drop').length) list.push('Genetik');
-  if (getCheckDropdownSelected('f-ekh-drop').length) list.push('EKH');
+  const genetikActive = getCheckDropdownTristate('f-genetik-drop');
+  if (genetikActive.include.length || genetikActive.exclude.length) list.push('Genetik');
+  const ekhActive = getCheckDropdownTristate('f-ekh-drop');
+  if (ekhActive.include.length || ekhActive.exclude.length) list.push('EKH');
   if (val('#f-gp-val') !== '') list.push('GP');
   if (val('#f-ext-val') !== '') list.push('Ext');
   if (val('#f-extpct-val') !== '') list.push('Ext%');
@@ -1261,8 +1266,8 @@ function collectFilterState() {
     zzl: document.querySelector('#f-zzl').value,
     favorites: document.querySelector('#f-favorites').checked,
     tags: getCheckDropdownSelected('f-tag-drop'),
-    genetik: getCheckDropdownSelected('f-genetik-drop'),
-    ekh: getCheckDropdownSelected('f-ekh-drop'),
+    genetik: getCheckDropdownTristate('f-genetik-drop'),
+    ekh: getCheckDropdownTristate('f-ekh-drop'),
     gpOp: document.querySelector('#f-gp-op').value,
     gpVal: document.querySelector('#f-gp-val').value,
     extOp: document.querySelector('#f-ext-op').value,
@@ -1293,8 +1298,13 @@ async function applyFilterState(state) {
   document.querySelector('#f-zzl').value = state.zzl || '';
   document.querySelector('#f-favorites').checked = !!state.favorites;
   setCheckDropdownSelected('f-tag-drop', state.tags);
-  setCheckDropdownSelected('f-genetik-drop', state.genetik);
-  setCheckDropdownSelected('f-ekh-drop', state.ekh);
+  // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/EKH)
+  // speichern hier noch ein flaches Array statt {include, exclude} - als
+  // reine "anwählen"-Liste ohne Ausschlüsse interpretieren, statt an
+  // einer alten Vorlage zu scheitern.
+  const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
+  setCheckDropdownTristate('f-genetik-drop', toTristate(state.genetik));
+  setCheckDropdownTristate('f-ekh-drop', toTristate(state.ekh));
   document.querySelector('#f-gp-op').value = state.gpOp || 'gt';
   document.querySelector('#f-gp-val').value = state.gpVal || '';
   document.querySelector('#f-ext-op').value = state.extOp || 'gt';

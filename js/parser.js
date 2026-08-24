@@ -1236,8 +1236,8 @@ function formatAge(birthdateIso) {
   if (!ym) return '';
   const { years, months } = ym;
   const parts = [];
-  if (years > 0) parts.push(`${years} Jahr${years === 1 ? '' : 'e'}`);
-  if (months > 0 || !years) parts.push(`${months} Monat${months === 1 ? '' : 'e'}`);
+  if (years > 0) parts.push(`${years} J`);
+  if (months > 0 || !years) parts.push(`${months} M`);
   return parts.join(', ');
 }
 
@@ -1277,13 +1277,14 @@ function closeAllCheckDropdowns() {
   document.querySelectorAll('.checkdrop-panel').forEach((p) => { p.hidden = true; });
 }
 
-function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
+function populateCheckDropdown(rootId, values, { noneOption, extra, tristate } = {}) {
   const panel = document.querySelector(`#${rootId} .checkdrop-panel`);
   panel.innerHTML = '';
+  const makeItem = tristate ? checkDropdownTristateItem : checkDropdownItem;
 
-  if (noneOption) panel.appendChild(checkDropdownItem('__none__', noneOption));
-  for (const v of values) panel.appendChild(checkDropdownItem(v, v));
-  for (const { value, label } of extra || []) panel.appendChild(checkDropdownItem(value, label));
+  if (noneOption) panel.appendChild(makeItem('__none__', noneOption));
+  for (const v of values) panel.appendChild(makeItem(v, v));
+  for (const { value, label } of extra || []) panel.appendChild(makeItem(value, label));
 
   if (!noneOption && !values.length && !(extra || []).length) {
     const empty = document.createElement('div');
@@ -1292,7 +1293,24 @@ function populateCheckDropdown(rootId, values, { noneOption, extra } = {}) {
     panel.appendChild(empty);
   }
 
-  panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
+  if (tristate) {
+    panel.addEventListener('click', (e) => {
+      const item = e.target.closest('.checkdrop-tristate');
+      if (!item) return;
+      cycleTristateItem(item);
+      updateCheckDropdownLabel(rootId);
+    });
+    panel.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const item = e.target.closest('.checkdrop-tristate');
+      if (!item) return;
+      e.preventDefault();
+      cycleTristateItem(item);
+      updateCheckDropdownLabel(rootId);
+    });
+  } else {
+    panel.addEventListener('change', () => updateCheckDropdownLabel(rootId));
+  }
 }
 
 function checkDropdownItem(value, label) {
@@ -1306,10 +1324,36 @@ function checkDropdownItem(value, label) {
   return wrap;
 }
 
+// Dreifach-Zustand statt einfacher Checkbox (siehe Nutzerwunsch "auch
+// anwählen, ausschließen, abwählen" für Genetik/EKH-Filter) - ein Klick
+// zyklt neutral -> anwählen (UND/ODER-Einschluss, siehe
+// applyClientFilters) -> ausschließen -> neutral. data-state trägt den
+// aktuellen Zustand direkt am Element statt einer Checkbox, da es hier
+// drei statt zwei Zustände sind.
+const TRISTATE_CYCLE = { neutral: 'include', include: 'exclude', exclude: 'neutral' };
+
+function checkDropdownTristateItem(value, label) {
+  const wrap = document.createElement('div');
+  wrap.className = 'checkdrop-item checkdrop-tristate';
+  wrap.dataset.value = value;
+  wrap.dataset.state = 'neutral';
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'button');
+  const box = document.createElement('span');
+  box.className = 'tristate-box';
+  wrap.appendChild(box);
+  wrap.appendChild(document.createTextNode(label));
+  return wrap;
+}
+
+function cycleTristateItem(item) {
+  item.dataset.state = TRISTATE_CYCLE[item.dataset.state] || 'neutral';
+}
+
 function updateCheckDropdownLabel(rootId) {
   const root = document.getElementById(rootId);
   const toggle = root.querySelector('.checkdrop-toggle');
-  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked');
+  const checked = root.querySelectorAll('.checkdrop-panel input[type=checkbox]:checked, .checkdrop-panel .checkdrop-tristate:not([data-state="neutral"])');
   toggle.textContent = checked.length ? `${checked.length} ausgewählt` : 'Alle';
 }
 
@@ -1317,8 +1361,34 @@ function getCheckDropdownSelected(rootId) {
   return [...document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]:checked`)].map((cb) => cb.value);
 }
 
+// Für Dreifach-Zustand-Dropdowns (siehe checkDropdownTristateItem) - statt
+// eines flachen Arrays wie bei getCheckDropdownSelected zwei getrennte
+// Listen, da "anwählen" (UND/ODER-Einschluss) und "ausschließen" fachlich
+// unterschiedlich in die Filterung eingehen (siehe applyClientFilters).
+function getCheckDropdownTristate(rootId) {
+  const include = [];
+  const exclude = [];
+  document.querySelectorAll(`#${rootId} .checkdrop-panel .checkdrop-tristate`).forEach((item) => {
+    if (item.dataset.state === 'include') include.push(item.dataset.value);
+    else if (item.dataset.state === 'exclude') exclude.push(item.dataset.value);
+  });
+  return { include, exclude };
+}
+
+function setCheckDropdownTristate(rootId, state) {
+  const include = new Set(state?.include || []);
+  const exclude = new Set(state?.exclude || []);
+  document.querySelectorAll(`#${rootId} .checkdrop-panel .checkdrop-tristate`).forEach((item) => {
+    if (include.has(item.dataset.value)) item.dataset.state = 'include';
+    else if (exclude.has(item.dataset.value)) item.dataset.state = 'exclude';
+    else item.dataset.state = 'neutral';
+  });
+  updateCheckDropdownLabel(rootId);
+}
+
 function resetCheckDropdown(rootId) {
   document.querySelectorAll(`#${rootId} .checkdrop-panel input[type=checkbox]`).forEach((cb) => { cb.checked = false; });
+  document.querySelectorAll(`#${rootId} .checkdrop-panel .checkdrop-tristate`).forEach((item) => { item.dataset.state = 'neutral'; });
   updateCheckDropdownLabel(rootId);
 }
 
