@@ -748,10 +748,13 @@ function cmpClass(value, baseline, lowerIsBetter, tolerance = 0) {
   return beyondTolerance ? 'cmp-bad' : 'cmp-tolerance';
 }
 
-// Klasse für die Name-Zelle - Mehrheitsentscheid über die vier Werte
-// (mehr "besser" als "schlechter/toleriert" -> grün, umgekehrt bei
-// überwiegend "schlechter" rot bzw. bei überwiegend "toleriert" der
-// Toleranz-Grünton, sonst nichts).
+// Klasse für die Name-Zelle - ab 2 von 4 Werten in derselben Kategorie
+// wird die Zelle in deren Farbe eingefärbt (rot ab 2 "schlechter", blau/
+// Toleranzfarbe ab 2 "toleriert", grün ab 2 "besser"), Priorität rot vor
+// blau vor grün bei mehrdeutigen Fällen (z.B. 2 rot + 2 grün -> rot,
+// als deutlicherer Hinweis statt gar keiner Farbe). Nutzerwunsch: "rot ab
+// 2 rot, blau ab 2 blau, grün ab 2 grün" statt der vorherigen echten
+// Mehrheitsregel (>50%), bei der ein 2-2-Gleichstand ungefärbt blieb.
 function overallCmpClass(d) {
   if (!compareBaseline) return '';
   const pairs = [
@@ -765,9 +768,9 @@ function overallCmpClass(d) {
   const good = classes.filter((c) => c === 'cmp-good').length;
   const bad = classes.filter((c) => c === 'cmp-bad').length;
   const tolerated = classes.filter((c) => c === 'cmp-tolerance').length;
-  const notGood = bad + tolerated;
-  if (good > notGood) return 'cmp-good';
-  if (notGood > good) return bad >= tolerated ? 'cmp-bad' : 'cmp-tolerance';
+  if (bad >= 2) return 'cmp-bad';
+  if (tolerated >= 2) return 'cmp-tolerance';
+  if (good >= 2) return 'cmp-good';
   return '';
 }
 
