@@ -1216,19 +1216,37 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      Alle Einträge bilden zusammen eine durchgehende Liste (ein Rahmen um
      #horse-table statt einzelner Karten je Zeile), Auswahl-Kästchen und
      Name stehen dabei ohne eigenes Label in einer Zeile. */
-  .table-wrap { overflow-x: visible; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+  .table-wrap { overflow-x: visible; background: transparent; border: none; box-shadow: none; }
   #horse-table, #horse-table tbody { display: block; width: 100%; }
   #horse-table thead { display: none; }
+  /* Jede Zeile als eigene Karte (gilt jetzt für Tablet UND Handy
+     gleichermaßen, siehe Nutzerwunsch "Tabletversion an die vom Handy
+     angleichen, nur die Breite ändern" - vorher hatte Tablet noch die
+     unterschiedliche "durchgehende Liste"-Optik). position:relative +
+     padding-right reserviert Platz für die absolut positionierte
+     Link/Aktionen-Spalte rechts (siehe unten), die dadurch nicht mit
+     Name & Co. um die Zeilenbreite konkurriert. */
   #horse-table tr {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     column-gap: 0.6rem;
-    padding: 0.65rem 0.8rem;
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin: 0 0 0.6rem;
+    padding: 0.7rem 2.4rem 0.7rem 0.8rem;
   }
-  #horse-table tr:last-child { border-bottom: none; }
+  #horse-table tr:last-child { margin-bottom: 0; }
   #horse-table tr:hover td { background: transparent; }
+  /* Ausgewählte Karte grün umrandet + leicht getönt (wie .card.selected
+     im Design-Vorschlag). */
+  #horse-table tr:has([data-select]:checked) {
+    border-color: var(--accent);
+    background: rgba(107, 157, 0, 0.05);
+  }
+  #horse-table tr:has([data-select]:checked) td:not(.cmp-good):not(.cmp-tolerance):not(.cmp-bad) { background: transparent; }
   #horse-table td {
     display: flex;
     justify-content: space-between;
@@ -1246,174 +1264,23 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     text-align: left;
     flex-shrink: 0;
   }
-  /* Auswahl-Kästchen, Mini-Bild und Name zusammen auf einer gemeinsamen
-     ersten Zeile, alle ohne eigenes Label. align-self:flex-end statt des
-     von der Zeile geerbten "center" (siehe #horse-table tr weiter oben) -
-     die drei Felder sind unterschiedlich hoch (Bild 40px, Kästchen/Name
-     deutlich weniger), bei "center" säßen ihre unteren Trennlinien dadurch
-     auf verschiedenen Höhen und der Strich wirkte verrutscht/gestuft statt
-     durchgehend gerade. "flex-end" richtet alle drei Unterkanten (und
-     damit die border-bottom-Linien) exakt aneinander aus. */
-  #horse-table td[data-label="Auswählen"] {
-    order: -1;
-    flex: 0 0 auto;
-    align-self: flex-end;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  #horse-table td[data-label="Auswählen"]::before { content: none; }
-  #horse-table td[data-label="Favorit"] {
-    order: -1;
-    flex: 0 0 auto;
-    align-self: flex-end;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  #horse-table td[data-label="Favorit"]::before { content: none; }
+  /* Auswahl-Kästchen, Herz, Mini-Bild und Name zusammen auf einer
+     gemeinsamen ersten Zeile (Name direkt neben dem Bild, wie im
+     Design-Vorschlag .card-top), oben ausgerichtet statt des von der
+     Zeile geerbten "center". */
+  #horse-table td[data-label="Auswählen"],
+  #horse-table td[data-label="Favorit"],
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
-    align-self: flex-end;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  #horse-table td[data-label="Bild"]::before { content: none; }
-  #horse-table td[data-label="Name"] {
-    order: -1;
-    /* flex-basis 0% statt "auto": bei "auto" entscheidet der Browser
-       schon anhand der ungeschrumpften Inhaltsbreite (langer Name +
-       Schlagwort-Badges), ob das Feld überhaupt auf die erste Zeile
-       neben Kästchen/Bild passt - reicht der Platz nicht, rutscht das
-       ganze Feld in eine eigene Zeile statt seinen Inhalt intern
-       umzubrechen, und die gemeinsame Trennlinie reißt auseinander. Mit
-       Basis 0% + min-width:0 bekommt es zunächst (fast) keinen Platz
-       zugewiesen und wächst danach nur so weit wie tatsächlich übrig
-       ist, wodurch Name/Badges innerhalb der Zeile umbrechen statt das
-       Feld selbst wegzuschieben. */
-    flex: 1 1 0%;
-    min-width: 0;
-    align-self: flex-end;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    text-align: left;
-    font-size: 1.05rem;
-    font-weight: 600;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  #horse-table td[data-label="Name"]::before { content: none; }
-  /* Schlagwort-Badges direkt unter dem Namen, in derselben "Kopf"-Gruppe
-     (order:-1) wie Auswählen/Favorit/Bild/Name - eigene, volle Zeile statt
-     eines Label:Wert-Paares, und komplett ausgeblendet, wenn ein Pferd
-     keine Schlagwörter hat (der häufigere Fall). */
-  #horse-table td[data-label="Schlagwörter"] {
-    order: -1;
-    flex: 1 1 100%;
-    justify-content: flex-start;
-    text-align: left;
-    padding-top: 0;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  #horse-table td[data-label="Schlagwörter"]::before { content: none; }
-  #horse-table td[data-label="Schlagwörter"]:empty { display: none; padding: 0; border-bottom: none; }
-  #horse-table td[data-label="Aktionen"] { display: block; text-align: left; padding-top: 0.5rem; }
-  #horse-table td[data-label="Aktionen"]::before { content: none; }
-  #horse-table td[data-label="Aktionen"] button { width: 100%; }
-  #horse-table td.small { font-size: 0.85rem; }
-}
-
-/* Tablet (641-900px): dieselbe Karten-Logik wie beim Handy oben, aber
-   zwei Karten nebeneinander statt einer durchgehenden Liste, und die
-   Felder je Karte brechen zu zweit pro Zeile um statt einzeln - nutzt die
-   zusätzliche Breite, ohne die Handy-spezifischen Regeln oben zu
-   verdoppeln (diese Regeln bauen bewusst nur auf ihnen auf, siehe
-   Nutzer-Feedback "Tabletübersicht wie beim Handy, nur breiter"). */
-@media (min-width: 641px) and (max-width: 900px) {
-  #horse-table tbody { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
-  #horse-table tr {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.7rem 0.9rem;
-    align-content: flex-start;
-  }
-  #horse-table tr:last-child { border-bottom: 1px solid var(--border); }
-  /* Restliche Felder (nicht Auswählen/Favorit/Bild/Name/Aktionen, die
-     bereits oben eine eigene volle Zeile bekommen) zu zweit pro Zeile
-     statt einzeln - dichter als die Handy-Liste, ohne die Beschriftung
-     durch echtes kv-Grid-Markup zu ersetzen. */
-  #horse-table td:not([data-label="Auswählen"]):not([data-label="Favorit"]):not([data-label="Bild"]):not([data-label="Name"]):not([data-label="Schlagwörter"]):not([data-label="Aktionen"]) {
-    flex: 1 1 45%;
-  }
-}
-
-@media (max-width: 640px) {
-  main.container { padding: 0.75rem; }
-  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
-  .topbar h1 { font-size: 1.3rem; }
-  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
-
-  /* Dashboard-Kacheln (siehe #dashboard-tiles weiter oben) - als fester
-     2-Spalten-Grid statt flex-wrap, sonst reißt die letzte Kachel bei
-     ungerader Anzahl allein in eine eigene, unruhige Zeile. */
-  .dashboard-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .dashboard-tile { min-width: 0; }
-  .avg-stats { grid-template-columns: repeat(2, 1fr); }
-
-  /* --- Formular (horse.html) --- */
-  .form-grid { grid-template-columns: 1fr; }
-  .form-grid.form-grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .form-actions { flex-direction: column; }
-  .form-actions .push-right { margin-left: 0; }
-  .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
-  fieldset { padding: 0.7rem 0.8rem 0.9rem; }
-  details.paste-box { padding: 0.7rem 0.8rem 0.9rem; }
-
-  /* --- Übersicht (Handy): einzelne Karten statt durchgehender Liste ---
-     Übernimmt/überschreibt die generische Listen-Optik aus dem
-     @media(max-width:900px)-Block oben (dort weiterhin für Tablet
-     gültig) - jede Zeile bekommt jetzt einen eigenen Rahmen samt Abstand
-     zur nächsten, wie im Design-Vorschlag (siehe .card in MixDMobile).
-     position:relative + padding-right reserviert Platz für die absolut
-     positionierte Link/Aktionen-Spalte rechts (siehe unten), die dadurch
-     nicht mehr mit Name & Co. um die Zeilenbreite konkurriert - genau
-     das hatte beim ersten Versuch den Namen auf 4px Breite gequetscht. */
-  .table-wrap { background: transparent; border: none; box-shadow: none; }
-  #horse-table tr {
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    margin: 0 0 0.6rem;
-    padding: 0.7rem 2.4rem 0.7rem 0.8rem;
-  }
-  #horse-table tr:last-child { margin-bottom: 0; }
-  /* Ausgewählte Karte grün umrandet + leicht getönt (wie .card.selected
-     im Design-Vorschlag) - eigene Regel statt der Desktop-Zellentönung
-     weiter oben, die hier durch die Karten-Optik nicht mehr passt. */
-  #horse-table tr:has([data-select]:checked) {
-    border-color: var(--accent);
-    background: rgba(107, 157, 0, 0.05);
-  }
-  #horse-table tr:has([data-select]:checked) td:not(.cmp-good):not(.cmp-tolerance):not(.cmp-bad) { background: transparent; }
-
-  /* Kein Trennstrich unter der Kopfzeile (Kästchen/Herz/Bild/Name) - im
-     Design-Vorschlag hat .card-top keinen eigenen Rahmen, die drei/vier
-     Felder teilen sich nur die obere Zeile ohne Linie darunter. Bisher
-     kam der Strich von derselben Regel, die auch die gemeinsame
-     Unterkante der drei Felder ausrichtet (padding-bottom reicht dafür
-     allein). */
-  #horse-table td[data-label="Auswählen"],
-  #horse-table td[data-label="Favorit"],
-  #horse-table td[data-label="Bild"],
-  #horse-table td[data-label="Name"],
-  #horse-table td[data-label="Schlagwörter"] {
+    align-self: flex-start;
     border-bottom: none;
   }
+  #horse-table td[data-label="Auswählen"]::before,
+  #horse-table td[data-label="Favorit"]::before { content: none; }
   /* Getönter Hintergrund hinter dem Mini-Bild (wie .thumb im
-     Design-Vorschlag, #eef3e2) statt des bisher transparenten/weißen
-     Feldes - füllt außerdem sichtbar aus, wenn (noch) kein Bild
-     hinterlegt ist. */
+     Design-Vorschlag) statt eines transparenten/weißen Feldes - füllt
+     außerdem sichtbar aus, wenn (noch) kein Bild hinterlegt ist. */
   #horse-table td[data-label="Bild"] {
     background: var(--th-bg-solid);
     border-radius: var(--radius);
@@ -1424,12 +1291,55 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     align-items: center;
     justify-content: center;
   }
+  #horse-table td[data-label="Bild"]::before { content: none; }
   #horse-table td[data-label="Bild"] .table-thumb { width: 100%; height: 100%; }
-
-  /* Link (🔗) und Aktionen (✎/✗) als eigene, senkrecht gestapelte
-     Spalte oben rechts auf der Karte (wie im Design-Vorschlag) - per
-     position:absolute aus dem Flex-Fluss der übrigen Felder genommen,
-     damit sie nicht mit Name & Co. um die Breite konkurrieren. */
+  #horse-table td[data-label="Name"] {
+    order: -1;
+    /* flex-basis 0% statt "auto": bei "auto" entscheidet der Browser
+       schon anhand der ungeschrumpften Inhaltsbreite (langer Name), ob
+       das Feld überhaupt auf die erste Zeile neben Kästchen/Bild passt -
+       reicht der Platz nicht, rutscht das ganze Feld in eine eigene Zeile
+       statt seinen Inhalt intern umzubrechen. Mit Basis 0% + min-width:0
+       bekommt es zunächst (fast) keinen Platz zugewiesen und wächst
+       danach nur so weit wie tatsächlich übrig ist, wodurch der Name
+       innerhalb der Zeile umbricht statt das Feld selbst wegzuschieben.
+       Nichts Nachfolgendes (GP & Co.) kann trotzdem auf dieselbe Zeile
+       rutschen, weil die Schlagwörter-Zelle direkt danach (siehe unten)
+       IMMER eine volle Zeile erzwingt, auch leer - das erzwingt zuverlässig
+       den Zeilenumbruch, unabhängig von Namens- oder Bildschirmbreite. */
+    flex: 1 1 0%;
+    min-width: 0;
+    align-self: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border-bottom: none;
+  }
+  #horse-table td[data-label="Name"]::before { content: none; }
+  /* Schlagwort-Badges in eigener Zeile direkt unter Bild+Name (wie
+     .card-tags im Design-Vorschlag) - erzwingt IMMER einen Zeilenumbruch
+     danach (flex-basis:100%), auch wenn leer (siehe Name oben), bleibt
+     dabei aber unsichtbar/ohne Höhe (siehe :empty). Mehrere Badges
+     brechen bei Bedarf selbst um (flex-wrap), statt über den Kartenrand
+     hinauszulaufen. */
+  #horse-table td[data-label="Schlagwörter"] {
+    order: -1;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 0.25rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.5rem;
+  }
+  #horse-table td[data-label="Schlagwörter"]::before { content: none; }
+  #horse-table td[data-label="Schlagwörter"]:empty { padding: 0; min-height: 0; }
+  /* Link (🔗) und Aktionen (✎/✗) als eigene, senkrecht gestapelte Spalte
+     oben rechts auf der Karte - per position:absolute aus dem Flex-Fluss
+     der übrigen Felder genommen, damit sie nicht mit Name & Co. um die
+     Breite konkurrieren. */
   #horse-table td[data-label="Link"] {
     position: absolute;
     top: 0.7rem;
@@ -1437,20 +1347,9 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     padding: 0;
   }
   #horse-table td[data-label="Link"]::before { content: none; }
-  /* flex-basis 30rem statt 0% (siehe Kommentar bei td[data-label="Name"]
-     im @media(max-width:900px)-Block oben) - mit Basis 0% unterschätzt
-     der Umbruch-Algorithmus Names hypothetische Breite VOR dem
-     Wachsen-Schritt und lässt das jeweils nächste Feld (Geschlecht, nach
-     der Kacheln-Umsortierung sogar das kleinere GP) fälschlich noch auf
-     dieselbe Zeile rutschen, was Name dann auf wenige Pixel quetscht.
-     30rem ist bewusst weit größer als jede realistische Kartenbreite,
-     damit garantiert NICHTS mehr auf die Namenszeile passt - dank
-     flex-shrink:1 wächst/schrumpft Name trotzdem auf die tatsächlich
-     verfügbare Breite. */
-  #horse-table td[data-label="Name"] { flex: 1 1 30rem; }
   #horse-table td[data-label="Aktionen"] {
     position: absolute;
-    top: 2.55rem;
+    top: 2.15rem;
     right: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -1458,14 +1357,17 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     padding: 0;
   }
   #horse-table td[data-label="Aktionen"]::before { content: none; }
+  /* Bearbeiten-/Link-Buttons verkleinert (Nutzer-Feedback "Bearbeitungs-
+     spalte verkleinern") - vorher 1.9rem. */
   #horse-table td[data-label="Link"] .btn,
   #horse-table td[data-label="Aktionen"] .btn,
   #horse-table td[data-label="Aktionen"] button {
-    width: 1.9rem;
+    width: 1.5rem;
     min-width: 0;
-    height: 1.9rem;
+    height: 1.5rem;
     padding: 0;
     margin-right: 0;
+    font-size: 0.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1581,7 +1483,12 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   /* Besitzer + Zuletzt bearbeitet als gemeinsame Fußzeile der Karte
      (wie im Design-Vorschlag) statt zweier gewöhnlicher Kacheln-Felder -
      eigene, dezentere Optik (kein fetter Wert, kein Label-Präfix vor dem
-     Zeitstempel) mit Trennstrich darüber. */
+     Zeitstempel) mit Trennstrich darüber. border-top auf beiden statt nur
+     auf Besitzer - da beide eigene, auto-breite Flex-Items in derselben
+     Zeile sind (kein gemeinsamer Container für einen einzelnen
+     durchgehenden Strich), ergeben zwei gleich hohe Trennstriche
+     nebeneinander optisch eine durchgehende Linie über der ganzen
+     Fußzeile. */
   #horse-table td[data-label="Besitzer"],
   #horse-table td[data-label="Zuletzt bearbeitet"] {
     flex: 0 0 auto;
@@ -1589,14 +1496,6 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     font-size: 0.78rem;
     color: var(--muted);
     padding: 0.2rem 0;
-  }
-  /* border-top auf beiden statt nur auf Besitzer - da beide eigene,
-     auto-breite Flex-Items in derselben Zeile sind (kein gemeinsamer
-     Container für einen einzelnen durchgehenden Strich), ergeben zwei
-     gleich hohe Trennstriche nebeneinander optisch eine durchgehende
-     Linie über der ganzen Fußzeile. */
-  #horse-table td[data-label="Besitzer"],
-  #horse-table td[data-label="Zuletzt bearbeitet"] {
     border-top: 1px solid var(--border);
     margin-top: 0.4rem;
     padding-top: 0.5rem;
@@ -1605,6 +1504,40 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   #horse-table td[data-label="Besitzer"]::before { content: "Besitzer:"; }
   #horse-table td[data-label="Zuletzt bearbeitet"] { order: 10; }
   #horse-table td[data-label="Zuletzt bearbeitet"]::before { content: none; }
+  #horse-table td.small { font-size: 0.85rem; }
+}
+
+/* Tablet (641-900px): exakt dieselbe Karten-Optik wie beim Handy weiter
+   oben (die Feld-/Kartenregeln stehen bereits gemeinsam im @media
+   (max-width:900px)-Block) - der einzige Unterschied ist hier die Breite:
+   zwei Karten nebeneinander statt einer durchgehenden Einzelspalte (siehe
+   Nutzerwunsch "Tabletversion an die vom Handy angleichen, nur die
+   Breite ändern"). */
+@media (min-width: 641px) and (max-width: 900px) {
+  #horse-table tbody { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+}
+
+@media (max-width: 640px) {
+  main.container { padding: 0.75rem; }
+  .topbar { flex-direction: column; gap: 0.5rem; align-items: flex-start; padding: 0.75rem 1rem; }
+  .topbar h1 { font-size: 1.3rem; }
+  .checkdrop-item { padding: 0.4rem 0.3rem; font-size: 0.95rem; }
+
+  /* Dashboard-Kacheln (siehe #dashboard-tiles weiter oben) - als fester
+     2-Spalten-Grid statt flex-wrap, sonst reißt die letzte Kachel bei
+     ungerader Anzahl allein in eine eigene, unruhige Zeile. */
+  .dashboard-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .dashboard-tile { min-width: 0; }
+  .avg-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* --- Formular (horse.html) --- */
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid.form-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .form-actions { flex-direction: column; }
+  .form-actions .push-right { margin-left: 0; }
+  .form-actions button, .form-actions .btn { width: 100%; text-align: center; }
+  fieldset { padding: 0.7rem 0.8rem 0.9rem; }
+  details.paste-box { padding: 0.7rem 0.8rem 0.9rem; }
 }
 
 /* --- Übersicht: nur die Tabelle scrollt, Kopf/Filter bleiben fest ---
