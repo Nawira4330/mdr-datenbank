@@ -901,6 +901,7 @@ function hasAllDisciplines(disciplines) {
 // den Filtern) genutzt.
 function missingDataLabels(horse) {
   const missing = [];
+  if (!horse.birthdate) missing.push('Geburtsdatum');
   if (horse.exterior_genetics?.overall?.percent == null) missing.push('Ext%');
   if (!hasPedigreeData(horse.pedigree)) missing.push('Stammbaum');
   if (

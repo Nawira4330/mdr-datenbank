@@ -54,6 +54,12 @@ let dashboardTiles = [];
 // Metrik), unabhängig von dashboardTiles (das nur Reihenfolge/Sichtbarkeit
 // alle Kacheln-Ids hält, siehe mergeDashboardTiles in parser.js).
 let customDashboardTiles = [];
+// Einzeln in den Einstellungen ausgeblendete Hinweise der Übersicht
+// (siehe migration_034_notice_toggles.sql, checkAgeNotices) - enthält
+// die Keys "foalStall"/"age3"/"age25". "Fehlende Daten" und
+// "Vorgeschlagene Schlagwörter" sind bewusst nicht abschaltbar (direkt
+// handlungsrelevant) und stehen deshalb nie in dieser Menge.
+let hiddenNotices = new Set();
 // Ungefilterter Gesamtbestand für die Berechnung angepinnter Kacheln (die
 // unabhängig vom gerade aktiven Tabellenfilter sein sollen) - einmalig
 // geladen (siehe loadAllHorsesCache), nicht bei jedem Tabellen-Filtern neu.
@@ -178,7 +184,7 @@ async function applyInitialFilterState() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles, hidden_notices')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
@@ -188,6 +194,7 @@ async function loadUserSettings(session) {
   favoriteHorseIds = new Set((!error && data?.favorite_horse_ids) || []);
   customDashboardTiles = (!error && data?.custom_dashboard_tiles) || [];
   dashboardTiles = mergeDashboardTiles(!error ? data?.dashboard_tiles : null, customDashboardTiles);
+  hiddenNotices = new Set((!error && data?.hidden_notices) || []);
   if (customDashboardTiles.length) await loadAllHorsesCache();
 }
 
@@ -249,7 +256,7 @@ async function showMissingDataNotice(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('id, name, exterior_genetics, pedigree, tournament_potential, disciplines, breed, purebred_pct, breed_composition')
+    .select('id, name, birthdate, exterior_genetics, pedigree, tournament_potential, disciplines, breed, purebred_pct, breed_composition')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -285,7 +292,7 @@ async function checkAgeNotices(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('id, name, birthdate, tags, created_at, updated_at, external_id')
+    .select('id, name, birthdate, tags, created_at, updated_at, external_id, foal_stall_confirmed')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -293,12 +300,17 @@ async function checkAgeNotices(session) {
     .map((h) => ({ ...h, age: gameAgeYearsMonths(h.birthdate) }))
     .filter((h) => h.age != null);
 
-  const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6);
-  renderAgeNotice(
+  // "Erledigt" (siehe onConfirmFoalStall) blendet ein einzelnes Fohlen
+  // sofort aus, ohne auf das natürliche Verschwinden mit 7 Monaten zu
+  // warten müssen.
+  const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6 && !h.foal_stall_confirmed);
+  renderAgeNoticeIfEnabled(
+    'foalStall',
     '#foal-stall-notice',
     needsStall,
     `${needsStall.length} Fohlen ${needsStall.length === 1 ? 'ist' : 'sind'} 6 Monate alt`,
     '<p>Fohlen brauchen ab 6 Monaten einen eigenen Stall:</p>',
+    true,
   );
 
   // "Ist 3 geworden" gilt technisch das ganze 4. Spieljahr (30 Tage) -
@@ -321,7 +333,8 @@ async function checkAgeNotices(session) {
     const savedAt = h.updated_at ? new Date(h.updated_at).getTime() : 0;
     return savedAt < turnedThreeAt;
   });
-  renderAgeNotice(
+  renderAgeNoticeIfEnabled(
+    'age3',
     '#age3-notice',
     turningThree,
     `${turningThree.length} Pferd${turningThree.length === 1 ? '' : 'e'} ${turningThree.length === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`,
@@ -336,7 +349,8 @@ async function checkAgeNotices(session) {
       if (!updateError) h.tags = merged;
     }
   }
-  renderAgeNotice(
+  renderAgeNoticeIfEnabled(
+    'age25',
     '#age25-notice',
     over25,
     `${over25.length} Pferd${over25.length === 1 ? '' : 'e'} über 25 Jahre - automatisch mit „GBH" markiert`,
@@ -344,7 +358,19 @@ async function checkAgeNotices(session) {
   );
 }
 
-function renderAgeNotice(selector, horses, summaryText, introHtml) {
+// Zeigt einen der 3 einzeln abschaltbaren Alters-Hinweise nur, wenn er
+// nicht in den Einstellungen ausgeblendet wurde (siehe hiddenNotices) -
+// die zugrunde liegende Automatik (z.B. GBH-Vergabe bei "Über 25 Jahre")
+// läuft unabhängig davon immer, betroffen ist nur die Anzeige.
+function renderAgeNoticeIfEnabled(key, selector, horses, summaryText, introHtml, confirmable) {
+  if (hiddenNotices.has(key)) {
+    document.querySelector(selector).hidden = true;
+    return;
+  }
+  renderAgeNotice(selector, horses, summaryText, introHtml, confirmable);
+}
+
+function renderAgeNotice(selector, horses, summaryText, introHtml, confirmable) {
   const notice = document.querySelector(selector);
   if (!horses.length) {
     notice.hidden = true;
@@ -355,11 +381,31 @@ function renderAgeNotice(selector, horses, summaryText, introHtml) {
       const linkBtn = h.external_id
         ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
         : '';
-      return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} ${linkBtn}</li>`;
+      // "✓ Erledigt" gibt es nur beim Fohlenstall-Hinweis (confirmable,
+      // siehe checkAgeNotices) - blendet dieses eine Pferd sofort aus,
+      // z.B. wenn der Stall schon vergeben ist, ohne auf das natürliche
+      // Verschwinden mit 7 Monaten warten zu müssen.
+      const confirmBtn = confirmable
+        ? `<button type="button" class="secondary small" data-confirm-foal-stall="${h.id}">✓ Erledigt</button>`
+        : '';
+      return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} ${linkBtn} ${confirmBtn}</li>`;
     })
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
+  if (confirmable) {
+    notice.querySelectorAll('[data-confirm-foal-stall]').forEach((btn) => {
+      btn.addEventListener('click', () => onConfirmFoalStall(btn.dataset.confirmFoalStall));
+    });
+  }
+}
+
+// Markiert ein einzelnes Fohlen als "Stall erledigt" (siehe
+// migration_035_foal_stall_confirmed.sql) und lädt die Alters-Hinweise
+// neu, damit es sofort aus der Liste verschwindet.
+async function onConfirmFoalStall(id) {
+  const { error } = await supabaseClient.from('horses').update({ foal_stall_confirmed: true }).eq('id', id);
+  if (!error) await checkAgeNotices(currentSession);
 }
 
 // Vorgeschlagene Schlagwörter (Staging-Tabelle "tag_suggestions", siehe
@@ -486,12 +532,6 @@ function showFlashBanner() {
   }
   if (flash.flaxenWarnings?.length) {
     text += ` ⚠️ Widerspruch: ${flash.flaxenWarnings.join(', ')} ${flash.flaxenWarnings.length > 1 ? 'sind' : 'ist'} als "Flaxen nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
-  }
-  // Siehe zzlJustApproved in horseForm.js: die Zuchtzulassung wurde bei
-  // diesem Speichervorgang neu auf "Ja" gesetzt - im Spiel ändert sich
-  // dadurch meist auch das Pferdebild.
-  if (flash.zzlJustApproved) {
-    text += ` 🖼️ Zuchtzulassung wurde auf „Ja" gesetzt – bitte das Bild aktualisieren.`;
   }
   banner.textContent = text;
   banner.hidden = false;

@@ -212,6 +212,31 @@
     </fieldset>
 
     <fieldset>
+      <legend>Hinweise in der Übersicht</legend>
+      <p class="muted small">
+        Legt fest, welche der folgenden Hinweiskästen oben in der
+        Übersicht angezeigt werden. Betrifft nur die Anzeige - die
+        automatische Vergabe des Schlagworts „GBH“ bei Pferden über 25
+        Jahren läuft unabhängig davon immer weiter. „Fehlende Daten“ und
+        „Vorgeschlagene Schlagwörter“ lassen sich nicht abschalten, da
+        dort direkt gehandelt werden kann (Felder ergänzen bzw.
+        Vorschläge übernehmen/verwerfen).
+      </p>
+      <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">
+        <input type="checkbox" id="notice-foal-stall-checkbox" style="width: auto;" checked />
+        Fohlen sind 6 Monate alt (Stall-Erinnerung)
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">
+        <input type="checkbox" id="notice-age3-checkbox" style="width: auto;" checked />
+        3 Jahre alt geworden (Bild-Erinnerung)
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">
+        <input type="checkbox" id="notice-age25-checkbox" style="width: auto;" checked />
+        Über 25 Jahre (GBH-Hinweis)
+      </label>
+    </fieldset>
+
+    <fieldset>
       <legend>Menü</legend>
       <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">
         <input type="checkbox" id="verpaarung-enabled-checkbox" style="width: auto;" checked />

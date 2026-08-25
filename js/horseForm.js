@@ -391,6 +391,7 @@ function collectForm() {
 // Pflichtfeld-Fehler, sondern nur ein Hinweis vor dem Speichern, siehe
 // showSaveWarningModal.
 const MISSING_DATA_SENTENCES = {
+  'Geburtsdatum': 'Das Geburtsdatum konnte nicht erkannt werden.',
   'Ext%': 'Das Exterieur-Prozentwert (Ext%) konnte nicht berechnet werden.',
   'Stammbaum': 'Der Stammbaum konnte nicht vollständig erfasst werden.',
   'Turnierwerte': 'Die Turnierwerte (GP/Begabung) konnten nicht vollständig erfasst werden.',
@@ -967,15 +968,6 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
   // autoUpdateParentFlaxenCarriers weiter oben.
   const flaxenResult = await autoUpdateParentFlaxenCarriers(payload);
 
-  // Bekommt ein Pferd bei diesem Speichervorgang neu die Zuchtzulassung
-  // (vorher nicht "Ja", jetzt "Ja") - im Spiel ändert sich dadurch meist
-  // auch das Pferdebild, das bisher gespeicherte Bild ist dann veraltet.
-  // Nur ein einmaliger Hinweis direkt bei der Änderung, nicht bei jedem
-  // weiteren Speichern eines bereits zugelassenen Pferds.
-  const zzlJustApproved = Boolean(
-    targetId && beforeRecord && beforeRecord.breeding_allowed !== true && payload.breeding_allowed === true,
-  );
-
   // Wird in der Übersicht nach der Weiterleitung als Banner angezeigt und
   // dort direkt wieder aus dem sessionStorage entfernt (siehe list.js) -
   // nur setzen, wenn es auch wirklich dorthin geht (bei den Pfeil-Buttons
@@ -997,7 +989,6 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
       changedFields: targetId ? computeChangedFields(beforeRecord, payload) : [],
       flaxenUpdated: flaxenResult.updated,
       flaxenWarnings: flaxenResult.warnings,
-      zzlJustApproved,
     }));
   }
   if (saveRedirect === null) {

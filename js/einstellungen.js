@@ -312,7 +312,7 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles, profile_nav_sort, custom_dashboard_tiles')
+    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles, profile_nav_sort, custom_dashboard_tiles, hidden_notices')
     .eq('user_id', currentUserId)
     .maybeSingle();
   if (error || !data) return;
@@ -354,6 +354,15 @@ async function loadCurrentSettings() {
   // bleibt die Auswahl beim HTML-Standard (erste Option, "alphabetisch").
   if (data.profile_nav_sort) document.getElementById('profile-nav-sort-select').value = data.profile_nav_sort;
 
+  // "hidden_notices" enthält die Keys der AUSGEBLENDETEN Hinweise (siehe
+  // js/list.js checkAgeNotices) - Checkbox-Standard ist "angezeigt"
+  // (checked), deshalb hier nur bei tatsächlich ausgeblendeten Hinweisen
+  // abhaken.
+  const hidden = new Set(data.hidden_notices || []);
+  document.getElementById('notice-foal-stall-checkbox').checked = !hidden.has('foalStall');
+  document.getElementById('notice-age3-checkbox').checked = !hidden.has('age3');
+  document.getElementById('notice-age25-checkbox').checked = !hidden.has('age25');
+
   // "dashboard_tiles" leer/fehlend = Standardauswahl (siehe
   // DASHBOARD_TILE_OPTIONS in parser.js) - mergeDashboardTiles ergänzt
   // dabei automatisch neu hinzugekommene Kacheln, die in einer älteren
@@ -379,6 +388,11 @@ async function onSave() {
   const defaultFilterPresetId = document.getElementById('default-filter-preset-select').value || null;
   const defaultSortPresetId = document.getElementById('default-sort-preset-select').value || null;
   const profileNavSort = document.getElementById('profile-nav-sort-select').value || null;
+  const hiddenNotices = [
+    !document.getElementById('notice-foal-stall-checkbox').checked ? 'foalStall' : null,
+    !document.getElementById('notice-age3-checkbox').checked ? 'age3' : null,
+    !document.getElementById('notice-age25-checkbox').checked ? 'age25' : null,
+  ].filter(Boolean);
   // dashboardTiles (Reihenfolge + Sichtbarkeit) ist bereits aktuell -
   // renderDashboardTileList/wireDashboardTileList halten die Arbeitskopie
   // bei jeder ▲/▼-Verschiebung bzw. jedem Häkchen synchron.
@@ -398,6 +412,7 @@ async function onSave() {
       dashboard_tiles: dashboardTiles,
       profile_nav_sort: profileNavSort,
       custom_dashboard_tiles: customDashboardTiles,
+      hidden_notices: hiddenNotices,
     });
   statusEl.textContent = error ? 'Speichern fehlgeschlagen: ' + error.message : 'Gespeichert.';
   // Sofort anwenden, ohne dass die Seite neu geladen werden muss (siehe
