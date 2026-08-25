@@ -6,6 +6,48 @@ drin.
 
 ---
 
+## 25.08.2026
+
+- **Dashboard-Kacheln: Klick übernimmt ihre Filterkriterien**: eigene,
+  angepinnte Kacheln (Filtervorlage oder Rasse/Besitzer/Geschlecht/ZZL/
+  Alter) sind jetzt anklickbar - übernimmt genau ihre Kriterien in die
+  Filterleiste (andere Felder werden zurückgesetzt) und zeigt die
+  passenden Pferde direkt in der Tabelle. Eingebaute Kacheln (Pferde
+  gesamt, Ø-Werte, Stuten/Hengste/...) bleiben unverändert nicht
+  interaktiv, da sie nur die jeweils aktuell gefilterte Tabelle
+  zusammenfassen. Dafür neu: ein Filterfeld "Alter von/bis" in der
+  Übersicht, da eigene Kacheln bereits nach Alter filtern konnten, es
+  dafür aber noch kein passendes Tabellen-Filterfeld gab.
+- **Eigene Dashboard-Kacheln: zusätzlich nach Besitzer eingrenzbar**
+  (bisher nur Rasse/Geschlecht/ZZL/Alter).
+- **Farbgenetik-Elternvererbung jetzt auch in Übersicht, Filter und
+  Kacheln**: ist ein Elternteil bestätigt oder aus Fellfarbe/Notiz/Name
+  abgeleitet reinerbig für ein Merkmal (z.B. Flaxen "flfl") oder trägt
+  Pearl, gilt das jetzt auch beim Nachwuchs in der Genetik-Spalte, beim
+  Genetik-Filter und bei den Dashboard-Kacheln als (mindestens)
+  vererbtes Merkmal - vorher nur im Genetik-Tab der einzelnen
+  Pferdeseite sichtbar, obwohl das Merkmal beim Fohlen selbst z.B. wegen
+  einer anderen Grundfarbe gar nicht in der Fellfarbe auftaucht.
+- **Bugfix: eigene Bestätigungs-Popups statt `window.prompt()`/
+  `window.confirm()`**: beide werden in manchen Browsern/Kontexten
+  stillschweigend unterdrückt, ohne jeden Fehler - z.B. reagierte "Als
+  Vorlage speichern" gar nicht mehr, oder das Löschen einer eigenen
+  Dashboard-Kachel schien wirkungslos ("löschen funktioniert nicht").
+  App-weit durch eigene Modal-Dialoge ersetzt (Vorlage speichern,
+  Sortierung speichern, Kachel/Vorlage löschen, Pferd löschen,
+  Verpaarung löschen, Abfohldatum ändern, Schlagwörter-Zusammenführung
+  beim erneuten Text-Einfügen).
+- **Bugfix: Schlagwörter-Filterliste im Dropdown wurde ohne sichtbare
+  Bildlaufleiste abgeschnitten** - bei den größeren Touch-Zeilen auf
+  schmalen Bildschirmen passte die komplette Liste nicht mehr in die
+  vorher feste Panel-Höhe.
+- **Ø-Vergleich-Bereich steht jetzt standardmäßig aufgeklappt**;
+  Namensfarbe färbt sich schon, sobald 2 der 4 Werte gleich ausfallen
+  (statt eine echte Mehrheit zu verlangen) - bei einem Gleichstand
+  zählt rot vor blau (Toleranz) vor grün.
+
+---
+
 ## 24.08.2026
 
 - **Genetik-/EKH-/Schlagwörter-Filter: an- und ausschließen statt nur
