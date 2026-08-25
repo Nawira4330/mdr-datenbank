@@ -85,6 +85,7 @@ async function init() {
     document.body.classList.add('hide-delete');
   }
   wireFilterForm();
+  wireDashboardTileClicks();
   wireSortableHeaders();
   wireSelection();
   wireFavorites();
@@ -960,6 +961,10 @@ function applyClientFilters(rows) {
   const intOp = document.querySelector('#f-int-op').value;
   const intVal = document.querySelector('#f-int-val').value;
   const favoritesOnly = document.querySelector('#f-favorites').checked;
+  const ageMinStr = document.querySelector('#f-age-min').value;
+  const ageMaxStr = document.querySelector('#f-age-max').value;
+  const ageMin = ageMinStr === '' ? null : Number(ageMinStr);
+  const ageMax = ageMaxStr === '' ? null : Number(ageMaxStr);
 
   return rows.filter((row) => {
     const d = computeDerived(row);
@@ -995,6 +1000,12 @@ function applyClientFilters(rows) {
     if (!compareValue(d.extAvg, extOp, extVal)) return false;
     if (!compareValue(d.extPercent, extpctOp, extpctVal)) return false;
     if (!compareValue(d.intAvg, intOp, intVal)) return false;
+    if (ageMin != null || ageMax != null) {
+      const age = row.birthdate ? gameAgeYears(row.birthdate) : null;
+      if (age == null) return false;
+      if (ageMin != null && age < ageMin) return false;
+      if (ageMax != null && age > ageMax) return false;
+    }
 
     return true;
   });
@@ -1245,6 +1256,7 @@ function activeFilterDescriptions() {
   if (val('#f-gender')) list.push('Geschlecht');
   if (val('#f-breed')) list.push('Rasse');
   if (val('#f-zzl')) list.push('ZZL');
+  if (val('#f-age-min').trim() || val('#f-age-max').trim()) list.push('Alter');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
   const tagActive = getCheckDropdownTristate('f-tag-drop');
   if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');
@@ -1366,6 +1378,8 @@ function collectFilterState() {
     gender: document.querySelector('#f-gender').value,
     breed: document.querySelector('#f-breed').value,
     zzl: document.querySelector('#f-zzl').value,
+    ageMin: document.querySelector('#f-age-min').value,
+    ageMax: document.querySelector('#f-age-max').value,
     favorites: document.querySelector('#f-favorites').checked,
     tags: getCheckDropdownTristate('f-tag-drop'),
     tagNote: document.querySelector('#f-tag-note').value,
@@ -1399,6 +1413,8 @@ async function applyFilterState(state) {
   document.querySelector('#f-gender').value = state.gender || '';
   document.querySelector('#f-breed').value = state.breed || '';
   document.querySelector('#f-zzl').value = state.zzl || '';
+  document.querySelector('#f-age-min').value = state.ageMin || '';
+  document.querySelector('#f-age-max').value = state.ageMax || '';
   document.querySelector('#f-favorites').checked = !!state.favorites;
   document.querySelector('#f-tag-note').value = state.tagNote || '';
   // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/
@@ -1703,6 +1719,13 @@ function matchesCustomTileFilters(h, filters) {
   if (f.breed) {
     const b = normalizeBreed(h.breed) || 'Rasselos';
     if (b !== f.breed) return false;
+  } else if (preferredBreeds) {
+    // Ohne eigene Rasse-Vorgabe gilt wie in der Tabelle (siehe
+    // applyClientFilters) die Einschränkung "Sichtbare Rassen" aus den
+    // Einstellungen - sonst würde die angezeigte Kachel-Anzahl nicht mehr
+    // zur Tabelle passen, sobald man per Klick dorthin filtert.
+    const b = normalizeBreed(h.breed) || 'Rasselos';
+    if (!preferredBreeds.includes(b)) return false;
   }
   if (f.owner && h.owner !== f.owner) return false;
   if (f.gender && h.gender !== f.gender) return false;
@@ -1733,9 +1756,22 @@ function matchesPresetFilters(h, state) {
     if ((normalizeBreed(h.breed) || 'Rasselos') !== 'Rasselos') return false;
   } else if (s.breed && s.breed !== '__unrestricted__') {
     if (normalizeBreed(h.breed) !== s.breed) return false;
+  } else if (!s.breed && preferredBreeds) {
+    // Wie applyClientFilters: ohne konkrete Rasse-Auswahl in der Vorlage
+    // gilt die Einschränkung "Sichtbare Rassen" - sonst würde die
+    // Kachel-Anzahl nicht mehr zur Tabelle passen, sobald man per Klick
+    // dorthin filtert.
+    const b = normalizeBreed(h.breed) || 'Rasselos';
+    if (!preferredBreeds.includes(b)) return false;
   }
   if (s.zzl === 'true' && h.breeding_allowed !== true) return false;
   if (s.zzl === 'false' && h.breeding_allowed) return false;
+  if (s.ageMin || s.ageMax) {
+    const age = h.birthdate ? gameAgeYears(h.birthdate) : null;
+    if (age == null) return false;
+    if (s.ageMin && age < Number(s.ageMin)) return false;
+    if (s.ageMax && age > Number(s.ageMax)) return false;
+  }
   if (s.favorites && !favoriteHorseIds.has(h.id)) return false;
   const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
   const genetik = toTristate(s.genetik);
@@ -1804,10 +1840,64 @@ function renderDashboardTiles(rows) {
       }
       const custom = customDashboardTiles.find((c) => c.id === t.id);
       if (!custom) return '';
-      return `<div class="dashboard-tile" title="Angepinnt: unabhängig vom aktuellen Filter"><span class="dashboard-tile-value">${escapeHtml(computeCustomTileValue(custom))}</span><span class="dashboard-tile-label">${escapeHtml(custom.label)}</span></div>`;
+      // Anders als die eingebauten Kacheln (die nur die aktuell gefilterte
+      // Tabelle zusammenfassen) haben eigene Kacheln feste Filterkriterien
+      // (Filtervorlage oder Rasse/Besitzer/Geschlecht/ZZL/Alter) - deshalb
+      // hier klickbar (siehe wireDashboardTileClicks/onDashboardTileClick),
+      // um genau diese Kriterien in die Filterleiste zu übernehmen und die
+      // passenden Pferde in der Tabelle zu sehen.
+      return `<div class="dashboard-tile dashboard-tile-clickable" data-custom-tile-id="${custom.id}" title="Klicken, um nach dieser Kachel zu filtern" tabindex="0" role="button"><span class="dashboard-tile-value">${escapeHtml(computeCustomTileValue(custom))}</span><span class="dashboard-tile-label">${escapeHtml(custom.label)}</span></div>`;
     })
     .join('');
   container.innerHTML = tilesHtml;
+}
+
+// Übernimmt die Filterkriterien einer eigenen, angepinnten Dashboard-
+// Kachel (siehe renderDashboardTiles) in die Filterleiste der Tabelle -
+// bei source:'preset' exakt die gespeicherte Filtervorlage (wie "Vorlage
+// laden…"), bei source:'custom' die dort hinterlegten Rasse/Besitzer/
+// Geschlecht/ZZL/Alter-Kriterien. Andere, nicht von der Kachel betroffene
+// Felder werden bewusst zurückgesetzt, damit die Tabelle danach exakt der
+// Kachel entspricht statt mit zuvor noch aktiven Filtern vermischt zu sein.
+async function onDashboardTileClick(tileId) {
+  const tile = customDashboardTiles.find((c) => c.id === tileId);
+  if (!tile) return;
+
+  if (tile.source === 'preset') {
+    const option = document.querySelector(`#filter-preset-select option[value="${CSS.escape(tile.presetId || '')}"]`);
+    if (!option) return;
+    await applyFilterState(JSON.parse(option.dataset.filters));
+    document.querySelector('#filter-preset-select').value = tile.presetId;
+  } else {
+    const f = tile.filters || {};
+    await applyFilterState({
+      breed: f.breed || '',
+      owner: f.owner || '',
+      gender: f.gender || '',
+      zzl: f.zzl || '',
+      ageMin: f.ageMin != null ? String(f.ageMin) : '',
+      ageMax: f.ageMax != null ? String(f.ageMax) : '',
+    });
+  }
+
+  document.querySelector('#filter-details').open = true;
+  document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function wireDashboardTileClicks() {
+  const container = document.querySelector('#dashboard-tiles');
+  if (!container) return;
+  container.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-custom-tile-id]');
+    if (tile) onDashboardTileClick(tile.dataset.customTileId);
+  });
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tile = e.target.closest('[data-custom-tile-id]');
+    if (!tile) return;
+    e.preventDefault();
+    onDashboardTileClick(tile.dataset.customTileId);
+  });
 }
 
 function onRowSelect(id, checked, refreshBar = true) {

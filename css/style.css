@@ -722,6 +722,13 @@ body.hide-delete #bulk-delete-btn {
 .dashboard-tile-value { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
 .dashboard-tile-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 
+/* Eigene, angepinnte Kacheln haben feste Filterkriterien und sind deshalb
+   klickbar (siehe onDashboardTileClick in list.js) - eingebaute Kacheln
+   (Pferde gesamt, Ø-Werte, ...) bleiben unverändert nicht interaktiv. */
+.dashboard-tile-clickable { cursor: pointer; }
+.dashboard-tile-clickable:hover { border-color: var(--accent); background: rgba(107, 157, 0, 0.08); }
+.dashboard-tile-clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* Ergebnis-Kacheln des Durchschnittsrechners (durchschnitt.html, siehe
    MixDDurchschnitt.dc.html) - groesser/prominenter als .dashboard-tile,
    da hier das alleinige Ergebnis der Seite statt eine von vielen Kacheln. */
