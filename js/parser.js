@@ -1584,5 +1584,16 @@ function showConfirmModal(title, message, okLabel) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge, gameAgeYears, gameAgeYearsMonths, matchesTags };
+  module.exports = {
+    parseHorseText, HORSE_TAG_OPTIONS, tagColor, tagsBadgesHtml, formatTimestamp, formatAge,
+    gameAgeDays, gameAgeYears, gameAgeYearsMonths, matchesTags,
+    // Farbgenetik-Ableitung (siehe tests/parser.test.js) - reine Funktionen
+    // ohne DOM-Abhängigkeit, deshalb auch unter Node testbar.
+    normalizeBreed, inferGeneticHintsFromPhenotype, isUntestedLocusValue,
+    extractPresentAlleles, isHomozygousPresent, homozygousPresentHints,
+    isDoubledAllele, halveDoubledAllele, pintoPatternsFromColors,
+    presentGenesSummary, parentHomozygousLoci, parentColorHints,
+    pintoParentHints, parentsMightHavePearl, missingDataLabels,
+    TRISTATE_CYCLE, cycleTristateItem,
+  };
 }

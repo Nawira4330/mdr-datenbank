@@ -238,13 +238,25 @@ function parentRecordsForRow(row) {
 // Dashboard-Kacheln (mindestens) als Flaxen-Träger gilt, nicht nur im
 // Genetik-Tab des einzelnen Pferds (dort übernimmt das horseForm.js
 // eigenständig, siehe fetchParentColorHints).
+//
+// Pro Render-/Filterdurchgang wird dieselbe Zeile bis zu 5x angefragt
+// (computeDerived, hasPearlGene, hasPearlGeneDoubled, hasFlaxenGene,
+// hasFlaxenGeneDoubled) - ein WeakMap-Cache je Zeilen-Objekt erspart die
+// mehrfache Neuberechnung (inkl. Eltern-Suche). Da loadHorses() bei jeder
+// neuen Abfrage frische Zeilen-Objekte liefert, veraltet der Cache nie:
+// alte Einträge werden mit den alten Objekten einfach vom Garbage
+// Collector entsorgt, ganz ohne manuelles Leeren.
+const genesCache = new WeakMap();
 function genesOfRow(row) {
+  if (genesCache.has(row)) return genesCache.get(row);
   const parents = parentRecordsForRow(row);
   const hints = parents.length
     ? [...parentColorHints(parents), ...pintoParentHints(parents, row.coat_color, row.notes, row.name)]
     : [];
   const parentMightHavePearl = parents.length ? parentsMightHavePearl(parents) : false;
-  return presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, hints, row.color_gene_overrides, parentMightHavePearl);
+  const genes = presentGenesSummary(row.colors, row.coat_color, row.notes, row.name, hints, row.color_gene_overrides, parentMightHavePearl);
+  genesCache.set(row, genes);
+  return genes;
 }
 
 // Zeigt einen Hinweis über den Filtern, wenn bei den EIGENEN Pferden
@@ -595,8 +607,8 @@ async function populateFilterOptions() {
   // ist - stattdessen einzeln als Sabino/Roan/Tobiano weiter unten.
   locusLabels.delete('KIT');
   // Pearl und Flaxen sind Sonderfälle: Pearl teilt sich den Cream-Locus
-  // (ein "pl" im Rohwert zeigt es auch mischerbig/als Träger an, anders
-  // als der scharfe Sichtbarkeits-Check in LOCUS_DOMINANT_CHECK), und
+  // (ein "pl" im Rohwert zeigt es auch mischerbig/als Träger an, feiner
+  // als die einfache Ja/Nein-Prüfung der generischen "Cream"-Option), und
   // Flaxen wird vom Spiel gar nicht als eigener Locus getestet, sondern
   // nur aus Fellfarbe/Notiz/Name abgeleitet (siehe hasPearlGene/
   // hasFlaxenGene) - daher als feste Zusatzoptionen statt aus den
@@ -862,25 +874,6 @@ function overallCmpClass(d) {
   return '';
 }
 
-// Ob ein Locus sein dominantes/sichtbares Allel trägt, nach der vom Nutzer
-// bereitgestellten MDR-Farbvererbungs-Dokumentation. KIT gilt als "trägt
-// das Merkmal", wenn der Wert nicht ausschließlich aus "0" besteht (laut
-// Spiel: getestet, aber kein Tobiano/Sabino/Dominant White/Roan).
-const LOCUS_DOMINANT_CHECK = {
-  Extension: (v) => v.includes('E'),
-  Dun: (v) => v.includes('D'),
-  Champagne: (v) => v.includes('Ch'),
-  Grey: (v) => v.includes('G'),
-  Silver: (v) => v.includes('Z'),
-  Overo: (v) => v.includes('O'),
-  Splashed: (v) => v.includes('SPL'),
-  Appaloosa: (v) => v.includes('Lp'),
-  PATN1: (v) => v.includes('P1'),
-  Agouti: (v) => /Ap|A1|At/.test(v),
-  Cream: (v) => /Cr|pl/.test(v),
-  KIT: (v) => !!v && !/^0+$/.test(v),
-};
-
 // Pearl liegt auf demselben Locus wie Cream (siehe parser.js) - ein
 // getesteter Rohwert wie "Crpl" (Cream+Pearl-Trägerin) oder "plpl"
 // (reinerbig Pearl) soll hier also schon bei einem bloßen "pl"-Vorkommen
@@ -923,13 +916,25 @@ function hasFlaxenGeneDoubled(row) {
 // Sabino/Roan/Dominant White), die im Rohwert als aneinandergereihte
 // Zwei-Buchstaben-Kürzel stehen (z.B. "RnTO" = Roan + Tobiano). Für die
 // Filterung wird daher gezielt nach dem jeweiligen Kürzel gesucht statt
-// nur (wie LOCUS_DOMINANT_CHECK.KIT) pauschal "irgendetwas vorhanden".
+// nur pauschal "irgendetwas vorhanden" (KIT wird deshalb auch gar nicht
+// als generische Genetik-Filteroption angeboten, siehe populateFilterOptions).
 function hasKitTrait(row, code) {
   const entry = (row.colors || []).find((c) => c.label === 'KIT');
   if (!entry || isUntestedLocusValue(entry.value)) return false;
   return new RegExp(code, 'i').test(entry.value);
 }
 
+// Bugfix (29.08.2026): prüfte bisher NUR den rohen, tatsächlich
+// getesteten Wert (row.colors) - ein nur aus Fellfarbe/Notiz/Name
+// abgeleitetes, manuell bestätigtes oder von einem Elternteil vererbtes
+// Merkmal (z.B. ein Hengst mit "Classic Champagne" im Namen, aber ohne
+// getesteten Champagne-Rohwert) wurde beim Ausschließen dieses Merkmals
+// trotzdem weiter angezeigt - obwohl genau dasselbe abgeleitete Merkmal
+// in der Genetik-Spalte der Tabelle bereits sichtbar war. genesOfRow
+// (siehe oben) bündelt getestet/manuell/abgeleitet/vererbt bereits
+// einheitlich (mit korrekter Rangfolge: ein getesteter Rohwert sticht
+// immer eine Ableitung) und wird deshalb jetzt auch hier verwendet,
+// statt die Rohwert-Prüfung separat zu duplizieren.
 function matchesGenetikLocus(row, locusName) {
   if (locusName === '__pearl__') return hasPearlGene(row);
   if (locusName === '__pearl_doubled__') return hasPearlGeneDoubled(row);
@@ -938,10 +943,7 @@ function matchesGenetikLocus(row, locusName) {
   if (locusName === '__kit_sb__') return hasKitTrait(row, 'sb');
   if (locusName === '__kit_rn__') return hasKitTrait(row, 'rn');
   if (locusName === '__kit_to__') return hasKitTrait(row, 'to');
-  const entry = (row.colors || []).find((c) => c.label === locusName);
-  if (!entry || isUntestedLocusValue(entry.value)) return false;
-  const check = LOCUS_DOMINANT_CHECK[locusName];
-  return check ? check(entry.value) : false;
+  return genesOfRow(row).some((g) => g.locus === locusName);
 }
 
 // Ein Erbkrankheiten-Locuswert gilt als unauffällig, wenn er (ohne die
