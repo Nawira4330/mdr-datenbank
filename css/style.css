@@ -750,7 +750,13 @@ details.collapsible {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 1rem;
-  overflow: hidden;
+  /* KEIN overflow:hidden - hat Dropdown-Panels (z.B. Schlagwörter-Filter,
+     siehe .checkdrop-panel) abgeschnitten, die absichtlich über den Rand
+     hinausragen ("restliche Tags werden abgeschnitten"). Für die
+     Eckenrundung reicht das border-radius hier plus die gezielte Rundung
+     an summary/.filter-bar weiter unten - .filter-bar/.compare-avg-block
+     haben ohnehin schon border:none/border-radius:0, wenn sie hier
+     drinstehen, es gibt also gar keine eigene Kante zum Abschneiden. */
 }
 details.collapsible > summary {
   cursor: pointer;

@@ -1056,6 +1056,11 @@ function applyClientFilters(rows) {
 function sortValue(row, field) {
   switch (field) {
     case 'name': return (row.name || '').toLowerCase();
+    // Alphabetisch über die angezeigten Schlagwort-Texte (wie die anderen
+    // Text-Spalten Rasse/Farbe/Geschlecht/Besitzer) - Pferde ganz ohne
+    // Schlagwort landen wie üblich (null) unabhängig von der Richtung
+    // immer am Ende (siehe applySort).
+    case 'tags': return (row.tags && row.tags.length) ? row.tags.map((t) => t.label).join(', ').toLowerCase() : null;
     case 'gender': return (row.gender || '').toLowerCase();
     case 'breed': return (row.breed || '').toLowerCase();
     case 'coat_color': return (row.coat_color || '').toLowerCase();
