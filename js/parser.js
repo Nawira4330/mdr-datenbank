@@ -1077,10 +1077,17 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     manual.push({ locus, alleles: alleleCode, source: 'manuell' });
   }
 
+  // Ein noch nicht umbenanntes Fohlen heißt automatisch "Fohlen_<Mutter>
+  // X <Vater>" (siehe parseHorseText) - der Name ist dann KEINE eigene
+  // Fellfarben-Beschreibung, sondern nur eine Verkettung der Namen beider
+  // Eltern. Ein Farbwort im Namen eines Elternteils (z.B. "Sir Classic" ->
+  // "Classic" = Black-Champagne) würde sonst fälschlich als Merkmal des
+  // Fohlens selbst gedeutet, obwohl es nur zufällig im Elternnamen steckt.
+  const isAutoFoalName = /^Fohlen_.+ X .+$/.test(horseName || '');
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
     ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
-    ...inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
+    ...(isAutoFoalName ? [] : inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' }))),
     ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, source: 'elternteil' })),
   ];
   const seen = new Set();

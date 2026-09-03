@@ -85,6 +85,24 @@ describe('Farbgenetik-Ableitung aus Fellfarbe/Notiz/Name (presentGenesSummary)',
     const hints = inferGeneticHintsFromPhenotype('Cremello', true);
     assert.equal(hints[0].allele, 'Cr');
   });
+
+  // Regressionstest für den am 03.09.2026 behobenen Fall ("Cathys Anda-
+  // Fohlen"): ein automatisch benanntes Fohlen "Fohlen_<Mutter> X <Vater>"
+  // (siehe parseHorseText) hatte einen Vater namens "...Sir Classic..." -
+  // "Classic" ist ein MDR-Farbwort (Black-Champagne) und wurde fälschlich
+  // als Merkmal des FOHLENS selbst gedeutet, obwohl es nur zufällig im
+  // Namen des Elternteils steckt (der komplette Fohlenname ist nur eine
+  // Verkettung der Elternnamen, keine eigene Fellfarben-Beschreibung).
+  test('Farbwörter im Namen eines Elternteils (auto-generierter Fohlenname) werden NICHT dem Fohlen selbst zugeschrieben', () => {
+    const foalName = 'Fohlen_Cathy by Salino X *Iced* Sir Classic -)B(-';
+    const genes = presentGenesSummary([], 'Sooty Sealbrown', null, foalName, null, null);
+    assert.ok(!genes.some((g) => g.locus === 'Champagne'), 'Champagne sollte NICHT aus "Sir Classic" im Fohlennamen abgeleitet werden');
+  });
+
+  test('Farbwörter im eigenen (nicht auto-generierten) Namen werden weiterhin erkannt', () => {
+    const genes = presentGenesSummary([], null, null, 'Classic Beauty', null, null);
+    assert.ok(genes.some((g) => g.locus === 'Champagne'), 'ein echter eigener Name darf weiterhin als Fellfarben-Hinweis zählen');
+  });
 });
 
 // Regressionstest für den am 25.08.2026 behobenen Fall: ein Fohlen einer

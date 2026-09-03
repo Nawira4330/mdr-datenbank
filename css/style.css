@@ -565,7 +565,17 @@ label {
   max-height: min(320px, 70vh);
   overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  /* Deutlich sichtbarer, dünner Scrollbalken statt des unauffälligen
+     Standard-Scrollbalkens - falls eine Liste doch mal die max-height
+     übersteigt (z.B. Genetik/EKH), soll sofort erkennbar sein, dass sich
+     noch weiter scrollen lässt, statt wie "abgeschnitten" zu wirken. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
+.checkdrop-panel::-webkit-scrollbar { width: 8px; }
+.checkdrop-panel::-webkit-scrollbar-track { background: transparent; }
+.checkdrop-panel::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+.checkdrop-panel::-webkit-scrollbar-thumb:hover { background: var(--accent-dark); }
 .checkdrop-item {
   display: flex;
   align-items: center;
@@ -794,6 +804,20 @@ details.collapsible > .compare-avg-block {
   color: var(--muted);
 }
 .favorite-btn.is-favorite { color: var(--danger); }
+
+/* "Bester Sohn"-Abzeichen (siehe bestSonBadges/loadBestSonBadges in
+   list.js) - nur bei genau einem Hengstfohlen je Vater gesetzt: ein
+   eigenes Symbol je Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), alle zusammen in
+   derselben Spalte, gefärbt danach, ob der Sohn bei GENAU DIESEM Wert
+   besser/gleich/schlechter als der Vater abschneidet. Dieselben Farben
+   wie beim Ø-Vergleich (cmp-good/cmp-tolerance/cmp-bad weiter unten),
+   damit grün/rot app-weit dieselbe Bedeutung behalten - "gleich" nutzt
+   den Toleranz-Farbton statt Schwarz, damit er genauso auffällt wie
+   besser/schlechter statt unterzugehen. */
+.best-son-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; }
+.best-son-symbol.best-son-better { color: var(--success); }
+.best-son-symbol.best-son-equal { color: var(--success-tolerance); }
+.best-son-symbol.best-son-worse { color: var(--danger); }
 
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html):
@@ -1330,6 +1354,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      Zeile geerbten "center". */
   #horse-table td[data-label="Auswählen"],
   #horse-table td[data-label="Favorit"],
+  #horse-table td[data-label="Bester Sohn"],
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
@@ -1337,7 +1362,12 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     border-bottom: none;
   }
   #horse-table td[data-label="Auswählen"]::before,
-  #horse-table td[data-label="Favorit"]::before { content: none; }
+  #horse-table td[data-label="Favorit"]::before,
+  #horse-table td[data-label="Bester Sohn"]::before { content: none; }
+  /* Bei den allermeisten Pferden leer (siehe bestSonBadges) - dann keine
+     eigene Breite/Innenabstand beanspruchen, sonst bliebe eine unnötige
+     Lücke neben Kästchen/Herz auf der Karte. */
+  #horse-table td[data-label="Bester Sohn"]:empty { padding: 0; min-width: 0; }
   /* Getönter Hintergrund hinter dem Mini-Bild (wie .thumb im
      Design-Vorschlag) statt eines transparenten/weißen Feldes - füllt
      außerdem sichtbar aus, wenn (noch) kein Bild hinterlegt ist. */

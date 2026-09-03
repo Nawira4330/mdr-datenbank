@@ -88,6 +88,16 @@
               <input type="checkbox" id="f-favorites" /> ♥ Nur Favoriten
             </label>
           </div>
+          <div class="field">
+            <label for="f-best-son">Bester Sohn</label>
+            <label class="compare-tolerance-toggle small" style="margin-top: 0.35rem;">
+              <input type="checkbox" id="f-best-son" /> ★ Nur beste Söhne
+            </label>
+            <span class="muted small">
+              Je Vater der männliche Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Brüdern:
+              ● GP · ▲ Ext · ■ Ext% · ◆ Int – grün = Sohn besser als Vater, türkis = gleichauf, rot = Vater noch besser (fehlende Werte bleiben ohne Symbol).
+            </span>
+          </div>
         </div>
       </div>
 
@@ -263,6 +273,7 @@
           <col style="width: 3%" />
           <col style="width: 3%" />
           <col style="width: 4%" />
+          <col style="width: 4%" />
           <col style="width: 5%" />
           <col style="width: 8%" />
           <col style="width: 7%" />
@@ -288,6 +299,7 @@
             <th></th>
             <th>Bild</th>
             <th></th>
+            <th title="Bester Sohn: bester männlicher Nachkomme des Vaters im Vergleich zu seinen Brüdern - je ein Symbol pro Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), Farbe zeigt besser/gleich/schlechter als der Vater bei genau diesem Wert">★</th>
             <th data-sort="name">Name</th>
             <th data-sort="tags">Schlagwörter</th>
             <th data-sort="gender">Geschlecht</th>
@@ -308,7 +320,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="21">Lade…</td></tr>
+          <tr><td colspan="22">Lade…</td></tr>
         </tbody>
       </table>
     </div>
