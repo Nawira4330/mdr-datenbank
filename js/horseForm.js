@@ -71,40 +71,9 @@ document.addEventListener('click', (e) => {
 // Discord-Bot gebraucht (embed.setImage() kann keine data:-URLs laden).
 // Enthält die Zwischenablage kein Bild (normaler Text/Link), passiert hier
 // nichts, der normale Text-Paste läuft unverändert weiter.
-const IMAGE_EXTENSION_BY_MIME_TYPE = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
-
-// Verkleinert/komprimiert ein eingefügtes Bild vor dem Upload (Egress:
-// unkomprimierte Screenshots/Fotos aus der Zwischenablage waren bisher oft
-// mehrere MB groß, wurden aber in der Übersichtstabelle nur als 40x40px-
-// Thumbnail angezeigt - jede Zeile lud trotzdem das volle Originalbild).
-// Läuft über eine <img>+<canvas>-Zwischenstation: auf max. 1600px lange
-// Kante herunterskaliert (reicht für die größte Anzeige, das Hero-Bild im
-// Profil, deutlich üppiger) und als JPEG mit 85% Qualität neu kodiert -
-// das reduziert typische Foto-/Screenshot-Dateien um 80-95%, ohne sichtbar
-// an Qualität zu verlieren. GIFs werden NICHT komprimiert (Animation ginge
-// beim Neukodieren als JPEG verloren) und unverändert hochgeladen.
-// Schlägt die Kompression aus irgendeinem Grund fehl (z.B. sehr alter
-// Browser ohne canvas.toBlob), wird einfach die Originaldatei hochgeladen
-// statt den Upload ganz abzubrechen.
-async function compressImageFile(file, maxDimension = 1600, quality = 0.85) {
-  if (file.type === 'image/gif') return file;
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-    // Nur übernehmen, wenn das Ergebnis tatsächlich kleiner ist (bei sehr
-    // kleinen/bereits stark komprimierten Bildern kann JPEG durch den
-    // Format-Wechsel gelegentlich größer werden als das Original).
-    return blob && blob.size < file.size ? blob : file;
-  } catch {
-    return file;
-  }
-}
+// IMAGE_EXTENSION_BY_MIME_TYPE/compressImageFile() stehen jetzt in
+// parser.js (dort auch von der nachtraeglichen Bestandsbild-Komprimierung
+// in verwaltung.html genutzt).
 
 document.getElementById('image_url')?.addEventListener('paste', async (e) => {
   const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/'));

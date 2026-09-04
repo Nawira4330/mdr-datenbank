@@ -53,12 +53,36 @@
         sehen darfst.
       </p>
     </fieldset>
+
+    <fieldset>
+      <legend>Bestandsbilder komprimieren</legend>
+      <p class="muted small">
+        Komprimiert/verkleinert nachträglich alle bereits hochgeladenen Pferdebilder im
+        eigenen Bild-Speicher (max. 1600px, JPEG 85% – wie beim normalen Bild-Upload,
+        siehe horse.html) und trägt die neue, kleinere Bild-URL beim jeweiligen Pferd
+        ein. Reduziert die Dateigröße typischerweise um 80–95% und senkt damit den
+        Egress-Verbrauch bei jedem künftigen Betrachten. Bereits kleine Bilder werden
+        übersprungen (erkennbar an der Dateigröße) – ein Durchlauf lässt sich also
+        jederzeit unterbrechen und später erneut starten, ohne bereits erledigte Bilder
+        doppelt anzufassen. Betrifft nur Bilder im eigenen Speicher, keine extern
+        verlinkten (z.B. direkt vom Spiel).
+      </p>
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" id="backfill-start-btn" class="secondary">▶️ Start</button>
+        <button type="button" id="backfill-stop-btn" class="secondary" disabled>⏹️ Stopp</button>
+        <span id="backfill-status" class="muted small"></span>
+      </div>
+      <progress id="backfill-progress-bar" value="0" max="100" style="width: 100%; margin-top: 0.5rem;" hidden></progress>
+      <ul id="backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
+    </fieldset>
   </main>
 
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/parser.js"></script>
   <script src="js/verwaltung.js"></script>
+  <script src="js/imageBackfill.js"></script>
 </body>
 </html>

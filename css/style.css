@@ -820,18 +820,21 @@ details.collapsible > .compare-avg-block {
 .favorite-btn.is-favorite { color: var(--danger); }
 
 /* "Bestes Kind"-Abzeichen (siehe bestChildBadges/loadBestChildBadges in
-   list.js) - nur bei Pferden gesetzt, die bei mindestens einem Wert unter
-   ihren gleichgeschlechtigen Geschwistern am besten abschneiden: ein
-   eigenes Symbol je Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), alle zusammen in
-   derselben Spalte, gefärbt danach, ob das Kind bei GENAU DIESEM Wert
-   besser/gleich/schlechter als der gleichgeschlechtige Elternteil
-   (Sohn->Vater, Tochter->Mutter) abschneidet. grün/rot wie beim
-   Ø-Vergleich (cmp-good/cmp-bad weiter unten), damit sie app-weit
-   dieselbe Bedeutung behalten - "gleich" bewusst in Gelb (nicht der
-   Toleranz-Farbton wie sonst), damit alle drei Zustände klar
-   unterscheidbar bleiben, statt mit "besser" zu verschwimmen. Komplett
-   ausblendbar über die Einstellungen (body.hide-best-child weiter unten). */
-.best-child-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; }
+   list.js) - ★ direkt in der jeweiligen Wert-Spalte (GP/Ext/Ext%/Int)
+   hinter der Zahl, bei Pferden, die bei GENAU DIESEM Wert unter ihren
+   gleichgeschlechtigen Geschwistern am besten abschneiden - gefärbt
+   danach, ob das Kind dabei besser/gleich/schlechter als der
+   gleichgeschlechtige Elternteil (Sohn->Vater, Tochter->Mutter)
+   abschneidet. grün/rot wie beim Ø-Vergleich (cmp-good/cmp-bad weiter
+   unten), damit sie app-weit dieselbe Bedeutung behalten - "gleich"
+   bewusst in Gelb (nicht der Toleranz-Farbton wie sonst), damit alle
+   Zustände klar unterscheidbar bleiben. Die vordere ★-Spalte zeigt
+   zusätzlich einen einzelnen, UNGEFÄRBTEN Stern als Sammel-Hinweis (kein
+   state-Modifier, siehe rowHtml) - Gold/Amber statt einer der
+   Bewertungsfarben, damit er nicht als eigenes Vergleichsergebnis
+   missverstanden wird. Komplett ausblendbar über die Einstellungen
+   (body.hide-best-child weiter unten). */
+.best-child-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; color: var(--warning); }
 .best-child-symbol.best-child-better { color: var(--success); }
 .best-child-symbol.best-child-equal { color: var(--warning); }
 .best-child-symbol.best-child-worse { color: var(--danger); }

@@ -91,7 +91,7 @@
           <div class="field" id="f-best-child-field">
             <label>
               Bestes Kind
-              <button type="button" class="info-icon-btn" id="best-child-info-btn" aria-expanded="false" aria-label="Erklärung anzeigen" title="Je Vater/Mutter der gleichgeschlechtige Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Geschwistern - Söhne vs. Vater, Töchter vs. Mutter: ● GP · ▲ Ext · ■ Ext% · ◆ Int – grün = besser als Elternteil, gelb = gleichauf, rot = Elternteil noch besser, hellblau = Elternteil nicht in der Datenbank oder ohne diesen Wert (fehlt bei allen Geschwistern ein Wert, bleibt das Symbol ganz weg).">ⓘ</button>
+              <button type="button" class="info-icon-btn" id="best-child-info-btn" aria-expanded="false" aria-label="Erklärung anzeigen" title="Je Vater/Mutter der gleichgeschlechtige Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Geschwistern - Söhne vs. Vater, Töchter vs. Mutter: ★ hinter dem jeweiligen Wert (GP/Ext/Ext%/Int) selbst, Farbe zeigt besser (grün) / gleichauf (gelb) / schlechter (rot) als der Elternteil, hellblau = kein Vergleich möglich (Elternteil nicht in der Datenbank oder ohne diesen Wert). Die vordere ★-Spalte markiert nur, dass mindestens einer dieser Sterne zutrifft.">ⓘ</button>
             </label>
             <div id="f-best-child" class="checkdrop-item checkdrop-tristate" style="margin-top: 0.35rem;" data-state="neutral" tabindex="0" role="button" aria-label="Bestes Kind: Klicken zum Durchschalten zwischen Alle / Nur beste Söhne/Töchter / Beste Söhne/Töchter ausschließen">
               <span class="tristate-box"></span>★ Beste Söhne/Töchter
@@ -302,7 +302,7 @@
             <th></th>
             <th>Bild</th>
             <th></th>
-            <th id="th-best-child" title="Bestes Kind: bester gleichgeschlechtige Nachkomme im Vergleich zum gleichgeschlechtigen Elternteil (Sohn/Vater, Tochter/Mutter) - je ein Symbol pro Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), Farbe zeigt besser/gleich/schlechter bei genau diesem Wert, hellblau = Elternteil nicht in der Datenbank oder ohne diesen Wert">★</th>
+            <th id="th-best-child" title="Bestes Kind: mindestens ein ★ hinter GP/Ext/Ext%/Int bei diesem Pferd - bester gleichgeschlechtige Nachkomme im Vergleich zum gleichgeschlechtigen Elternteil (Sohn/Vater, Tochter/Mutter) bei genau diesem Wert, Farbe dort zeigt besser/gleich/schlechter, hellblau = kein Vergleich möglich">★</th>
             <th data-sort="name">Name</th>
             <th data-sort="tags">Schlagwörter</th>
             <th data-sort="gender">Geschlecht</th>

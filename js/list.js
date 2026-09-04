@@ -285,11 +285,14 @@ async function loadGeneIndex() {
 // color), damit sich auf einen Blick sowohl der Wert (Symbol) als auch
 // besser/gleich/schlechter (Farbe) ablesen lässt - alle 4 zusammen in
 // einer einzigen Spalte (siehe rowHtml).
+// Dasselbe Symbol (★) für alle 4 Werte (Nutzerwunsch) - steht direkt in
+// der jeweiligen Wert-Spalte hinter der Zahl (siehe rowHtml), statt wie
+// vorher gesammelt mit 4 verschiedenen Symbolen in einer eigenen Spalte.
 const BEST_CHILD_METRICS = [
-  { key: 'gp', lowerIsBetter: false, symbol: '●', label: 'GP' },
-  { key: 'extAvg', lowerIsBetter: true, symbol: '▲', label: 'Ext' },
-  { key: 'extPercent', lowerIsBetter: false, symbol: '■', label: 'Ext%' },
-  { key: 'intAvg', lowerIsBetter: true, symbol: '◆', label: 'Int' },
+  { key: 'gp', lowerIsBetter: false, symbol: '★', label: 'GP' },
+  { key: 'extAvg', lowerIsBetter: true, symbol: '★', label: 'Ext' },
+  { key: 'extPercent', lowerIsBetter: false, symbol: '★', label: 'Ext%' },
+  { key: 'intAvg', lowerIsBetter: true, symbol: '★', label: 'Int' },
 ];
 
 // Formatiert einen einzelnen Leistungswert für die Symbol-Tooltips (siehe
@@ -1355,20 +1358,28 @@ function rowHtml(h) {
   const isFavorite = favoriteHorseIds.has(h.id);
   // "Bestes Kind"-Abzeichen (siehe loadBestChildBadges) - nur bei Pferden
   // gesetzt, die bei mindestens einem Wert unter ihren gleichgeschlechtigen
-  // Geschwistern am besten abschneiden. Je Wert (GP/Ext/Ext%/Int) ein
-  // eigenes Symbol, alle zusammen in derselben Spalte, gefärbt danach, ob
-  // das Kind bei GENAU DIESEM Wert besser/gleich/schlechter als der
-  // gleichgeschlechtige Elternteil (Sohn->Vater, Tochter->Mutter) ist.
+  // Geschwistern am besten abschneiden. Der ★ steht direkt in der
+  // jeweiligen Wert-Spalte (GP/Ext/Ext%/Int) hinter der Zahl, gefärbt
+  // danach, ob das Kind bei GENAU DIESEM Wert besser/gleich/schlechter als
+  // der gleichgeschlechtige Elternteil (Sohn->Vater, Tochter->Mutter) ist
+  // (bzw. hellblau, falls kein Vergleich möglich, siehe best-child-unknown
+  // in style.css). Die vordere ★-Spalte zeigt nur noch einen einzelnen,
+  // ungefärbten Stern als Sammel-Hinweis, wenn IRGENDEIN Wert einen Stern
+  // hat - Nutzerwunsch, statt dort selbst 1-4 Symbole gesammelt zu zeigen.
   const bestChildStateLabels = { better: 'besser', equal: 'gleichauf', worse: 'schlechter' };
-  const bestChildCell = (bestChildBadges.get(h.id) || []).map((m) => {
+  const bestChildByKey = new Map((bestChildBadges.get(h.id) || []).map((m) => [m.key, m]));
+  const bestChildStar = (key) => {
+    const m = bestChildByKey.get(key);
+    if (!m) return '';
     // "unknown" (siehe assignBestChildBadges): bestes Geschwister zwar
     // ermittelt, aber kein Vergleich möglich, weil der Elternteil (noch)
     // nicht in der Datenbank steht oder dort dieser eine Wert fehlt.
     const title = m.state === 'unknown'
       ? `${m.label}: ${m.childLabel} beste(r) unter den Geschwistern (Vergleich mit ${m.parentLabel} nicht möglich - fehlt in der Datenbank oder ohne diesen Wert)`
       : `${m.label}: ${m.childLabel} ${formatBestChildValue(m.key, m.childValue)} ${bestChildStateLabels[m.state]} als ${m.parentLabel} ${formatBestChildValue(m.key, m.parentValue)}`;
-    return `<span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
-  }).join('');
+    return ` <span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
+  };
+  const bestChildCell = bestChildByKey.size ? '<span class="best-child-symbol" title="Bestes Kind bei mindestens einem Wert - siehe ★ hinter GP/Ext/Ext%/Int">★</span>' : '';
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
@@ -1382,10 +1393,10 @@ function rowHtml(h) {
     <td data-label="Rasse" title="${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}">${escapeHtml(normalizeBreed(h.breed) || 'Rasselos')}</td>
     <td data-label="Farbe" title="${escapeHtml(h.coat_color || '')}">${escapeHtml(h.coat_color || '')}</td>
     <td data-label="Genetik" class="small genetik-cell" style="font-family: ui-monospace, monospace;" title="${escapeHtml(d.presentGenes)}">${escapeHtml(d.presentGenes)}</td>
-    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false, effectiveTolerance('gp'))}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}</td>
-    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true, effectiveTolerance('ext'))}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}</td>
-    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false, effectiveTolerance('extPercent'))}">${d.extPercent != null ? d.extPercent + '%' : ''}</td>
-    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true, effectiveTolerance('int'))}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}</td>
+    <td data-label="GP" class="${cmpClass(d.gp, compareBaseline?.gp, false, effectiveTolerance('gp'))}">${d.gp != null ? escapeHtml(String(d.gp)) : ''}${bestChildStar('gp')}</td>
+    <td data-label="Ext" class="${cmpClass(d.extAvg, compareBaseline?.ext, true, effectiveTolerance('ext'))}">${d.extAvg != null ? d.extAvg.toFixed(2) : ''}${bestChildStar('extAvg')}</td>
+    <td data-label="Ext%" class="${cmpClass(d.extPercent, compareBaseline?.extPercent, false, effectiveTolerance('extPercent'))}">${d.extPercent != null ? d.extPercent + '%' : ''}${bestChildStar('extPercent')}</td>
+    <td data-label="Int" class="${cmpClass(d.intAvg, compareBaseline?.int, true, effectiveTolerance('int'))}">${d.intAvg != null ? d.intAvg.toFixed(2) : ''}${bestChildStar('intAvg')}</td>
     <td data-label="HLP/SLP">${escapeHtml(hlpSlpDisplay(h.hlp_slp))}</td>
     <td data-label="ZZL">${zzlDisplay(h.breeding_allowed)}</td>
     <td data-label="EKH">${escapeHtml(ekhText)}</td>
