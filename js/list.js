@@ -60,12 +60,18 @@ let customDashboardTiles = [];
 // "Vorgeschlagene Schlagwörter" sind bewusst nicht abschaltbar (direkt
 // handlungsrelevant) und stehen deshalb nie in dieser Menge.
 let hiddenNotices = new Set();
-// "Bester Sohn"-Abzeichen (Nutzerwunsch): Pferde-ID -> Array von
-// {key, symbol, label, state, sonValue, fatherValue} (siehe
-// compareSonToFatherPerMetric) - nur für genau EINEN männlichen
-// Nachkommen je Vater gesetzt (siehe loadBestSonBadges), alle anderen
-// Pferde kommen in dieser Map gar nicht vor.
-let bestSonBadges = new Map();
+// "Bestes Kind"-Abzeichen (Nutzerwunsch): Pferde-ID -> Array von
+// {key, symbol, label, state, childValue, parentValue, childLabel,
+// parentLabel} (siehe assignBestChildBadges) - nur bei den Pferden
+// gesetzt, die bei mindestens einem Wert unter ihren gleichgeschlechtigen
+// Geschwistern am besten abschneiden (siehe loadBestChildBadges), alle
+// anderen Pferde kommen in dieser Map gar nicht vor. Bleibt eine leere
+// Map, solange die Funktion in den Einstellungen abgeschaltet ist (siehe
+// bestChildBadgesEnabled).
+let bestChildBadges = new Map();
+// Aus den Einstellungen (siehe migration_036) - schaltet die komplette
+// "Bestes Kind"-Funktion ab (Spalte/Filter/Berechnung), falls gewünscht.
+let bestChildBadgesEnabled = true;
 // Ungefilterter Gesamtbestand für die Berechnung angepinnter Kacheln (die
 // unabhängig vom gerade aktiven Tabellenfilter sein sollen) - einmalig
 // geladen (siehe loadAllHorsesCache), nicht bei jedem Tabellen-Filtern neu.
@@ -110,8 +116,9 @@ async function init() {
   wireScrollTop();
   showFlashBanner();
   await loadUserSettings(session);
+  document.body.classList.toggle('hide-best-child', !bestChildBadgesEnabled);
   await loadGeneIndex();
-  await loadBestSonBadges();
+  if (bestChildBadgesEnabled) await loadBestChildBadges();
   await showMissingDataNotice(session);
   await checkAgeNotices(session);
   await loadTagSuggestions();
@@ -191,7 +198,7 @@ async function applyInitialFilterState() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles, hidden_notices')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles, hidden_notices, best_child_badges_enabled')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
@@ -202,6 +209,8 @@ async function loadUserSettings(session) {
   customDashboardTiles = (!error && data?.custom_dashboard_tiles) || [];
   dashboardTiles = mergeDashboardTiles(!error ? data?.dashboard_tiles : null, customDashboardTiles);
   hiddenNotices = new Set((!error && data?.hidden_notices) || []);
+  // NOT NULL DEFAULT true - fehlt nur, solange nie gespeichert.
+  bestChildBadgesEnabled = !error && data?.best_child_badges_enabled != null ? data.best_child_badges_enabled : true;
   if (customDashboardTiles.length) await loadAllHorsesCache();
 }
 
@@ -229,22 +238,29 @@ async function loadGeneIndex() {
   geneIndex = new Map((!error && data ? data : []).map((h) => [h.name, h]));
 }
 
-// --- "Bester Sohn"-Abzeichen (Nutzerwunsch) ---
+// --- "Bestes Kind"-Abzeichen (Nutzerwunsch) ---
 //
-// Je Vater und je Wert (GP/Ext/Ext%/Int) EINZELN ausgewertet: das Symbol
-// dieses einen Werts erscheint nur bei dem/den männlichen Nachkommen
-// (Brüdern), der/die bei GENAU DIESEM Wert am besten unter den Brüdern
-// abschneidet - nicht zwangsläufig bei allen 4 Werten dasselbe Pferd (z.B.
-// kann ein Bruder das beste GP haben, ein anderer das beste Ext%). Farbe
-// zeigt, ob dieser Bestwert besser/gleich/schlechter als der Vater ist.
-// Läuft komplett über den Gesamtbestand (nicht nur die eigenen/gefilterten
-// Pferde), da Väter und Brüder unterschiedlichen Konten gehören können.
+// Je Elternteil und je Wert (GP/Ext/Ext%/Int) EINZELN ausgewertet: das
+// Symbol dieses einen Werts erscheint nur bei dem/den gleichgeschlechtigen
+// Geschwistern, der/die bei GENAU DIESEM Wert am besten unter den
+// Geschwistern abschneidet - nicht zwangsläufig bei allen 4 Werten
+// dasselbe Pferd (z.B. kann ein Bruder das beste GP haben, ein anderer
+// das beste Ext%). Farbe zeigt, ob dieser Bestwert besser/gleich/
+// schlechter als der jeweils gleichgeschlechtige Elternteil ist: Söhne
+// werden mit dem Vater verglichen, Töchter mit der Mutter. Läuft komplett
+// über den Gesamtbestand (nicht nur die eigenen/gefilterten Pferde), da
+// Eltern und Geschwister unterschiedlichen Konten gehören können.
 //
-// "Männlicher Nachkomme" = Hengst/Hengstfohlen/Wallach (jedes Alter,
-// Nutzervorgabe) - ursprünglich nur auf "Hengstfohlen" beschränkt, aber
-// dieser Geschlecht-Wert kommt beim automatischen Auslesen praktisch nie
-// vor (das Spiel zeigt ihn offenbar nur in einem sehr kurzen Zeitfenster),
+// "Männlicher Nachkomme" = Hengst/Hengstfohlen/Wallach, "weiblicher
+// Nachkomme" = Stute/Stutfohlen (jeweils jedes Alter, Nutzervorgabe) -
+// ursprünglich nur auf "Hengstfohlen" beschränkt, aber dieser
+// Geschlecht-Wert kommt beim automatischen Auslesen praktisch nie vor
+// (das Spiel zeigt ihn offenbar nur in einem sehr kurzen Zeitfenster),
 // wodurch die Funktion mit den echten Bestandsdaten nie ausgelöst hätte.
+//
+// Komplett abschaltbar über die Einstellungen (siehe
+// migration_036_best_child_badges_toggle.sql, bestChildBadgesEnabled) -
+// läuft dann weder die Berechnung noch wird Spalte/Filter angezeigt.
 
 // Dieselbe Richtung wie beim Ø-Vergleich (siehe overallCmpClass): GP/Ext%
 // sind besser, je höher, Ext/Int besser, je niedriger. Je Wert ein eigenes,
@@ -253,7 +269,7 @@ async function loadGeneIndex() {
 // color), damit sich auf einen Blick sowohl der Wert (Symbol) als auch
 // besser/gleich/schlechter (Farbe) ablesen lässt - alle 4 zusammen in
 // einer einzigen Spalte (siehe rowHtml).
-const BEST_SON_METRICS = [
+const BEST_CHILD_METRICS = [
   { key: 'gp', lowerIsBetter: false, symbol: '●', label: 'GP' },
   { key: 'extAvg', lowerIsBetter: true, symbol: '▲', label: 'Ext' },
   { key: 'extPercent', lowerIsBetter: false, symbol: '■', label: 'Ext%' },
@@ -262,7 +278,7 @@ const BEST_SON_METRICS = [
 
 // Formatiert einen einzelnen Leistungswert für die Symbol-Tooltips (siehe
 // rowHtml) - dieselbe Darstellung wie in den GP/Ext/Ext%/Int-Spalten.
-function formatBestSonValue(key, value) {
+function formatBestChildValue(key, value) {
   if (value == null) return '?';
   if (key === 'gp') return String(value);
   if (key === 'extPercent') return value + '%';
@@ -282,57 +298,79 @@ function quickPerfStats(h) {
   };
 }
 
+// Ermittelt für eine Gruppe gleichgeschlechtiger Geschwister (Söhne EINES
+// Vaters ODER Töchter EINER Mutter) je Wert einzeln, wer unter den
+// Geschwistern am besten abschneidet, vergleicht diesen Bestwert mit dem
+// Elternteil und trägt das Ergebnis in "badges" ein - bei echtem
+// Gleichstand bekommen alle mit dem Bestwert das Symbol (nicht nur
+// eines), verschiedene Werte können so bei verschiedenen Geschwistern
+// landen. childLabel/parentLabel ("Sohn"/"Vater" bzw. "Tochter"/"Mutter")
+// stehen später im Tooltip (siehe rowHtml).
+function assignBestChildBadges(children, parentStats, badges, childLabel, parentLabel) {
+  for (const metric of BEST_CHILD_METRICS) {
+    const pv = parentStats[metric.key];
+    if (pv == null) continue; // Elternwert unbekannt -> kein Vergleich möglich
+    const values = children.map((c) => c.stats[metric.key]).filter((v) => v != null);
+    if (!values.length) continue;
+    const bestValue = metric.lowerIsBetter ? Math.min(...values) : Math.max(...values);
+    const childBetter = metric.lowerIsBetter ? bestValue < pv : bestValue > pv;
+    const parentBetter = metric.lowerIsBetter ? pv < bestValue : pv > bestValue;
+    const state = childBetter ? 'better' : (parentBetter ? 'worse' : 'equal');
+    for (const c of children) {
+      if (c.stats[metric.key] !== bestValue) continue;
+      const list = badges.get(c.id) || [];
+      list.push({ ...metric, state, childValue: bestValue, parentValue: pv, childLabel, parentLabel });
+      badges.set(c.id, list);
+    }
+  }
+}
+
 // Einmaliger, ungefilterter Voll-Abruf über den Gesamtbestand (siehe
 // geneIndex oben) - nur die für die Leistungswerte und den Stammbaum
-// nötigen Spalten.
-async function loadBestSonBadges() {
+// nötigen Spalten. Wird in init() nur aufgerufen, wenn die Funktion in
+// den Einstellungen nicht abgeschaltet ist (siehe bestChildBadgesEnabled).
+async function loadBestChildBadges() {
   const { data, error } = await fetchAllRows(
     supabaseClient.from('horses').select('id, name, gender, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament'),
   );
   if (error || !data) {
-    bestSonBadges = new Map();
+    bestChildBadges = new Map();
     return;
   }
   const byName = new Map(data.map((h) => [h.name, h]));
   const sonsByFather = new Map();
+  const daughtersByMother = new Map();
   for (const h of data) {
-    if (h.gender !== 'Hengst' && h.gender !== 'Hengstfohlen' && h.gender !== 'Wallach') continue;
-    // Erster Stammbaum-Eintrag ist laut Spiel immer der Vater (siehe
-    // parseHorseText/parentRecordsForRow weiter oben).
+    // Erste zwei Stammbaum-Einträge sind laut Spiel immer Vater und
+    // Mutter in dieser Reihenfolge (siehe parseHorseText/
+    // parentRecordsForRow weiter oben).
     const ancestors = Array.isArray(h.pedigree) ? h.pedigree.slice(1) : (h.pedigree?.ancestors || []);
-    const fatherName = ancestors[0]?.name;
-    if (!fatherName) continue;
-    const list = sonsByFather.get(fatherName) || [];
-    list.push({ id: h.id, stats: quickPerfStats(h) });
-    sonsByFather.set(fatherName, list);
+    if (h.gender === 'Hengst' || h.gender === 'Hengstfohlen' || h.gender === 'Wallach') {
+      const fatherName = ancestors[0]?.name;
+      if (!fatherName) continue;
+      const list = sonsByFather.get(fatherName) || [];
+      list.push({ id: h.id, stats: quickPerfStats(h) });
+      sonsByFather.set(fatherName, list);
+    } else if (h.gender === 'Stute' || h.gender === 'Stutfohlen') {
+      const motherName = ancestors[1]?.name;
+      if (!motherName) continue;
+      const list = daughtersByMother.get(motherName) || [];
+      list.push({ id: h.id, stats: quickPerfStats(h) });
+      daughtersByMother.set(motherName, list);
+    }
   }
   const badges = new Map();
   for (const [fatherName, sons] of sonsByFather) {
     const father = byName.get(fatherName);
     if (!father) continue; // Vater nicht in der Datenbank -> kein Vergleich möglich
-    const fatherStats = quickPerfStats(father);
-    // Jeder der 4 Werte einzeln: wer unter den Brüdern den besten Rohwert
-    // hat, bekommt GENAU DAS EINE Symbol - bei echtem Gleichstand bekommen
-    // alle mit diesem Bestwert das Symbol (nicht nur einer). Verschiedene
-    // Werte können so bei verschiedenen Brüdern landen.
-    for (const metric of BEST_SON_METRICS) {
-      const fv = fatherStats[metric.key];
-      if (fv == null) continue; // Vaterwert unbekannt -> kein Vergleich möglich
-      const values = sons.map((s) => s.stats[metric.key]).filter((v) => v != null);
-      if (!values.length) continue;
-      const bestValue = metric.lowerIsBetter ? Math.min(...values) : Math.max(...values);
-      const sonBetter = metric.lowerIsBetter ? bestValue < fv : bestValue > fv;
-      const fatherBetter = metric.lowerIsBetter ? fv < bestValue : fv > bestValue;
-      const state = sonBetter ? 'better' : (fatherBetter ? 'worse' : 'equal');
-      for (const s of sons) {
-        if (s.stats[metric.key] !== bestValue) continue;
-        const list = badges.get(s.id) || [];
-        list.push({ ...metric, state, sonValue: bestValue, fatherValue: fv });
-        badges.set(s.id, list);
-      }
-    }
+    assignBestChildBadges(sons, quickPerfStats(father), badges, 'Sohn', 'Vater');
   }
-  bestSonBadges = badges;
+  for (const [motherName, daughters] of daughtersByMother) {
+    const mother = byName.get(motherName);
+    if (!mother) continue; // Mutter nicht in der Datenbank -> kein Vergleich möglich
+    assignBestChildBadges(daughters, quickPerfStats(mother), badges, 'Tochter', 'Mutter');
+  }
+  bestChildBadges = badges;
 }
 
 // Direkte Eltern eines Pferds (erste zwei Stammbaum-Einträge, siehe
@@ -1116,7 +1154,7 @@ function applyClientFilters(rows) {
   const intOp = document.querySelector('#f-int-op').value;
   const intVal = document.querySelector('#f-int-val').value;
   const favoritesOnly = document.querySelector('#f-favorites').checked;
-  const bestSonOnly = document.querySelector('#f-best-son').checked;
+  const bestChildOnly = document.querySelector('#f-best-child')?.checked;
   const ageMinStr = document.querySelector('#f-age-min').value;
   const ageMaxStr = document.querySelector('#f-age-max').value;
   const ageMin = ageMinStr === '' ? null : Number(ageMinStr);
@@ -1126,7 +1164,7 @@ function applyClientFilters(rows) {
     const d = computeDerived(row);
 
     if (favoritesOnly && !favoriteHorseIds.has(row.id)) return false;
-    if (bestSonOnly && !bestSonBadges.has(row.id)) return false;
+    if (bestChildOnly && !bestChildBadges.has(row.id)) return false;
 
     // Nur bei der Standardauswahl "Alle" (kein konkreter Rasse-Filter
     // gewählt) wirken die bevorzugten Rassen aus den Einstellungen -
@@ -1283,16 +1321,16 @@ function rowHtml(h) {
     : '';
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
   const isFavorite = favoriteHorseIds.has(h.id);
-  // "Bester Sohn"-Abzeichen (siehe loadBestSonBadges) - nur für genau
-  // einen männlichen Nachkommen je Vater gesetzt, alle anderen Pferde
-  // bekommen keine Symbole. Je Wert (GP/Ext/Ext%/Int) ein eigenes Symbol,
-  // alle zusammen
-  // in derselben Spalte, gefärbt danach, ob der Sohn bei GENAU DIESEM Wert
-  // besser/gleich/schlechter als der Vater ist.
-  const bestSonStateLabels = { better: 'besser', equal: 'gleichauf', worse: 'schlechter' };
-  const bestSonCell = (bestSonBadges.get(h.id) || []).map((m) => {
-    const title = `${m.label}: Sohn ${formatBestSonValue(m.key, m.sonValue)} ${bestSonStateLabels[m.state]} als Vater ${formatBestSonValue(m.key, m.fatherValue)}`;
-    return `<span class="best-son-symbol best-son-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
+  // "Bestes Kind"-Abzeichen (siehe loadBestChildBadges) - nur bei Pferden
+  // gesetzt, die bei mindestens einem Wert unter ihren gleichgeschlechtigen
+  // Geschwistern am besten abschneiden. Je Wert (GP/Ext/Ext%/Int) ein
+  // eigenes Symbol, alle zusammen in derselben Spalte, gefärbt danach, ob
+  // das Kind bei GENAU DIESEM Wert besser/gleich/schlechter als der
+  // gleichgeschlechtige Elternteil (Sohn->Vater, Tochter->Mutter) ist.
+  const bestChildStateLabels = { better: 'besser', equal: 'gleichauf', worse: 'schlechter' };
+  const bestChildCell = (bestChildBadges.get(h.id) || []).map((m) => {
+    const title = `${m.label}: ${m.childLabel} ${formatBestChildValue(m.key, m.childValue)} ${bestChildStateLabels[m.state]} als ${m.parentLabel} ${formatBestChildValue(m.key, m.parentValue)}`;
+    return `<span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
   }).join('');
 
   return `<tr>
@@ -1300,7 +1338,7 @@ function rowHtml(h) {
     <td data-label="Favorit"><button type="button" class="icon-btn favorite-btn${isFavorite ? ' is-favorite' : ''}" data-favorite="${h.id}" title="${isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}">${isFavorite ? '♥' : '♡'}</button></td>
     <td data-label="Bild">${imageCell}</td>
     <td data-label="Link">${linkCell}</td>
-    <td data-label="Bester Sohn">${bestSonCell}</td>
+    <td data-label="Bestes Kind">${bestChildCell}</td>
     <td data-label="Name" class="${nameCls}" title="${escapeHtml(nameTitle)}">${nameCell}</td>
     <td data-label="Schlagwörter" title="${escapeHtml(tagTitle)}">${tagsBadgesHtml(h.tags)}</td>
     <td data-label="Geschlecht">${escapeHtml(h.gender || '')}</td>
@@ -1404,6 +1442,16 @@ function wireFilterForm() {
     loadHorses();
   });
   document.querySelector('#only-my-horses-btn').addEventListener('click', onOnlyMyHorses);
+  // "ⓘ"-Knopf neben "Nur beste Söhne/Töchter" (Nutzerwunsch): Erklärung
+  // bleibt per title-Attribut auch beim Hovern sichtbar, zusätzlich per
+  // Klick ein-/ausblendbar (z.B. auf Touch-Geräten ohne Hover) - toggelt
+  // nur den sichtbaren Text, ändert nichts am Filter selbst.
+  document.querySelector('#best-child-info-btn').addEventListener('click', () => {
+    const textEl = document.querySelector('#best-child-info-text');
+    const btn = document.querySelector('#best-child-info-btn');
+    textEl.hidden = !textEl.hidden;
+    btn.setAttribute('aria-expanded', String(!textEl.hidden));
+  });
   // "— N aktiv (Feld)"-Hinweis neben "🔍 Filter" (siehe MixD.dc.html) - auf
   // jede Eingabe/Auswahl im Formular reagieren, nicht erst beim Filtern
   // (Submit), damit der Hinweis den tatsächlichen Feldinhalt widerspiegelt.
@@ -1432,7 +1480,7 @@ function activeFilterDescriptions() {
   if (val('#f-zzl')) list.push('ZZL');
   if (val('#f-age-min').trim() || val('#f-age-max').trim()) list.push('Alter');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
-  if (document.querySelector('#f-best-son').checked) list.push('Bester Sohn');
+  if (document.querySelector('#f-best-child')?.checked) list.push('Bestes Kind');
   const tagActive = getCheckDropdownTristate('f-tag-drop');
   if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');
   if (val('#f-tag-note').trim()) list.push('Schlagwort-Notiz');
@@ -1556,7 +1604,7 @@ function collectFilterState() {
     ageMin: document.querySelector('#f-age-min').value,
     ageMax: document.querySelector('#f-age-max').value,
     favorites: document.querySelector('#f-favorites').checked,
-    bestSon: document.querySelector('#f-best-son').checked,
+    bestChild: document.querySelector('#f-best-child')?.checked,
     tags: getCheckDropdownTristate('f-tag-drop'),
     tagNote: document.querySelector('#f-tag-note').value,
     genetik: getCheckDropdownTristate('f-genetik-drop'),
@@ -1592,7 +1640,7 @@ async function applyFilterState(state) {
   document.querySelector('#f-age-min').value = state.ageMin || '';
   document.querySelector('#f-age-max').value = state.ageMax || '';
   document.querySelector('#f-favorites').checked = !!state.favorites;
-  document.querySelector('#f-best-son').checked = !!state.bestSon;
+  if (document.querySelector('#f-best-child')) document.querySelector('#f-best-child').checked = !!state.bestChild;
   document.querySelector('#f-tag-note').value = state.tagNote || '';
   // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/
   // EKH/Schlagwörtern) speichern hier noch ein flaches Array statt
@@ -1950,7 +1998,7 @@ function matchesPresetFilters(h, state) {
     if (s.ageMax && age > Number(s.ageMax)) return false;
   }
   if (s.favorites && !favoriteHorseIds.has(h.id)) return false;
-  if (s.bestSon && !bestSonBadges.has(h.id)) return false;
+  if (s.bestChild && !bestChildBadges.has(h.id)) return false;
   const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
   const genetik = toTristate(s.genetik);
   if (genetik.include.length && !genetik.include.every((locus) => matchesGenetikLocus(h, locus))) return false;

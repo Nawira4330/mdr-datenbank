@@ -522,6 +522,20 @@ label {
   align-self: center;
 }
 .compare-tolerance-toggle input[type="checkbox"] { width: auto; margin: 0; }
+/* "ⓘ"-Knopf für die Erklärung neben "Nur beste Söhne/Töchter" (siehe
+   #best-child-info-btn/-text in list.js) - bewusst unauffällig (kein
+   Rahmen/Hintergrund wie die übrigen Buttons), da er nur bei Bedarf
+   Zusatzinfo einblendet statt eine eigenständige Aktion auszulösen. */
+.info-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0 0.1rem;
+}
+.info-icon-btn:hover { color: var(--info); }
 .compare-avg-values { flex-basis: 100%; color: var(--text); }
 .compare-avg-values b { color: var(--text); font-weight: 700; }
 
@@ -805,19 +819,33 @@ details.collapsible > .compare-avg-block {
 }
 .favorite-btn.is-favorite { color: var(--danger); }
 
-/* "Bester Sohn"-Abzeichen (siehe bestSonBadges/loadBestSonBadges in
-   list.js) - nur bei genau einem Hengstfohlen je Vater gesetzt: ein
+/* "Bestes Kind"-Abzeichen (siehe bestChildBadges/loadBestChildBadges in
+   list.js) - nur bei Pferden gesetzt, die bei mindestens einem Wert unter
+   ihren gleichgeschlechtigen Geschwistern am besten abschneiden: ein
    eigenes Symbol je Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), alle zusammen in
-   derselben Spalte, gefärbt danach, ob der Sohn bei GENAU DIESEM Wert
-   besser/gleich/schlechter als der Vater abschneidet. Dieselben Farben
-   wie beim Ø-Vergleich (cmp-good/cmp-tolerance/cmp-bad weiter unten),
-   damit grün/rot app-weit dieselbe Bedeutung behalten - "gleich" nutzt
-   den Toleranz-Farbton statt Schwarz, damit er genauso auffällt wie
-   besser/schlechter statt unterzugehen. */
-.best-son-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; }
-.best-son-symbol.best-son-better { color: var(--success); }
-.best-son-symbol.best-son-equal { color: var(--success-tolerance); }
-.best-son-symbol.best-son-worse { color: var(--danger); }
+   derselben Spalte, gefärbt danach, ob das Kind bei GENAU DIESEM Wert
+   besser/gleich/schlechter als der gleichgeschlechtige Elternteil
+   (Sohn->Vater, Tochter->Mutter) abschneidet. grün/rot wie beim
+   Ø-Vergleich (cmp-good/cmp-bad weiter unten), damit sie app-weit
+   dieselbe Bedeutung behalten - "gleich" bewusst in Gelb (nicht der
+   Toleranz-Farbton wie sonst), damit alle drei Zustände klar
+   unterscheidbar bleiben, statt mit "besser" zu verschwimmen. Komplett
+   ausblendbar über die Einstellungen (body.hide-best-child weiter unten). */
+.best-child-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; }
+.best-child-symbol.best-child-better { color: var(--success); }
+.best-child-symbol.best-child-equal { color: var(--warning); }
+.best-child-symbol.best-child-worse { color: var(--danger); }
+
+/* Einstellungen -> "Bestes Kind"-Funktion abgeschaltet (siehe
+   bestChildBadgesEnabled in list.js) - blendet Spalte und Filterfeld
+   komplett aus, statt nur eine leere Spalte/wirkungslose Checkbox zu
+   zeigen. */
+body.hide-best-child #col-best-child { visibility: collapse; }
+body.hide-best-child #th-best-child,
+body.hide-best-child #horse-table td[data-label="Bestes Kind"] {
+  display: none;
+}
+body.hide-best-child #f-best-child-field { display: none; }
 
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html):
@@ -1354,7 +1382,6 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      Zeile geerbten "center". */
   #horse-table td[data-label="Auswählen"],
   #horse-table td[data-label="Favorit"],
-  #horse-table td[data-label="Bester Sohn"],
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
@@ -1362,12 +1389,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     border-bottom: none;
   }
   #horse-table td[data-label="Auswählen"]::before,
-  #horse-table td[data-label="Favorit"]::before,
-  #horse-table td[data-label="Bester Sohn"]::before { content: none; }
-  /* Bei den allermeisten Pferden leer (siehe bestSonBadges) - dann keine
-     eigene Breite/Innenabstand beanspruchen, sonst bliebe eine unnötige
-     Lücke neben Kästchen/Herz auf der Karte. */
-  #horse-table td[data-label="Bester Sohn"]:empty { padding: 0; min-width: 0; }
+  #horse-table td[data-label="Favorit"]::before { content: none; }
   /* Getönter Hintergrund hinter dem Mini-Bild (wie .thumb im
      Design-Vorschlag) statt eines transparenten/weißen Feldes - füllt
      außerdem sichtbar aus, wenn (noch) kein Bild hinterlegt ist. */
@@ -1568,7 +1590,23 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   #horse-table td[data-label="Farbe"] { order: 5; }
   #horse-table td[data-label="Alter"] { order: 6; }
   #horse-table td[data-label="HLP/SLP"] { order: 7; }
-  #horse-table td[data-label="EKH"] { order: 8; }
+  /* "Bestes Kind"-Symbole (siehe bestChildBadges in list.js) direkt unter
+     HLP/SLP (Nutzerwunsch) - eigene Zeile über die volle Breite wie
+     Farbe/EKH statt im 50%-Paar, da meist nur wenige kleine Symbole statt
+     eines langen Werts; kein Label-Präfix (Symbole+Farbe sprechen für
+     sich, siehe Tooltip) und bei den allermeisten Pferden leer, dann ohne
+     eigene Höhe/Abstand (wie bei Schlagwörter weiter oben). */
+  #horse-table td[data-label="Bestes Kind"] {
+    order: 8;
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    border-bottom: none;
+    padding: 0.2rem 0;
+  }
+  #horse-table td[data-label="Bestes Kind"]::before { content: none; }
+  #horse-table td[data-label="Bestes Kind"]:empty { padding: 0; min-height: 0; }
+  #horse-table td[data-label="EKH"] { order: 9; }
 
   /* Besitzer + Zuletzt bearbeitet als gemeinsame Fußzeile der Karte
      (wie im Design-Vorschlag) statt zweier gewöhnlicher Kacheln-Felder -
@@ -1590,9 +1628,9 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     margin-top: 0.4rem;
     padding-top: 0.5rem;
   }
-  #horse-table td[data-label="Besitzer"] { order: 9; flex-grow: 1; }
+  #horse-table td[data-label="Besitzer"] { order: 10; flex-grow: 1; }
   #horse-table td[data-label="Besitzer"]::before { content: "Besitzer:"; }
-  #horse-table td[data-label="Zuletzt bearbeitet"] { order: 10; }
+  #horse-table td[data-label="Zuletzt bearbeitet"] { order: 11; }
   #horse-table td[data-label="Zuletzt bearbeitet"]::before { content: none; }
   #horse-table td.small { font-size: 0.85rem; }
 }

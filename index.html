@@ -88,14 +88,15 @@
               <input type="checkbox" id="f-favorites" /> ♥ Nur Favoriten
             </label>
           </div>
-          <div class="field">
-            <label for="f-best-son">Bester Sohn</label>
+          <div class="field" id="f-best-child-field">
+            <label for="f-best-child">Bestes Kind</label>
             <label class="compare-tolerance-toggle small" style="margin-top: 0.35rem;">
-              <input type="checkbox" id="f-best-son" /> ★ Nur beste Söhne
+              <input type="checkbox" id="f-best-child" /> ★ Nur beste Söhne/Töchter
+              <button type="button" class="info-icon-btn" id="best-child-info-btn" aria-expanded="false" aria-label="Erklärung anzeigen" title="Je Vater/Mutter der gleichgeschlechtige Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Geschwistern - Söhne vs. Vater, Töchter vs. Mutter: ● GP · ▲ Ext · ■ Ext% · ◆ Int – grün = besser als Elternteil, gelb = gleichauf, rot = Elternteil noch besser (fehlende Werte bleiben ohne Symbol).">ⓘ</button>
             </label>
-            <span class="muted small">
-              Je Vater der männliche Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Brüdern:
-              ● GP · ▲ Ext · ■ Ext% · ◆ Int – grün = Sohn besser als Vater, türkis = gleichauf, rot = Vater noch besser (fehlende Werte bleiben ohne Symbol).
+            <span class="muted small" id="best-child-info-text" hidden>
+              Je Vater/Mutter der gleichgeschlechtige Nachkomme (jeden Alters) mit den meisten GP/Ext/Ext%/Int-Bestwerten unter seinen Geschwistern - Söhne vs. Vater, Töchter vs. Mutter:
+              ● GP · ▲ Ext · ■ Ext% · ◆ Int – grün = besser als Elternteil, gelb = gleichauf, rot = Elternteil noch besser (fehlende Werte bleiben ohne Symbol).
             </span>
           </div>
         </div>
@@ -274,7 +275,7 @@
           <col style="width: 3%" />
           <col style="width: 4%" />
           <col style="width: 4%" />
-          <col style="width: 5%" />
+          <col id="col-best-child" style="width: 5%" />
           <col style="width: 8%" />
           <col style="width: 7%" />
           <col style="width: 5%" />
@@ -299,7 +300,7 @@
             <th></th>
             <th>Bild</th>
             <th></th>
-            <th title="Bester Sohn: bester männlicher Nachkomme des Vaters im Vergleich zu seinen Brüdern - je ein Symbol pro Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), Farbe zeigt besser/gleich/schlechter als der Vater bei genau diesem Wert">★</th>
+            <th id="th-best-child" title="Bestes Kind: bester gleichgeschlechtige Nachkomme im Vergleich zum gleichgeschlechtigen Elternteil (Sohn/Vater, Tochter/Mutter) - je ein Symbol pro Wert (● GP, ▲ Ext, ■ Ext%, ◆ Int), Farbe zeigt besser/gleich/schlechter bei genau diesem Wert">★</th>
             <th data-sort="name">Name</th>
             <th data-sort="tags">Schlagwörter</th>
             <th data-sort="gender">Geschlecht</th>
