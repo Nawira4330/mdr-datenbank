@@ -835,6 +835,12 @@ details.collapsible > .compare-avg-block {
 .best-child-symbol.best-child-better { color: var(--success); }
 .best-child-symbol.best-child-equal { color: var(--warning); }
 .best-child-symbol.best-child-worse { color: var(--danger); }
+/* Elternteil fehlt in der Datenbank (oder hat diesen einen Wert nicht) -
+   bestes Geschwister wird trotzdem ermittelt und gezeigt, nur ohne
+   besser/gleich/schlechter-Aussage (Nutzerwunsch: hellblau statt gar
+   kein Symbol) - derselbe Blauton wie sonst bei rein informativen
+   Hinweisen (siehe --info), da hier explizit NICHT gewertet wird. */
+.best-child-symbol.best-child-unknown { color: var(--info); }
 
 /* Einstellungen -> "Bestes Kind"-Funktion abgeschaltet (siehe
    bestChildBadgesEnabled in list.js) - blendet Spalte und Filterfeld

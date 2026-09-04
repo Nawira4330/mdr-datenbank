@@ -324,18 +324,28 @@ function quickPerfStats(h) {
 // stehen später im Tooltip (siehe rowHtml).
 function assignBestChildBadges(children, parentStats, badges, childLabel, parentLabel) {
   for (const metric of BEST_CHILD_METRICS) {
-    const pv = parentStats[metric.key];
-    if (pv == null) continue; // Elternwert unbekannt -> kein Vergleich möglich
     const values = children.map((c) => c.stats[metric.key]).filter((v) => v != null);
-    if (!values.length) continue;
+    if (!values.length) continue; // keins der Geschwister hat überhaupt einen Wert -> kein Sieger ermittelbar
     const bestValue = metric.lowerIsBetter ? Math.min(...values) : Math.max(...values);
-    const childBetter = metric.lowerIsBetter ? bestValue < pv : bestValue > pv;
-    const parentBetter = metric.lowerIsBetter ? pv < bestValue : pv > bestValue;
-    const state = childBetter ? 'better' : (parentBetter ? 'worse' : 'equal');
+    // Elternwert unbekannt (Elternteil fehlt komplett in der DB, siehe
+    // loadBestChildBadges, ODER Elternteil vorhanden, aber dieser eine
+    // Wert nicht erfasst) - der/die beste(n) Geschwister wird trotzdem
+    // ermittelt und bekommt das Symbol, nur eben ohne Farbaussage
+    // besser/gleich/schlechter (siehe .best-child-unknown in style.css,
+    // Nutzerwunsch: hellblau statt gar kein Symbol).
+    const pv = parentStats[metric.key];
+    let state;
+    if (pv == null) {
+      state = 'unknown';
+    } else {
+      const childBetter = metric.lowerIsBetter ? bestValue < pv : bestValue > pv;
+      const parentBetter = metric.lowerIsBetter ? pv < bestValue : pv > bestValue;
+      state = childBetter ? 'better' : (parentBetter ? 'worse' : 'equal');
+    }
     for (const c of children) {
       if (c.stats[metric.key] !== bestValue) continue;
       const list = badges.get(c.id) || [];
-      list.push({ ...metric, state, childValue: bestValue, parentValue: pv, childLabel, parentLabel });
+      list.push({ ...metric, state, childValue: bestValue, parentValue: pv ?? null, childLabel, parentLabel });
       badges.set(c.id, list);
     }
   }
@@ -375,16 +385,20 @@ async function loadBestChildBadges() {
       daughtersByMother.set(motherName, list);
     }
   }
+  // Leere Stats (alle Werte null), falls der Elternteil selbst nicht in
+  // der Datenbank steht - assignBestChildBadges ermittelt den/die besten
+  // Geschwister dann trotzdem, nur ohne Farbaussage (state "unknown",
+  // siehe dort). Vorher wurde die ganze Gruppe hier übersprungen, wodurch
+  // ohne erfassten Elternteil GAR KEIN Symbol erschien, obwohl sich die
+  // Geschwister untereinander sehr wohl vergleichen lassen.
   const badges = new Map();
   for (const [fatherName, sons] of sonsByFather) {
     const father = byName.get(fatherName);
-    if (!father) continue; // Vater nicht in der Datenbank -> kein Vergleich möglich
-    assignBestChildBadges(sons, quickPerfStats(father), badges, 'Sohn', 'Vater');
+    assignBestChildBadges(sons, father ? quickPerfStats(father) : {}, badges, 'Sohn', 'Vater');
   }
   for (const [motherName, daughters] of daughtersByMother) {
     const mother = byName.get(motherName);
-    if (!mother) continue; // Mutter nicht in der Datenbank -> kein Vergleich möglich
-    assignBestChildBadges(daughters, quickPerfStats(mother), badges, 'Tochter', 'Mutter');
+    assignBestChildBadges(daughters, mother ? quickPerfStats(mother) : {}, badges, 'Tochter', 'Mutter');
   }
   bestChildBadges = badges;
 }
@@ -1171,7 +1185,7 @@ function applyClientFilters(rows) {
   const intOp = document.querySelector('#f-int-op').value;
   const intVal = document.querySelector('#f-int-val').value;
   const favoritesOnly = document.querySelector('#f-favorites').checked;
-  const bestChildOnly = document.querySelector('#f-best-child')?.checked;
+  const bestChild = document.querySelector('#f-best-child')?.dataset.state || 'neutral';
   const ageMinStr = document.querySelector('#f-age-min').value;
   const ageMaxStr = document.querySelector('#f-age-max').value;
   const ageMin = ageMinStr === '' ? null : Number(ageMinStr);
@@ -1181,7 +1195,8 @@ function applyClientFilters(rows) {
     const d = computeDerived(row);
 
     if (favoritesOnly && !favoriteHorseIds.has(row.id)) return false;
-    if (bestChildOnly && !bestChildBadges.has(row.id)) return false;
+    if (bestChild === 'include' && !bestChildBadges.has(row.id)) return false;
+    if (bestChild === 'exclude' && bestChildBadges.has(row.id)) return false;
 
     // Nur bei der Standardauswahl "Alle" (kein konkreter Rasse-Filter
     // gewählt) wirken die bevorzugten Rassen aus den Einstellungen -
@@ -1346,7 +1361,12 @@ function rowHtml(h) {
   // gleichgeschlechtige Elternteil (Sohn->Vater, Tochter->Mutter) ist.
   const bestChildStateLabels = { better: 'besser', equal: 'gleichauf', worse: 'schlechter' };
   const bestChildCell = (bestChildBadges.get(h.id) || []).map((m) => {
-    const title = `${m.label}: ${m.childLabel} ${formatBestChildValue(m.key, m.childValue)} ${bestChildStateLabels[m.state]} als ${m.parentLabel} ${formatBestChildValue(m.key, m.parentValue)}`;
+    // "unknown" (siehe assignBestChildBadges): bestes Geschwister zwar
+    // ermittelt, aber kein Vergleich möglich, weil der Elternteil (noch)
+    // nicht in der Datenbank steht oder dort dieser eine Wert fehlt.
+    const title = m.state === 'unknown'
+      ? `${m.label}: ${m.childLabel} beste(r) unter den Geschwistern (Vergleich mit ${m.parentLabel} nicht möglich - fehlt in der Datenbank oder ohne diesen Wert)`
+      : `${m.label}: ${m.childLabel} ${formatBestChildValue(m.key, m.childValue)} ${bestChildStateLabels[m.state]} als ${m.parentLabel} ${formatBestChildValue(m.key, m.parentValue)}`;
     return `<span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
   }).join('');
 
@@ -1455,6 +1475,9 @@ function wireFilterForm() {
     resetCheckDropdown('f-ekh-drop');
     resetCheckDropdown('f-genetik-drop');
     resetCheckDropdown('f-tag-drop');
+    // Kein natives Formularfeld (siehe f-best-child oben) - form.reset()
+    // fasst es deshalb nicht an, muss extra zurückgesetzt werden.
+    document.querySelector('#f-best-child').dataset.state = 'neutral';
     updateFilterHintBadge();
     loadHorses();
   });
@@ -1468,6 +1491,21 @@ function wireFilterForm() {
     const btn = document.querySelector('#best-child-info-btn');
     textEl.hidden = !textEl.hidden;
     btn.setAttribute('aria-expanded', String(!textEl.hidden));
+  });
+  // "Bestes Kind"-Filter als einzelnes Dreifach-Element (Nutzerwunsch: wie
+  // Genetik/EKH per Klick durchschaltbar statt Dropdown-Auswahl) - nutzt
+  // dieselbe .checkdrop-tristate-Optik/cycleTristateItem wie dort (siehe
+  // parser.js), aber standalone statt in einem .checkdrop-panel, da es hier
+  // nur den einen Umschalter gibt (keine Liste mehrerer Werte). Der
+  // generische "#filter-form click"-Listener weiter unten aktualisiert den
+  // Hinweis-Badge bereits automatisch (matcht ebenfalls .checkdrop-tristate).
+  const bestChildToggle = document.querySelector('#f-best-child');
+  bestChildToggle.addEventListener('click', () => cycleTristateItem(bestChildToggle));
+  bestChildToggle.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    cycleTristateItem(bestChildToggle);
+    updateFilterHintBadge();
   });
   // "— N aktiv (Feld)"-Hinweis neben "🔍 Filter" (siehe MixD.dc.html) - auf
   // jede Eingabe/Auswahl im Formular reagieren, nicht erst beim Filtern
@@ -1497,7 +1535,7 @@ function activeFilterDescriptions() {
   if (val('#f-zzl')) list.push('ZZL');
   if (val('#f-age-min').trim() || val('#f-age-max').trim()) list.push('Alter');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
-  if (document.querySelector('#f-best-child')?.checked) list.push('Bestes Kind');
+  if (document.querySelector('#f-best-child').dataset.state !== 'neutral') list.push('Bestes Kind');
   const tagActive = getCheckDropdownTristate('f-tag-drop');
   if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');
   if (val('#f-tag-note').trim()) list.push('Schlagwort-Notiz');
@@ -1621,7 +1659,7 @@ function collectFilterState() {
     ageMin: document.querySelector('#f-age-min').value,
     ageMax: document.querySelector('#f-age-max').value,
     favorites: document.querySelector('#f-favorites').checked,
-    bestChild: document.querySelector('#f-best-child')?.checked,
+    bestChild: document.querySelector('#f-best-child').dataset.state,
     tags: getCheckDropdownTristate('f-tag-drop'),
     tagNote: document.querySelector('#f-tag-note').value,
     genetik: getCheckDropdownTristate('f-genetik-drop'),
@@ -1657,7 +1695,14 @@ async function applyFilterState(state) {
   document.querySelector('#f-age-min').value = state.ageMin || '';
   document.querySelector('#f-age-max').value = state.ageMax || '';
   document.querySelector('#f-favorites').checked = !!state.favorites;
-  if (document.querySelector('#f-best-child')) document.querySelector('#f-best-child').checked = !!state.bestChild;
+  // Ältere gespeicherte Vorlagen kennen "bestChild" noch als reines
+  // Boolean (Checkbox-Vorgänger) oder als "only"/"exclude"/""
+  // (Dropdown-Zwischenstand) statt der jetzigen Tristate-Werte
+  // "include"/"exclude"/"neutral" (siehe f-best-child-Klick-Widget oben).
+  const bestChildState = state.bestChild === true || state.bestChild === 'only' ? 'include'
+    : state.bestChild === 'exclude' ? 'exclude'
+    : (state.bestChild === 'include' ? 'include' : 'neutral');
+  document.querySelector('#f-best-child').dataset.state = bestChildState;
   document.querySelector('#f-tag-note').value = state.tagNote || '';
   // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/
   // EKH/Schlagwörtern) speichern hier noch ein flaches Array statt
@@ -2015,7 +2060,10 @@ function matchesPresetFilters(h, state) {
     if (s.ageMax && age > Number(s.ageMax)) return false;
   }
   if (s.favorites && !favoriteHorseIds.has(h.id)) return false;
-  if (s.bestChild && !bestChildBadges.has(h.id)) return false;
+  // s.bestChild === true/'only' deckt ältere, vor der Umstellung auf das
+  // Tristate-Widget gespeicherte Vorlagen ab (siehe applyFilterState).
+  if ((s.bestChild === 'include' || s.bestChild === 'only' || s.bestChild === true) && !bestChildBadges.has(h.id)) return false;
+  if (s.bestChild === 'exclude' && bestChildBadges.has(h.id)) return false;
   const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
   const genetik = toTristate(s.genetik);
   if (genetik.include.length && !genetik.include.every((locus) => matchesGenetikLocus(h, locus))) return false;
