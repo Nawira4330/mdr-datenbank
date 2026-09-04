@@ -85,6 +85,10 @@ let bestChildBadges = new Map();
 // Aus den Einstellungen (siehe migration_036) - schaltet die komplette
 // "Bestes Kind"-Funktion ab (Spalte/Filter/Berechnung), falls gewünscht.
 let bestChildBadgesEnabled = true;
+// Aus den Einstellungen (siehe migration_038) - Übersicht startet
+// standardmäßig mit dem Besitzer-Filter auf das eigene Konto gesetzt,
+// außer hier auf false gestellt (siehe applyDefaultOwnerFilter).
+let defaultOwnerFilterEnabled = true;
 // Ungefilterter Gesamtbestand für die Berechnung angepinnter Kacheln (die
 // unabhängig vom gerade aktiven Tabellenfilter sein sollen) - einmalig
 // geladen (siehe loadAllHorsesCache), nicht bei jedem Tabellen-Filtern neu.
@@ -145,12 +149,17 @@ async function init() {
 // Reihenfolge:
 // 1. Standard-Filtervorlage aus den Einstellungen (siehe
 //    defaultFilterPresetId/migration_028), falls gesetzt - bringt ihre
-//    eigene, mit gespeicherte Sortierung gleich mit.
+//    eigene, mit gespeicherte Sortierung gleich mit. Entscheidet damit
+//    auch selbst über den Besitzer-Filter (auch wenn die Vorlage dort gar
+//    nichts einträgt) - Schritt 2-4 setzen den Besitzer-Filter zusätzlich
+//    standardmäßig auf das eigene Konto (Nutzerwunsch, siehe
+//    applyDefaultOwnerFilter/migration_038), NUR WENN keine eigene
+//    Standard-Filtervorlage bereits (wie auch immer) entschieden hat.
 // 2. Sonst die Standard-Sortier-Vorlage aus den Einstellungen (siehe
-//    defaultSortPresetId/migration_030), falls gesetzt - ohne Filter.
+//    defaultSortPresetId/migration_030), falls gesetzt.
 // 3. Sonst die zuletzt manuell gewählte Sortierung aus diesem Browser
-//    (siehe LAST_SORT_STORAGE_KEY/saveLastSort), ohne Filter.
-// 4. Sonst der Programmstandard (Name aufsteigend, keine Filter).
+//    (siehe LAST_SORT_STORAGE_KEY/saveLastSort).
+// 4. Sonst der Programmstandard (Name aufsteigend).
 async function applyInitialFilterState() {
   if (defaultFilterPresetId) {
     const { data, error } = await supabaseClient
@@ -185,6 +194,7 @@ async function applyInitialFilterState() {
       if ([...sortPresetSelect.options].some((o) => o.value === defaultSortPresetId)) {
         sortPresetSelect.value = defaultSortPresetId;
       }
+      applyDefaultOwnerFilter();
       await loadHorses();
       return;
     }
@@ -199,6 +209,7 @@ async function applyInitialFilterState() {
   } catch {
     // Ungültiger/fehlender localStorage-Wert - beim Programmstandard bleiben.
   }
+  applyDefaultOwnerFilter();
   await loadHorses();
 }
 
@@ -211,7 +222,7 @@ async function applyInitialFilterState() {
 async function loadUserSettings(session) {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles, hidden_notices, best_child_badges_enabled')
+    .select('preferred_breeds, compare_tolerances, default_filter_preset_id, default_sort_preset_id, favorite_horse_ids, dashboard_tiles, custom_dashboard_tiles, hidden_notices, best_child_badges_enabled, default_owner_filter_enabled')
     .eq('user_id', session.user.id)
     .maybeSingle();
   preferredBreeds = (!error && data?.preferred_breeds?.length) ? data.preferred_breeds : null;
@@ -224,6 +235,7 @@ async function loadUserSettings(session) {
   hiddenNotices = new Set((!error && data?.hidden_notices) || []);
   // NOT NULL DEFAULT true - fehlt nur, solange nie gespeichert.
   bestChildBadgesEnabled = !error && data?.best_child_badges_enabled != null ? data.best_child_badges_enabled : true;
+  defaultOwnerFilterEnabled = !error && data?.default_owner_filter_enabled != null ? data.default_owner_filter_enabled : true;
   if (customDashboardTiles.length) await loadAllHorsesCache();
 }
 
@@ -1589,15 +1601,35 @@ function updateCompareHintBadge() {
   badge.textContent = `— an, Basis: ${parts.length ? parts.join('/') : 'alle'}`;
 }
 
-// Setzt den Besitzer-Filter auf das eigene Konto - Groß-/Kleinschreibung
-// im "Besitzer"-Feld ist nicht garantiert einheitlich mit dem
-// Benutzernamen, deshalb hier case-insensitiv die passende Option in der
-// bereits befüllten Auswahlliste suchen statt den Wert direkt zu setzen.
-function onOnlyMyHorses() {
+// Setzt den Besitzer-Filter auf das eigene Konto, falls in der
+// Auswahlliste (bereits befüllt, siehe populateFilterOptions) eine
+// passende Option existiert - Groß-/Kleinschreibung im "Besitzer"-Feld
+// ist nicht garantiert einheitlich mit dem Benutzernamen, deshalb hier
+// case-insensitiv gesucht statt den Wert direkt zu setzen. Gibt zurück,
+// ob eine passende Option gefunden (und gesetzt) wurde - genutzt sowohl
+// vom "Nur meine"-Button als auch vom Start-Standard (siehe
+// applyDefaultOwnerFilter unten).
+function setOwnerFilterToSelf() {
   const select = document.querySelector('#f-owner');
   const match = [...select.options].find((o) => o.value.toLowerCase() === currentIdentity.toLowerCase());
   if (match) select.value = match.value;
+  return !!match;
+}
+
+function onOnlyMyHorses() {
+  setOwnerFilterToSelf();
   loadHorses();
+}
+
+// Setzt beim Start der Übersicht den Besitzer-Filter standardmäßig auf
+// das eigene Konto (Nutzerwunsch), außer in den Einstellungen abgeschaltet
+// (siehe defaultOwnerFilterEnabled/migration_038) - nur, wenn das
+// Besitzer-Feld noch leer ist (keine explizite Standard-Filtervorlage hat
+// bereits selbst entschieden, siehe applyInitialFilterState).
+function applyDefaultOwnerFilter() {
+  if (!defaultOwnerFilterEnabled) return;
+  if (document.querySelector('#f-owner').value) return;
+  setOwnerFilterToSelf();
 }
 
 // Für die meisten Spalten ist beim ersten Klick aufsteigend (A-Z, 1-x) der

@@ -312,7 +312,7 @@ async function populateBreedCheckboxes() {
 async function loadCurrentSettings() {
   const { data, error } = await supabaseClient
     .from('user_settings')
-    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles, profile_nav_sort, custom_dashboard_tiles, hidden_notices, best_child_badges_enabled')
+    .select('preferred_breeds, verpaarung_enabled, page_zoom, compare_tolerances, default_filter_preset_id, default_sort_preset_id, dashboard_tiles, profile_nav_sort, custom_dashboard_tiles, hidden_notices, best_child_badges_enabled, default_owner_filter_enabled')
     .eq('user_id', currentUserId)
     .maybeSingle();
   if (error || !data) return;
@@ -345,6 +345,12 @@ async function loadCurrentSettings() {
   // ihrem HTML-Standard (checked).
   if (data.best_child_badges_enabled !== undefined && data.best_child_badges_enabled !== null) {
     document.getElementById('best-child-badges-checkbox').checked = data.best_child_badges_enabled;
+  }
+  // "default_owner_filter_enabled" fehlt nur, wenn noch nie gespeichert
+  // wurde (Spalte ist NOT NULL DEFAULT true) - dann bleibt die Checkbox
+  // bei ihrem HTML-Standard (checked).
+  if (data.default_owner_filter_enabled !== undefined && data.default_owner_filter_enabled !== null) {
+    document.getElementById('default-owner-filter-checkbox').checked = data.default_owner_filter_enabled;
   }
   // "page_zoom" ist NULL, solange nie gespeichert wurde - dann bleibt die
   // Auswahl beim App-Standard (80%, siehe --zoom in style.css).
@@ -385,6 +391,7 @@ async function onSave() {
   const selected = [...document.querySelectorAll('#breed-checkboxes input[type="checkbox"]:checked')].map((cb) => cb.value);
   const verpaarungEnabled = document.getElementById('verpaarung-enabled-checkbox').checked;
   const bestChildBadgesEnabled = document.getElementById('best-child-badges-checkbox').checked;
+  const defaultOwnerFilterEnabled = document.getElementById('default-owner-filter-checkbox').checked;
   const pageZoom = Number(document.getElementById('page-zoom-select').value);
   const compareTolerances = {
     gp: Number(document.getElementById('tolerance-gp').value) || 0,
@@ -413,6 +420,7 @@ async function onSave() {
       preferred_breeds: selected.length ? selected : null,
       verpaarung_enabled: verpaarungEnabled,
       best_child_badges_enabled: bestChildBadgesEnabled,
+      default_owner_filter_enabled: defaultOwnerFilterEnabled,
       page_zoom: pageZoom,
       compare_tolerances: compareTolerances,
       default_filter_preset_id: defaultFilterPresetId,
