@@ -1,3 +1,16 @@
+// Spalten, die die Übersichtstabelle/Filter/Sortierung/CSV-Export/
+// Dashboard-Kacheln tatsächlich lesen (siehe buildQuery/loadAllHorsesCache
+// weiter unten) - bewusst statt select('*'), das zusätzlich u.a.
+// "raw_text" (den kompletten eingefügten Spieltext, potenziell mehrere KB
+// je Pferd), "disciplines", "traits", "ico", "purebred_pct" und "user_id"
+// mitgeladen hätte, obwohl keins davon hier gebraucht wird - bei ~1150
+// Pferden und mehreren Abfragen je Seitenaufruf ein spürbarer Anteil am
+// Egress-Volumen. "created_at" fehlt bewusst (nur checkAgeNotices braucht
+// es, mit eigener, bereits schlanker Abfrage). Wird ein Feld hier künftig
+// gebraucht, muss es zuerst in diese Liste aufgenommen werden, sonst bleibt
+// es in den geladenen Zeilen einfach undefined.
+const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composition, coat_color, disease_free, birthdate, owner, breeding_allowed, hlp_slp, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides, exterior_genetics, exterior_descriptive, temperament, tournament_potential, pedigree, notes, image_url, tags, updated_at';
+
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
 let lastRenderedRows = [];
@@ -221,7 +234,10 @@ async function loadAllHorsesCache() {
   // fetchAllRows statt einer einzelnen .select() - der Gesamtbestand kann
   // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
   // sonst würden angepinnte Kacheln stillschweigend zu niedrig zählen.
-  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('*'));
+  // HORSE_LIST_COLUMNS statt select('*') - dieselben Felder wie buildQuery,
+  // da matchesPresetFilters/matchesCustomTileFilters dieselbe Logik wie die
+  // normale Tabellenfilterung nutzen (siehe computeCustomTileValue).
+  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(HORSE_LIST_COLUMNS));
   allHorsesCache = !error && data ? data : [];
 }
 
@@ -795,7 +811,8 @@ function fillSelect(selector, values) {
 }
 
 function buildQuery() {
-  let q = supabaseClient.from('horses').select('*');
+  // HORSE_LIST_COLUMNS statt select('*') - siehe Kommentar dort (Egress).
+  let q = supabaseClient.from('horses').select(HORSE_LIST_COLUMNS);
 
   const name = document.querySelector('#f-name').value.trim();
   const owner = document.querySelector('#f-owner').value;

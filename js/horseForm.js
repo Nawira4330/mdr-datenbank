@@ -72,6 +72,40 @@ document.addEventListener('click', (e) => {
 // Enthält die Zwischenablage kein Bild (normaler Text/Link), passiert hier
 // nichts, der normale Text-Paste läuft unverändert weiter.
 const IMAGE_EXTENSION_BY_MIME_TYPE = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
+
+// Verkleinert/komprimiert ein eingefügtes Bild vor dem Upload (Egress:
+// unkomprimierte Screenshots/Fotos aus der Zwischenablage waren bisher oft
+// mehrere MB groß, wurden aber in der Übersichtstabelle nur als 40x40px-
+// Thumbnail angezeigt - jede Zeile lud trotzdem das volle Originalbild).
+// Läuft über eine <img>+<canvas>-Zwischenstation: auf max. 1600px lange
+// Kante herunterskaliert (reicht für die größte Anzeige, das Hero-Bild im
+// Profil, deutlich üppiger) und als JPEG mit 85% Qualität neu kodiert -
+// das reduziert typische Foto-/Screenshot-Dateien um 80-95%, ohne sichtbar
+// an Qualität zu verlieren. GIFs werden NICHT komprimiert (Animation ginge
+// beim Neukodieren als JPEG verloren) und unverändert hochgeladen.
+// Schlägt die Kompression aus irgendeinem Grund fehl (z.B. sehr alter
+// Browser ohne canvas.toBlob), wird einfach die Originaldatei hochgeladen
+// statt den Upload ganz abzubrechen.
+async function compressImageFile(file, maxDimension = 1600, quality = 0.85) {
+  if (file.type === 'image/gif') return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+    // Nur übernehmen, wenn das Ergebnis tatsächlich kleiner ist (bei sehr
+    // kleinen/bereits stark komprimierten Bildern kann JPEG durch den
+    // Format-Wechsel gelegentlich größer werden als das Original).
+    return blob && blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
 document.getElementById('image_url')?.addEventListener('paste', async (e) => {
   const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/'));
   if (!item) return;
@@ -84,9 +118,18 @@ document.getElementById('image_url')?.addEventListener('paste', async (e) => {
   input.value = 'Bild wird hochgeladen…';
   input.disabled = true;
 
-  const ext = IMAGE_EXTENSION_BY_MIME_TYPE[file.type] || 'png';
+  const uploadFile = await compressImageFile(file);
+  const ext = IMAGE_EXTENSION_BY_MIME_TYPE[uploadFile.type] || 'png';
   const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-  const { error } = await supabaseClient.storage.from('horse-images').upload(path, file, { contentType: file.type });
+  // cacheControl auf 1 Jahr (Egress): der Dateiname enthält bereits einen
+  // Zeitstempel + Zufallsanteil und wird nie wiederverwendet/überschrieben
+  // - ein langes, unveränderliches Cache-Control ist hier also gefahrlos
+  // möglich und verhindert, dass Browser/CDN dasselbe Bild nach Supabase'
+  // sonst recht kurzem Standard (1 Stunde) immer wieder neu abrufen.
+  const { error } = await supabaseClient.storage.from('horse-images').upload(path, uploadFile, {
+    contentType: uploadFile.type,
+    cacheControl: '31536000',
+  });
 
   input.disabled = false;
   if (error) {
