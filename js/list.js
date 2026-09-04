@@ -1923,17 +1923,45 @@ function onBulkOwnerChange() {
   if (!rows.length) return;
   document.querySelector('#bulk-owner-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
   document.querySelector('#bulk-owner-name').value = '';
+
+  // Nutzerwunsch: beim Besitzerwechsel gleich mit abfragen, ob Schlagwörter
+  // wie "Verkauf"/"Reserviert" mit entfernt werden sollen, die nach der
+  // Übertragung meist nicht mehr passen - nur die Schlagwörter zeigen, die
+  // unter den AUSGEWÄHLTEN Pferden tatsächlich vorkommen (nicht die volle
+  // HORSE_TAG_OPTIONS-Liste, die bei den ausgewählten Pferden oft gar nicht
+  // zutrifft), unangehakt als sicherer Standard.
+  const presentLabels = [...new Set(rows.flatMap((r) => (r.tags || []).map((t) => t.label)))];
+  const tagsSection = document.querySelector('#bulk-owner-tags-section');
+  if (presentLabels.length) {
+    document.querySelector('#bulk-owner-tags-checkboxes').innerHTML = presentLabels.map((label) => `
+      <label class="tag-checkbox-row">
+        <input type="checkbox" data-bulk-owner-tag-checkbox="${escapeHtml(label)}" />
+        <span class="tag-dot" style="background:${tagColor(label)}"></span>
+        ${escapeHtml(label)}
+      </label>
+    `).join('');
+    tagsSection.hidden = false;
+  } else {
+    tagsSection.hidden = true;
+  }
+
   document.querySelector('#bulk-owner-modal').hidden = false;
 }
 
 async function confirmBulkOwnerChange() {
   const newOwner = document.querySelector('#bulk-owner-name').value.trim();
+  const tagsToRemove = [...document.querySelectorAll('#bulk-owner-tags-checkboxes [data-bulk-owner-tag-checkbox]:checked')]
+    .map((cb) => cb.dataset.bulkOwnerTagCheckbox);
   document.querySelector('#bulk-owner-modal').hidden = true;
   if (!newOwner) return;
 
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   const results = await Promise.all(
-    rows.map((row) => supabaseClient.from('horses').update({ owner: newOwner }).eq('id', row.id)),
+    rows.map((row) => {
+      const payload = { owner: newOwner };
+      if (tagsToRemove.length) payload.tags = (row.tags || []).filter((t) => !tagsToRemove.includes(t.label));
+      return supabaseClient.from('horses').update(payload).eq('id', row.id);
+    }),
   );
   const failed = results.filter((r) => r.error);
   if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].error.message}`);

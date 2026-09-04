@@ -360,6 +360,12 @@
         <label for="bulk-owner-name">Neuer Besitzer</label>
         <input type="text" id="bulk-owner-name" list="known-owners" placeholder="Benutzername…" />
         <datalist id="known-owners"></datalist>
+        <div id="bulk-owner-tags-section" hidden>
+          <p class="small muted" style="margin-top: 0.6rem; margin-bottom: 0.3rem;">
+            Vorhandene Schlagwörter - angehakte werden beim Besitzerwechsel mit entfernt (z.B. "Verkauf"/"Reserviert", die nach der Übertragung nicht mehr passen):
+          </p>
+          <div id="bulk-owner-tags-checkboxes"></div>
+        </div>
         <div class="modal-actions">
           <button type="button" id="bulk-owner-cancel" class="secondary">Abbrechen</button>
           <button type="button" id="bulk-owner-confirm">Übertragen</button>
