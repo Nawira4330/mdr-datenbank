@@ -830,11 +830,12 @@ details.collapsible > .compare-avg-block {
    bewusst in Gelb (nicht der Toleranz-Farbton wie sonst), damit alle
    Zustände klar unterscheidbar bleiben. Die vordere ★-Spalte zeigt
    zusätzlich einen einzelnen, UNGEFÄRBTEN Stern als Sammel-Hinweis (kein
-   state-Modifier, siehe rowHtml) - Gold/Amber statt einer der
-   Bewertungsfarben, damit er nicht als eigenes Vergleichsergebnis
-   missverstanden wird. Komplett ausblendbar über die Einstellungen
-   (body.hide-best-child weiter unten). */
-.best-child-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; color: var(--warning); }
+   state-Modifier, siehe rowHtml) - klares Gelb statt einer der
+   Bewertungsfarben (bewusst NICHT var(--warning), das bleibt dem
+   "gleichauf"-Zustand vorbehalten), damit er nicht als eigenes
+   Vergleichsergebnis missverstanden wird. Komplett ausblendbar über die
+   Einstellungen (body.hide-best-child weiter unten). */
+.best-child-symbol { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; color: #eab308; }
 .best-child-symbol.best-child-better { color: var(--success); }
 .best-child-symbol.best-child-equal { color: var(--warning); }
 .best-child-symbol.best-child-worse { color: var(--danger); }
@@ -1391,6 +1392,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      Zeile geerbten "center". */
   #horse-table td[data-label="Auswählen"],
   #horse-table td[data-label="Favorit"],
+  #horse-table td[data-label="Bestes Kind"],
   #horse-table td[data-label="Bild"] {
     order: -1;
     flex: 0 0 auto;
@@ -1398,7 +1400,13 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     border-bottom: none;
   }
   #horse-table td[data-label="Auswählen"]::before,
-  #horse-table td[data-label="Favorit"]::before { content: none; }
+  #horse-table td[data-label="Favorit"]::before,
+  #horse-table td[data-label="Bestes Kind"]::before { content: none; }
+  /* Steht in der DOM-Reihenfolge (siehe rowHtml) direkt vor Name, landet
+     dadurch innerhalb dieser Gruppe (gleiches order:-1) vor Name und vor
+     den Schlagwörtern (Nutzerwunsch) - bei den allermeisten Pferden leer,
+     dann ohne eigene Breite/Höhe. */
+  #horse-table td[data-label="Bestes Kind"]:empty { padding: 0; min-width: 0; }
   /* Getönter Hintergrund hinter dem Mini-Bild (wie .thumb im
      Design-Vorschlag) statt eines transparenten/weißen Feldes - füllt
      außerdem sichtbar aus, wenn (noch) kein Bild hinterlegt ist. */
@@ -1599,23 +1607,7 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
   #horse-table td[data-label="Farbe"] { order: 5; }
   #horse-table td[data-label="Alter"] { order: 6; }
   #horse-table td[data-label="HLP/SLP"] { order: 7; }
-  /* "Bestes Kind"-Symbole (siehe bestChildBadges in list.js) direkt unter
-     HLP/SLP (Nutzerwunsch) - eigene Zeile über die volle Breite wie
-     Farbe/EKH statt im 50%-Paar, da meist nur wenige kleine Symbole statt
-     eines langen Werts; kein Label-Präfix (Symbole+Farbe sprechen für
-     sich, siehe Tooltip) und bei den allermeisten Pferden leer, dann ohne
-     eigene Höhe/Abstand (wie bei Schlagwörter weiter oben). */
-  #horse-table td[data-label="Bestes Kind"] {
-    order: 8;
-    flex: 0 0 100%;
-    justify-content: flex-start;
-    gap: 0.3rem;
-    border-bottom: none;
-    padding: 0.2rem 0;
-  }
-  #horse-table td[data-label="Bestes Kind"]::before { content: none; }
-  #horse-table td[data-label="Bestes Kind"]:empty { padding: 0; min-height: 0; }
-  #horse-table td[data-label="EKH"] { order: 9; }
+  #horse-table td[data-label="EKH"] { order: 8; }
 
   /* Besitzer + Zuletzt bearbeitet als gemeinsame Fußzeile der Karte
      (wie im Design-Vorschlag) statt zweier gewöhnlicher Kacheln-Felder -
@@ -1637,9 +1629,9 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
     margin-top: 0.4rem;
     padding-top: 0.5rem;
   }
-  #horse-table td[data-label="Besitzer"] { order: 10; flex-grow: 1; }
+  #horse-table td[data-label="Besitzer"] { order: 9; flex-grow: 1; }
   #horse-table td[data-label="Besitzer"]::before { content: "Besitzer:"; }
-  #horse-table td[data-label="Zuletzt bearbeitet"] { order: 11; }
+  #horse-table td[data-label="Zuletzt bearbeitet"] { order: 10; }
   #horse-table td[data-label="Zuletzt bearbeitet"]::before { content: none; }
   #horse-table td.small { font-size: 0.85rem; }
 }
