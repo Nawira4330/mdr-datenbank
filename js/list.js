@@ -82,7 +82,7 @@ let hiddenNotices = new Set();
 // Map, solange die Funktion in den Einstellungen abgeschaltet ist (siehe
 // bestChildBadgesEnabled).
 let bestChildBadges = new Map();
-// "Übertroffen"/"Krone"-Abzeichen für Hengste (Nutzerwunsch, siehe
+// "Entthront"/"Krone"-Abzeichen für Hengste (Nutzerwunsch, siehe
 // loadBestChildBadges) - Pferde-ID -> {type: 'outclassed'|'crown'}, nur
 // bei Hengsten gesetzt, die die jeweilige Bedingung erfüllen. Läuft mit
 // demselben Ein-/Ausschalter wie bestChildBadges (bestChildBadgesEnabled).
@@ -423,10 +423,10 @@ async function loadBestChildBadges() {
   }
   bestChildBadges = badges;
 
-  // "Übertroffen"/"Krone"-Abzeichen (Nutzerwunsch, siehe rowHtml) - nutzt
+  // "Entthront"/"Krone"-Abzeichen (Nutzerwunsch, siehe rowHtml) - nutzt
   // dieselbe sonsByFather-Gruppierung wie oben, deshalb hier im selben
   // Durchlauf statt einer weiteren eigenen Abfrage:
-  // - "Übertroffen" (🥈): der Hengst hat mindestens einen männlichen
+  // - "Entthront" (🥈): der Hengst hat mindestens einen männlichen
   //   Nachkommen, der bei ALLEN 4 Werten (GP/Ext/Ext%/Int) besser ist -
   //   nur wenn bei Vater UND Sohn alle 4 Werte bekannt sind (sonst keine
   //   verlässliche "überall besser"-Aussage möglich).
@@ -1444,14 +1444,14 @@ function rowHtml(h) {
     return ` <span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
   };
   const bestChildSummaryStar = bestChildByKey.size ? '<span class="best-child-symbol" title="Bestes Kind bei mindestens einem Wert - siehe ★ hinter GP/Ext/Ext%/Int">★</span>' : '';
-  // "Übertroffen"/"Krone" (siehe loadBestChildBadges) - eigene Symbole für
+  // "Entthront"/"Krone" (siehe loadBestChildBadges) - eigene Symbole für
   // Hengste, unabhängig vom ★-Sammel-Hinweis oben, beide können
   // gleichzeitig auftreten (z.B. ein Hengst ist selbst "Bestes Kind" UND
   // wurde von einem eigenen Sohn übertroffen).
   const stallionBadge = stallionBadges.get(h.id);
   const stallionCell = stallionBadge
     ? (stallionBadge.type === 'outclassed'
-      ? '<span class="stallion-badge stallion-outclassed" title="Übertroffen: mindestens ein männlicher Nachkomme ist bei GP/Ext/Ext%/Int ausnahmslos besser als dieser Hengst">🥈</span>'
+      ? '<span class="stallion-badge stallion-outclassed" title="Entthront: mindestens ein männlicher Nachkomme ist bei GP/Ext/Ext%/Int ausnahmslos besser als dieser Hengst">🥈</span>'
       : '<span class="stallion-badge stallion-crown" title="Krone: hat ZZL, aber noch keinen männlichen Nachkommen in der Datenbank">👑</span>')
     : '';
   const bestChildCell = bestChildSummaryStar + stallionCell;
@@ -1640,7 +1640,7 @@ function activeFilterDescriptions() {
   if (val('#f-age-min').trim() || val('#f-age-max').trim()) list.push('Alter');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
   if (document.querySelector('#f-best-child').dataset.state !== 'neutral') list.push('Bestes Kind');
-  if (document.querySelector('#f-stallion-outclassed').dataset.state !== 'neutral') list.push('Übertroffen');
+  if (document.querySelector('#f-stallion-outclassed').dataset.state !== 'neutral') list.push('Entthront');
   if (document.querySelector('#f-stallion-crown').dataset.state !== 'neutral') list.push('Krone');
   const tagActive = getCheckDropdownTristate('f-tag-drop');
   if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');

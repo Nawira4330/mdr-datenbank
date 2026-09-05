@@ -846,7 +846,7 @@ details.collapsible > .compare-avg-block {
    Hinweisen (siehe --info), da hier explizit NICHT gewertet wird. */
 .best-child-symbol.best-child-unknown { color: var(--info); }
 
-/* "Übertroffen"/"Krone"-Abzeichen für Hengste (siehe stallionBadges in
+/* "Entthront"/"Krone"-Abzeichen für Hengste (siehe stallionBadges in
    list.js) - echte Emoji statt geometrischer Zeichen (anders als die
    ★-Symbole oben), da hier keine Farbe per CSS nötig ist (jeweils nur
    ein fester Zustand, kein besser/gleich/schlechter-Spektrum). Läuft mit
