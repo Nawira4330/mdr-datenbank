@@ -82,6 +82,11 @@ let hiddenNotices = new Set();
 // Map, solange die Funktion in den Einstellungen abgeschaltet ist (siehe
 // bestChildBadgesEnabled).
 let bestChildBadges = new Map();
+// "Übertroffen"/"Krone"-Abzeichen für Hengste (Nutzerwunsch, siehe
+// loadBestChildBadges) - Pferde-ID -> {type: 'outclassed'|'crown'}, nur
+// bei Hengsten gesetzt, die die jeweilige Bedingung erfüllen. Läuft mit
+// demselben Ein-/Ausschalter wie bestChildBadges (bestChildBadgesEnabled).
+let stallionBadges = new Map();
 // Aus den Einstellungen (siehe migration_036) - schaltet die komplette
 // "Bestes Kind"-Funktion ab (Spalte/Filter/Berechnung), falls gewünscht.
 let bestChildBadgesEnabled = true;
@@ -372,10 +377,11 @@ function assignBestChildBadges(children, parentStats, badges, childLabel, parent
 // den Einstellungen nicht abgeschaltet ist (siehe bestChildBadgesEnabled).
 async function loadBestChildBadges() {
   const { data, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('id, name, gender, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament'),
+    supabaseClient.from('horses').select('id, name, gender, breeding_allowed, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament'),
   );
   if (error || !data) {
     bestChildBadges = new Map();
+    stallionBadges = new Map();
     return;
   }
   const byName = new Map(data.map((h) => [h.name, h]));
@@ -416,6 +422,46 @@ async function loadBestChildBadges() {
     assignBestChildBadges(daughters, mother ? quickPerfStats(mother) : {}, badges, 'Tochter', 'Mutter');
   }
   bestChildBadges = badges;
+
+  // "Übertroffen"/"Krone"-Abzeichen (Nutzerwunsch, siehe rowHtml) - nutzt
+  // dieselbe sonsByFather-Gruppierung wie oben, deshalb hier im selben
+  // Durchlauf statt einer weiteren eigenen Abfrage:
+  // - "Übertroffen" (🥈): der Hengst hat mindestens einen männlichen
+  //   Nachkommen, der bei ALLEN 4 Werten (GP/Ext/Ext%/Int) besser ist -
+  //   nur wenn bei Vater UND Sohn alle 4 Werte bekannt sind (sonst keine
+  //   verlässliche "überall besser"-Aussage möglich).
+  // - "Krone" (👑): der Hengst hat ZZL, aber (noch) GAR KEINEN
+  //   männlichen Nachkommen in der Datenbank (weder in sonsByFather
+  //   vertreten noch sonstwie).
+  const stallions = new Map();
+  for (const h of data) {
+    if (h.gender !== 'Hengst') continue;
+    const sons = sonsByFather.get(h.name);
+    if (!sons || !sons.length) {
+      if (h.breeding_allowed === true) stallions.set(h.id, { type: 'crown' });
+      continue;
+    }
+    const fatherStats = quickPerfStats(h);
+    if (sons.some((s) => isBetterInEveryMetric(s.stats, fatherStats))) {
+      stallions.set(h.id, { type: 'outclassed' });
+    }
+  }
+  stallionBadges = stallions;
+}
+
+// Prüft, ob "a" bei ALLEN BEST_CHILD_METRICS-Werten besser als "b"
+// abschneidet - verlangt bewusst, dass jeder der 4 Werte bei BEIDEN
+// bekannt ist (fehlt einer, ist "überall besser" nicht verlässlich
+// feststellbar, siehe loadBestChildBadges), anders als die
+// Einzelwert-Sterne, wo fehlende Werte pro Wert einzeln übersprungen
+// werden.
+function isBetterInEveryMetric(a, b) {
+  for (const { key, lowerIsBetter } of BEST_CHILD_METRICS) {
+    if (a[key] == null || b[key] == null) return false;
+    const better = lowerIsBetter ? a[key] < b[key] : a[key] > b[key];
+    if (!better) return false;
+  }
+  return true;
 }
 
 // Direkte Eltern eines Pferds (erste zwei Stammbaum-Einträge, siehe
@@ -1201,6 +1247,8 @@ function applyClientFilters(rows) {
   const intVal = document.querySelector('#f-int-val').value;
   const favoritesOnly = document.querySelector('#f-favorites').checked;
   const bestChild = document.querySelector('#f-best-child')?.dataset.state || 'neutral';
+  const stallionOutclassed = document.querySelector('#f-stallion-outclassed')?.dataset.state || 'neutral';
+  const stallionCrown = document.querySelector('#f-stallion-crown')?.dataset.state || 'neutral';
   const ageMinStr = document.querySelector('#f-age-min').value;
   const ageMaxStr = document.querySelector('#f-age-max').value;
   const ageMin = ageMinStr === '' ? null : Number(ageMinStr);
@@ -1212,6 +1260,10 @@ function applyClientFilters(rows) {
     if (favoritesOnly && !favoriteHorseIds.has(row.id)) return false;
     if (bestChild === 'include' && !bestChildBadges.has(row.id)) return false;
     if (bestChild === 'exclude' && bestChildBadges.has(row.id)) return false;
+    if (stallionOutclassed === 'include' && stallionBadges.get(row.id)?.type !== 'outclassed') return false;
+    if (stallionOutclassed === 'exclude' && stallionBadges.get(row.id)?.type === 'outclassed') return false;
+    if (stallionCrown === 'include' && stallionBadges.get(row.id)?.type !== 'crown') return false;
+    if (stallionCrown === 'exclude' && stallionBadges.get(row.id)?.type === 'crown') return false;
 
     // Nur bei der Standardauswahl "Alle" (kein konkreter Rasse-Filter
     // gewählt) wirken die bevorzugten Rassen aus den Einstellungen -
@@ -1391,7 +1443,18 @@ function rowHtml(h) {
       : `${m.label}: ${m.childLabel} ${formatBestChildValue(m.key, m.childValue)} ${bestChildStateLabels[m.state]} als ${m.parentLabel} ${formatBestChildValue(m.key, m.parentValue)}`;
     return ` <span class="best-child-symbol best-child-${m.state}" title="${escapeHtml(title)}">${m.symbol}</span>`;
   };
-  const bestChildCell = bestChildByKey.size ? '<span class="best-child-symbol" title="Bestes Kind bei mindestens einem Wert - siehe ★ hinter GP/Ext/Ext%/Int">★</span>' : '';
+  const bestChildSummaryStar = bestChildByKey.size ? '<span class="best-child-symbol" title="Bestes Kind bei mindestens einem Wert - siehe ★ hinter GP/Ext/Ext%/Int">★</span>' : '';
+  // "Übertroffen"/"Krone" (siehe loadBestChildBadges) - eigene Symbole für
+  // Hengste, unabhängig vom ★-Sammel-Hinweis oben, beide können
+  // gleichzeitig auftreten (z.B. ein Hengst ist selbst "Bestes Kind" UND
+  // wurde von einem eigenen Sohn übertroffen).
+  const stallionBadge = stallionBadges.get(h.id);
+  const stallionCell = stallionBadge
+    ? (stallionBadge.type === 'outclassed'
+      ? '<span class="stallion-badge stallion-outclassed" title="Übertroffen: mindestens ein männlicher Nachkomme ist bei GP/Ext/Ext%/Int ausnahmslos besser als dieser Hengst">🥈</span>'
+      : '<span class="stallion-badge stallion-crown" title="Krone: hat ZZL, aber noch keinen männlichen Nachkommen in der Datenbank">👑</span>')
+    : '';
+  const bestChildCell = bestChildSummaryStar + stallionCell;
 
   return `<tr>
     <td data-label="Auswählen"><input type="checkbox" data-select="${h.id}" /></td>
@@ -1488,6 +1551,31 @@ async function confirmDelete() {
   await loadHorses();
 }
 
+// ⓘ-Knopf, der einen daneben liegenden erklärenden Text ein-/ausblendet
+// (siehe #best-child-info-btn/#stallion-info-btn in index.html).
+function wireInfoToggleButton(btnId, textId) {
+  const btn = document.querySelector(`#${btnId}`);
+  const textEl = document.querySelector(`#${textId}`);
+  btn.addEventListener('click', () => {
+    textEl.hidden = !textEl.hidden;
+    btn.setAttribute('aria-expanded', String(!textEl.hidden));
+  });
+}
+
+// Ein einzelnes, freistehendes Dreifach-Element (siehe cycleTristateItem
+// in parser.js) außerhalb eines .checkdrop-panel - Klick UND Enter/Leertaste
+// schalten durch.
+function wireStandaloneTristate(id) {
+  const toggle = document.querySelector(`#${id}`);
+  toggle.addEventListener('click', () => cycleTristateItem(toggle));
+  toggle.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    cycleTristateItem(toggle);
+    updateFilterHintBadge();
+  });
+}
+
 function wireFilterForm() {
   document.querySelector('#filter-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1498,38 +1586,31 @@ function wireFilterForm() {
     resetCheckDropdown('f-ekh-drop');
     resetCheckDropdown('f-genetik-drop');
     resetCheckDropdown('f-tag-drop');
-    // Kein natives Formularfeld (siehe f-best-child oben) - form.reset()
-    // fasst es deshalb nicht an, muss extra zurückgesetzt werden.
+    // Keine nativen Formularfelder (siehe f-best-child/f-stallion-* oben) -
+    // form.reset() fasst sie deshalb nicht an, müssen extra zurückgesetzt werden.
     document.querySelector('#f-best-child').dataset.state = 'neutral';
+    document.querySelector('#f-stallion-outclassed').dataset.state = 'neutral';
+    document.querySelector('#f-stallion-crown').dataset.state = 'neutral';
     updateFilterHintBadge();
     loadHorses();
   });
   document.querySelector('#only-my-horses-btn').addEventListener('click', onOnlyMyHorses);
-  // "ⓘ"-Knopf neben "Nur beste Söhne/Töchter" (Nutzerwunsch): Erklärung
-  // bleibt per title-Attribut auch beim Hovern sichtbar, zusätzlich per
-  // Klick ein-/ausblendbar (z.B. auf Touch-Geräten ohne Hover) - toggelt
-  // nur den sichtbaren Text, ändert nichts am Filter selbst.
-  document.querySelector('#best-child-info-btn').addEventListener('click', () => {
-    const textEl = document.querySelector('#best-child-info-text');
-    const btn = document.querySelector('#best-child-info-btn');
-    textEl.hidden = !textEl.hidden;
-    btn.setAttribute('aria-expanded', String(!textEl.hidden));
-  });
-  // "Bestes Kind"-Filter als einzelnes Dreifach-Element (Nutzerwunsch: wie
-  // Genetik/EKH per Klick durchschaltbar statt Dropdown-Auswahl) - nutzt
-  // dieselbe .checkdrop-tristate-Optik/cycleTristateItem wie dort (siehe
-  // parser.js), aber standalone statt in einem .checkdrop-panel, da es hier
-  // nur den einen Umschalter gibt (keine Liste mehrerer Werte). Der
-  // generische "#filter-form click"-Listener weiter unten aktualisiert den
+  // "ⓘ"-Knöpfe (Nutzerwunsch): Erklärung bleibt per title-Attribut auch
+  // beim Hovern sichtbar, zusätzlich per Klick ein-/ausblendbar (z.B. auf
+  // Touch-Geräten ohne Hover) - toggelt nur den sichtbaren Text, ändert
+  // nichts am Filter selbst.
+  wireInfoToggleButton('best-child-info-btn', 'best-child-info-text');
+  wireInfoToggleButton('stallion-info-btn', 'stallion-info-text');
+  // Einzelne Dreifach-Elemente (Nutzerwunsch: wie Genetik/EKH per Klick
+  // durchschaltbar statt Dropdown-Auswahl) - nutzt dieselbe
+  // .checkdrop-tristate-Optik/cycleTristateItem wie dort (siehe parser.js),
+  // aber standalone statt in einem .checkdrop-panel, da es hier jeweils nur
+  // den einen Umschalter gibt (keine Liste mehrerer Werte). Der generische
+  // "#filter-form click"-Listener weiter unten aktualisiert den
   // Hinweis-Badge bereits automatisch (matcht ebenfalls .checkdrop-tristate).
-  const bestChildToggle = document.querySelector('#f-best-child');
-  bestChildToggle.addEventListener('click', () => cycleTristateItem(bestChildToggle));
-  bestChildToggle.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    cycleTristateItem(bestChildToggle);
-    updateFilterHintBadge();
-  });
+  wireStandaloneTristate('f-best-child');
+  wireStandaloneTristate('f-stallion-outclassed');
+  wireStandaloneTristate('f-stallion-crown');
   // "— N aktiv (Feld)"-Hinweis neben "🔍 Filter" (siehe MixD.dc.html) - auf
   // jede Eingabe/Auswahl im Formular reagieren, nicht erst beim Filtern
   // (Submit), damit der Hinweis den tatsächlichen Feldinhalt widerspiegelt.
@@ -1559,6 +1640,8 @@ function activeFilterDescriptions() {
   if (val('#f-age-min').trim() || val('#f-age-max').trim()) list.push('Alter');
   if (document.querySelector('#f-favorites').checked) list.push('Favoriten');
   if (document.querySelector('#f-best-child').dataset.state !== 'neutral') list.push('Bestes Kind');
+  if (document.querySelector('#f-stallion-outclassed').dataset.state !== 'neutral') list.push('Übertroffen');
+  if (document.querySelector('#f-stallion-crown').dataset.state !== 'neutral') list.push('Krone');
   const tagActive = getCheckDropdownTristate('f-tag-drop');
   if (tagActive.include.length || tagActive.exclude.length) list.push('Schlagwörter');
   if (val('#f-tag-note').trim()) list.push('Schlagwort-Notiz');
@@ -1703,6 +1786,8 @@ function collectFilterState() {
     ageMax: document.querySelector('#f-age-max').value,
     favorites: document.querySelector('#f-favorites').checked,
     bestChild: document.querySelector('#f-best-child').dataset.state,
+    stallionOutclassed: document.querySelector('#f-stallion-outclassed').dataset.state,
+    stallionCrown: document.querySelector('#f-stallion-crown').dataset.state,
     tags: getCheckDropdownTristate('f-tag-drop'),
     tagNote: document.querySelector('#f-tag-note').value,
     genetik: getCheckDropdownTristate('f-genetik-drop'),
@@ -1746,6 +1831,8 @@ async function applyFilterState(state) {
     : state.bestChild === 'exclude' ? 'exclude'
     : (state.bestChild === 'include' ? 'include' : 'neutral');
   document.querySelector('#f-best-child').dataset.state = bestChildState;
+  document.querySelector('#f-stallion-outclassed').dataset.state = state.stallionOutclassed || 'neutral';
+  document.querySelector('#f-stallion-crown').dataset.state = state.stallionCrown || 'neutral';
   document.querySelector('#f-tag-note').value = state.tagNote || '';
   // Ältere gespeicherte Vorlagen (vor der Dreifach-Auswahl bei Genetik/
   // EKH/Schlagwörtern) speichern hier noch ein flaches Array statt
@@ -2135,6 +2222,10 @@ function matchesPresetFilters(h, state) {
   // Tristate-Widget gespeicherte Vorlagen ab (siehe applyFilterState).
   if ((s.bestChild === 'include' || s.bestChild === 'only' || s.bestChild === true) && !bestChildBadges.has(h.id)) return false;
   if (s.bestChild === 'exclude' && bestChildBadges.has(h.id)) return false;
+  if (s.stallionOutclassed === 'include' && stallionBadges.get(h.id)?.type !== 'outclassed') return false;
+  if (s.stallionOutclassed === 'exclude' && stallionBadges.get(h.id)?.type === 'outclassed') return false;
+  if (s.stallionCrown === 'include' && stallionBadges.get(h.id)?.type !== 'crown') return false;
+  if (s.stallionCrown === 'exclude' && stallionBadges.get(h.id)?.type === 'crown') return false;
   const toTristate = (v) => (Array.isArray(v) ? { include: v, exclude: [] } : (v || { include: [], exclude: [] }));
   const genetik = toTristate(s.genetik);
   if (genetik.include.length && !genetik.include.every((locus) => matchesGenetikLocus(h, locus))) return false;

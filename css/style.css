@@ -846,6 +846,13 @@ details.collapsible > .compare-avg-block {
    Hinweisen (siehe --info), da hier explizit NICHT gewertet wird. */
 .best-child-symbol.best-child-unknown { color: var(--info); }
 
+/* "Übertroffen"/"Krone"-Abzeichen für Hengste (siehe stallionBadges in
+   list.js) - echte Emoji statt geometrischer Zeichen (anders als die
+   ★-Symbole oben), da hier keine Farbe per CSS nötig ist (jeweils nur
+   ein fester Zustand, kein besser/gleich/schlechter-Spektrum). Läuft mit
+   demselben Ein-/Ausschalter wie "Bestes Kind" (body.hide-best-child). */
+.stallion-badge { font-size: 1rem; line-height: 1; cursor: default; margin-right: 0.15rem; }
+
 /* Einstellungen -> "Bestes Kind"-Funktion abgeschaltet (siehe
    bestChildBadgesEnabled in list.js) - blendet Spalte und Filterfeld
    komplett aus, statt nur eine leere Spalte/wirkungslose Checkbox zu
@@ -855,7 +862,8 @@ body.hide-best-child #th-best-child,
 body.hide-best-child #horse-table td[data-label="Bestes Kind"] {
   display: none;
 }
-body.hide-best-child #f-best-child-field { display: none; }
+body.hide-best-child #f-best-child-field,
+body.hide-best-child #f-stallion-field { display: none; }
 
 /* --- Table --- */
 /* table-layout: fixed + Prozentbreiten (siehe <colgroup> in index.html):
