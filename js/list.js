@@ -1819,6 +1819,16 @@ async function restoreListReturnState() {
   let raw;
   try {
     raw = sessionStorage.getItem(LIST_STATE_STORAGE_KEY);
+    // Bugfix (Nutzerfeedback 2026-09-09): SOFORT nach dem Lesen entfernen,
+    // nicht erst am Ende - ohne das blieb der einmal gespeicherte Zustand
+    // fuer den Rest der Tab-Lebensdauer bestehen (sessionStorage
+    // ueberlebt normale Navigation, nicht nur den einen Ruecksprung) und
+    // ueberschrieb dadurch dauerhaft die eigentliche Standard-Filtervorlage
+    // - wirkte wie "Vorlagen/Sortierung funktionieren nicht mehr". Der
+    // Rueckkehr-Zustand soll aber nur GENAU EINMAL gelten (das eine Mal
+    // "zurueck zur Uebersicht" nach einem Pferdeprofil), nicht bei jedem
+    // folgenden Seitenaufruf in diesem Tab erneut.
+    sessionStorage.removeItem(LIST_STATE_STORAGE_KEY);
   } catch {
     return false;
   }
