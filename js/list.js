@@ -125,6 +125,7 @@ async function init() {
     document.body.classList.add('hide-delete');
   }
   wireFilterForm();
+  wireListStatePersistence();
   wireDashboardTileClicks();
   wireSortableHeaders();
   wireSelection();
@@ -166,6 +167,12 @@ async function init() {
 //    (siehe LAST_SORT_STORAGE_KEY/saveLastSort).
 // 4. Sonst der Programmstandard (Name aufsteigend).
 async function applyInitialFilterState() {
+  // Hat Vorrang vor Standard-Filtervorlage/-Sortierung unten - stellt den
+  // zuletzt TATSÄCHLICH gesehenen Zustand wieder her (z.B. nach dem
+  // Ansehen eines Pferdeprofils per "Zurück" oder "Zur Übersicht"), nicht
+  // nur einen generischen Standard (Nutzerwunsch 2026-09-07).
+  if (await restoreListReturnState()) return;
+
   if (defaultFilterPresetId) {
     const { data, error } = await supabaseClient
       .from('filter_presets')
@@ -1775,6 +1782,59 @@ function syncMobileSortControls() {
 
 // Liest den kompletten Zustand aller Filter-/Suchfelder aus (nicht die
 // Ø-Vergleich-Vergleichsbasis - eigenes, unabhängiges Feature).
+const LIST_STATE_STORAGE_KEY = 'mdr_list_return_state';
+
+// Merkt sich Filter/Sortierung + Scrollposition beim Verlassen der
+// Übersicht (Nutzerwunsch 2026-09-07: nach dem Ansehen eines
+// Pferdeprofils per "Zurück" oder "Zur Übersicht" wieder am selben Punkt
+// landen). sessionStorage statt localStorage, da das bewusst nur "zurück
+// zu dem, wo ich gerade war" abdecken soll, nicht dauerhaft über
+// Browser-Neustarts hinweg (dafür gibt es bereits die Filter-/
+// Sortier-Vorlagen) - pro Tab getrennt, verschwindet beim Schließen des
+// Tabs von selbst. "pagehide" statt "beforeunload" feuert zuverlässig bei
+// JEDER Art des Verlassens (Link-Klick, Zurück-Button, Tab schließen),
+// auch wenn die Seite aus dem bfcache wiederhergestellt wird.
+function saveListReturnState() {
+  try {
+    sessionStorage.setItem(LIST_STATE_STORAGE_KEY, JSON.stringify({
+      filters: collectFilterState(),
+      scrollY: window.scrollY,
+    }));
+  } catch {
+    // sessionStorage kann z.B. im privaten Modus mancher Browser
+    // fehlschlagen - dann bleibt es beim normalen Verhalten ohne
+    // wiederhergestellten Zustand.
+  }
+}
+
+function wireListStatePersistence() {
+  window.addEventListener('pagehide', saveListReturnState);
+}
+
+// Stellt einen per saveListReturnState() gemerkten Zustand wieder her -
+// siehe Aufruf in applyInitialFilterState(). Gibt true zurück, wenn
+// etwas wiederhergestellt wurde (dann läuft die dortige normale
+// Standard-Logik NICHT mehr zusätzlich).
+async function restoreListReturnState() {
+  let raw;
+  try {
+    raw = sessionStorage.getItem(LIST_STATE_STORAGE_KEY);
+  } catch {
+    return false;
+  }
+  if (!raw) return false;
+  let saved;
+  try {
+    saved = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+  if (!saved?.filters) return false;
+  await applyFilterState(saved.filters);
+  if (saved.scrollY) window.scrollTo(0, saved.scrollY);
+  return true;
+}
+
 function collectFilterState() {
   return {
     name: document.querySelector('#f-name').value,
@@ -1869,7 +1929,13 @@ async function applyFilterState(state) {
   updateFilterHintBadge();
   updateCompareHintBadge();
 
-  loadHorses();
+  // Bisher "loadHorses();" ohne await - alle 4 Aufrufer von
+  // applyFilterState() awaiten es aber ohnehin bereits, hier also
+  // ungefaehrlich nachgezogen. Noetig, damit restoreListState() (siehe
+  // unten) die Scrollposition erst NACH dem tatsaechlichen Tabellen-
+  // Rendering setzen kann, nicht schon waehrend des noch laufenden
+  // Ladevorgangs.
+  await loadHorses();
 }
 
 async function loadFilterPresets() {

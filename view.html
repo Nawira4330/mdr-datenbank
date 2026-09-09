@@ -56,6 +56,7 @@
           <button type="button" class="tab-btn" data-tab="genetik">Genetik</button>
           <button type="button" class="tab-btn" data-tab="turnier">Turnierwerte</button>
           <button type="button" class="tab-btn" data-tab="stammbaum">Stammbaum</button>
+          <button type="button" class="tab-btn" data-tab="zuchtbuch">Zuchtbuch</button>
         </div>
 
         <div class="tab-panel" data-tab-panel="stammdaten">
@@ -133,6 +134,25 @@
         <div class="tab-panel" data-tab-panel="stammbaum" hidden>
           <div id="detail-stammbaum"></div>
         </div>
+
+        <div class="tab-panel" data-tab-panel="zuchtbuch" hidden>
+          <fieldset>
+            <legend>Angezeigte Verwandte</legend>
+            <div class="form-grid">
+              <div>
+                <label for="zuchtbuch-filter">Verwandtschaft</label>
+                <select id="zuchtbuch-filter">
+                  <option value="alle">Alle Verwandtschaft</option>
+                  <option value="vater">Gleicher Vater</option>
+                  <option value="mutter">Gleiche Mutter</option>
+                  <option value="kinder">Kinder</option>
+                  <option value="nachkommen">Alle Nachkommen</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+          <div id="detail-zuchtbuch"></div>
+        </div>
       </div>
     </div>
 
@@ -159,6 +179,7 @@
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/parser.js"></script>
+  <script src="js/tournamentScoring.js"></script>
   <script src="js/horseForm.js"></script>
   <script src="js/horseView.js"></script>
 </body>

@@ -1346,7 +1346,14 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
      Alle Einträge bilden zusammen eine durchgehende Liste (ein Rahmen um
      #horse-table statt einzelner Karten je Zeile), Auswahl-Kästchen und
      Name stehen dabei ohne eigenes Label in einer Zeile. */
-  .table-wrap { overflow-x: visible; background: transparent; border: none; box-shadow: none; }
+  /* Nur auf der Übersichtsliste (body.list-page) - sonst würden auch die
+     neueren .table-wrap-Tabellen im Pferdeprofil (Turnierwerte,
+     Stammbaum, Zuchtbuch) ihr eigenes horizontales Scrollen verlieren,
+     OHNE den hier folgenden Tabelle->Karten-Umbau zu bekommen (der ist
+     extra auf #horse-table zugeschnitten) - sie würden dann die ganze
+     Seite waagerecht aufreißen statt intern zu scrollen (Bugfix
+     2026-09-09, entdeckt beim Testen des neuen Zuchtbuch-Reiters). */
+  body.list-page .table-wrap { overflow-x: visible; background: transparent; border: none; box-shadow: none; }
   #horse-table, #horse-table tbody { display: block; width: 100%; }
   #horse-table thead { display: none; }
   /* Jede Zeile als eigene Karte (gilt jetzt für Tablet UND Handy

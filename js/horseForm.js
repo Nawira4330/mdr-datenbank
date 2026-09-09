@@ -510,6 +510,14 @@ async function runSaveFlow() {
   if (!resolved) return;
   const { targetId, payload: mergedPayload, beforeRecord } = resolved;
 
+  // Turnierwerte + LP-Prognose (js/tournamentScoring.js) werden bewusst
+  // HIER, einmalig beim Speichern, berechnet und mit abgelegt statt bei
+  // jedem Ansehen des Profils neu (siehe computedTournamentValuesHtml/
+  // lpResultHtml in renderDetailTables) - ändert sich nicht mehr, bis das
+  // Pferd das nächste Mal gespeichert wird.
+  mergedPayload.computed_tournament_values = computeTournamentValues(mergedPayload);
+  mergedPayload.computed_lp_result = checkLP(mergedPayload);
+
   const warnings = missingDataWarnings(mergedPayload);
   if (warnings.length) {
     pendingSave = { formData, payload: mergedPayload, session, targetId, beforeRecord };
@@ -1127,14 +1135,27 @@ async function renderDetailTables(data) {
   if (data.tournament_potential && Object.keys(data.tournament_potential).length) {
     turnierParts.push(tournamentSummaryHtml(data.tournament_potential, data.disciplines));
   }
+  if (data.computed_lp_result) turnierParts.push(lpResultHtml(data.computed_lp_result));
+  if (data.computed_tournament_values?.length) turnierParts.push(computedTournamentValuesHtml(data.computed_tournament_values));
   if (data.disciplines && Object.keys(data.disciplines).length) turnierParts.push(percentGroupsHtml('Disziplinen', data.disciplines, true));
   if (data.traits && Object.keys(data.traits).length) turnierParts.push(percentGroupsHtml('Eigenschaften', data.traits, true));
 
-  if (hasPedigreeData(data.pedigree)) stammbaumParts.push(pedigreeHtml(data.pedigree));
+  if (hasPedigreeData(data.pedigree)) stammbaumParts.push(await pedigreeHtml(data.pedigree));
 
   fillDetailContainer('detail-genetik', genetikParts);
   fillDetailContainer('detail-turnier', turnierParts);
   fillDetailContainer('detail-stammbaum', stammbaumParts);
+
+  const ownGpRaw = data.tournament_potential?.['Gesamtpotenzial'];
+  currentProfileDerived = {
+    gp: ownGpRaw != null && ownGpRaw !== '' ? Number(ownGpRaw) : null,
+    ext: averageScore(data.exterior_descriptive, scoreExteriorTerm),
+    extPct: data.exterior_genetics?.overall?.percent ?? null,
+    int: averageScore(data.temperament, scoreTemperamentTerm),
+  };
+  currentRelatednessCache = data.relatedness_cache || [];
+  currentRelatednessUpdatedAt = data.relatedness_updated_at || null;
+  renderZuchtbuchTab();
 
   const legacyContainer = document.getElementById('detail-tables');
   if (legacyContainer) {
@@ -1159,6 +1180,8 @@ function wireTabs() {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => activateTab(btn.dataset.tab));
   });
+  wireZuchtbuchFilter();
+  wireZuchtbuchSort();
 }
 
 function activateTab(tab) {
@@ -1456,6 +1479,237 @@ function percentGroupsHtml(title, groups, potentialOnly) {
   return html;
 }
 
+// --- Turnierplaner-Integration im "Turnierwerte"-Reiter -----------------
+//
+// computed_tournament_values/computed_lp_result werden NICHT hier live
+// berechnet, sondern einmalig beim Speichern in runSaveFlow() (siehe dort)
+// mit js/tournamentScoring.js (1:1 aus MDR-Planer/js/tournamentScoring.js
+// übernommen) und in der DB abgelegt - das Profil zeigt hier nur noch das
+// gespeicherte Ergebnis an. Portiert aus MDR-Planer/js/turnierplaner.js
+// (lpResultHtml/rowHtml).
+function lpResultHtml(lp) {
+  if (!lp) return '';
+  let html = '<div style="margin-top:0.5rem;">';
+  if (lp.possible === true) {
+    html += '<div class="pill yes">Leistungsprüfung (LP): voraussichtlich bestanden</div>';
+  } else if (lp.possible === false) {
+    html += '<div class="pill no">Leistungsprüfung (LP): voraussichtlich NICHT bestanden</div>';
+  } else {
+    html += '<div class="pill">Leistungsprüfung (LP): nicht sicher prüfbar (zu wenig Daten)</div>';
+  }
+  if (lp.reasons?.length) {
+    html += '<ul class="small">' + lp.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join('') + '</ul>';
+  }
+  if (lp.warnings?.length) {
+    html += '<p class="small muted">' + lp.warnings.map(escapeHtml).join('<br>') + '</p>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function computedTournamentValuesHtml(values) {
+  if (!values?.length) return '';
+  const rows = values.map((v) => `<tr>
+    <td>${escapeHtml(v.category)}</td>
+    <td>${escapeHtml(v.name)}</td>
+    <td>${v.wert != null ? v.wert : '–'}</td>
+    <td>${v.interieur != null ? v.interieur.toFixed(2) : '–'}</td>
+    <td>${v.complete && v.lk != null ? 'LK' + v.lk : '–'}</td>
+  </tr>`).join('');
+  return `<div class="group-heading">Turnierwerte je Disziplin (Turnierplaner)</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Kategorie</th><th>Disziplin</th><th>Wert</th><th>Interieur</th><th>LK</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+// --- Zuchtbuch-Reiter: Verwandtschaft -----------------------------------
+//
+// relatedness_cache wird NICHT hier live berechnet, sondern periodisch von
+// der Edge Function supabase/functions/recompute-relatedness serverseitig
+// neu aufgebaut (siehe dort, sowie mark_relatedness_stale-Trigger in
+// supabase/migration_039_profile_relatedness_and_tournament_cache.sql) -
+// hier nur Anzeige + Filter über das bereits geladene Ergebnis, kein
+// zusätzlicher Abruf. Anders als im MDR-Planer-Zuchtbuch gibt es keine
+// Pferdeauswahl - es werden immer nur die Verwandten DIESES Profils
+// gezeigt. Filterlogik 1:1 aus MDR-Planer/js/zuchtbuch.js
+// (filterRelatives) übernommen, nur als 5-Wege-Auswahl statt 4 Checkboxen
+// + "Alle"-Kippschalter.
+let currentRelatednessCache = [];
+let currentRelatednessUpdatedAt = null;
+// GP/Ext/Ext%/Int DIESES Profils - für die Farbcodierung der Verwandten-
+// Werte "in Bezug auf das ausgewählte Pferd" (Nutzerwunsch 2026-09-07),
+// dieselbe Konvention wie MDR-Planer/js/zuchtbuch.js (compareColor):
+// grün = besser als dieses Pferd, rot = schlechter, keine Farbe = gleich.
+let currentProfileDerived = { gp: null, ext: null, extPct: null, int: null };
+
+const ZUCHTBUCH_METRIC_HIGHER_IS_BETTER = { gp: true, ext: false, extPct: true, int: false };
+function zuchtbuchCompareColor(value, reference, metric) {
+  if (value == null || reference == null || value === reference) return '';
+  const better = ZUCHTBUCH_METRIC_HIGHER_IS_BETTER[metric] ? value > reference : value < reference;
+  return `color: ${better ? 'var(--success)' : 'var(--danger)'};`;
+}
+
+function filterRelativesCache(relatives, filter) {
+  // "Alle Verwandtschaft" zeigt zusätzlich "Weitere Verwandtschaft" (siehe
+  // findExtendedRelatives in der Edge Function - gemeinsamer Vorfahre
+  // irgendwo im sichtbaren Stammbaum, ohne direkte Eltern-Kind-Beziehung,
+  // Nutzerwunsch 2026-09-08) - bei den anderen, spezifischeren Filtern
+  // bewusst NICHT mit dabei, wie im Original.
+  if (filter === 'alle') return relatives;
+  return relatives.filter((r) => {
+    if (filter === 'vater') return r.beziehung === 'Vollgeschwister' || r.beziehung === 'Halbgeschwister (Vater)';
+    if (filter === 'mutter') return r.beziehung === 'Vollgeschwister' || r.beziehung === 'Halbgeschwister (Mutter)';
+    if (filter === 'kinder') return r.beziehung === 'Kind';
+    // "Alle Nachkommen": alles außer den beiden Geschwister-Beziehungen
+    // (Kind, Enkelkind, Urenkelkind, ... - siehe generationLabel) UND
+    // außer "Weitere Verwandtschaft".
+    return r.beziehung !== 'Vollgeschwister' && r.beziehung !== 'Halbgeschwister (Vater)'
+      && r.beziehung !== 'Halbgeschwister (Mutter)' && r.beziehung !== 'Weitere Verwandtschaft';
+  });
+}
+
+// Sortierung der Zuchtbuch-Verwandten-Tabelle (Nutzerwunsch 2026-09-09) -
+// gleiches Klick-auf-Spaltenkopf-Muster wie MDR-Planer/js/zuchtbuch.js
+// (relativesSortValue/nextSort/applySortGeneric/wireTableSort): Klick
+// sortiert danach, erneuter Klick auf dieselbe Spalte kehrt die Richtung
+// um. Default wie im Original: nach Beziehungs-Nähe (engste Verwandtschaft
+// zuerst) - "Beziehung" hat dafür keinen eigenen Zahlenwert im Datensatz,
+// deshalb hier dieselbe Rangfolge wie MDR-Planer's sortRank beim Aufbau
+// von findRelatives/findExtendedRelatives (siehe dortige Edge Function).
+let zuchtbuchSort = { field: 'beziehung', dir: 'asc' };
+
+const ZUCHTBUCH_BEZIEHUNG_RANK = {
+  'Vollgeschwister': 1,
+  'Halbgeschwister (Vater)': 2,
+  'Halbgeschwister (Mutter)': 3,
+  'Kind': 4,
+  'Enkelkind': 5,
+  'Urenkelkind': 6,
+  'Ururenkelkind': 7,
+};
+function zuchtbuchBeziehungRank(beziehung) {
+  if (ZUCHTBUCH_BEZIEHUNG_RANK[beziehung] != null) return ZUCHTBUCH_BEZIEHUNG_RANK[beziehung];
+  const m = /^Nachkomme \(Generation (\d+)\)$/.exec(beziehung || '');
+  if (m) return 3 + Number(m[1]);
+  if (beziehung === 'Weitere Verwandtschaft') return 50;
+  return 99;
+}
+
+function zuchtbuchSortValue(r, field) {
+  switch (field) {
+    case 'name': return (r.name || '').toLowerCase();
+    case 'gender': return (r.gender || '').toLowerCase();
+    case 'beziehung': return zuchtbuchBeziehungRank(r.beziehung);
+    case 'owner': return (r.owner || '').toLowerCase();
+    case 'gp': return r.gp;
+    case 'ext': return r.ext;
+    case 'extpct': return r.extPct;
+    case 'int': return r.int;
+    case 'inbreeding': return r.inbreeding ? 1 : 0;
+    case 'tag': return (r.tags && r.tags.length) ? r.tags.map((t) => t.label).join(', ').toLowerCase() : null;
+    default: return null;
+  }
+}
+
+// Fehlende Werte (null) landen unabhängig von der Richtung immer am Ende,
+// wie beim gleichen Muster in js/list.js (applySort).
+function applyZuchtbuchSort(rows) {
+  const mult = zuchtbuchSort.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = zuchtbuchSortValue(a, zuchtbuchSort.field);
+    const vb = zuchtbuchSortValue(b, zuchtbuchSort.field);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return va.localeCompare(vb, 'de') * mult;
+    return (va - vb) * mult;
+  });
+}
+
+function zuchtbuchSortArrow(field) {
+  return zuchtbuchSort.field === field ? (zuchtbuchSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+}
+
+function wireZuchtbuchSort() {
+  document.addEventListener('click', (e) => {
+    const th = e.target.closest('#zuchtbuch-relatives-table th[data-sort]');
+    if (!th) return;
+    const field = th.dataset.sort;
+    zuchtbuchSort = zuchtbuchSort.field === field
+      ? { field, dir: zuchtbuchSort.dir === 'asc' ? 'desc' : 'asc' }
+      : { field, dir: 'asc' };
+    renderZuchtbuchTab();
+  });
+}
+
+function renderZuchtbuchTab() {
+  const container = document.getElementById('detail-zuchtbuch');
+  if (!container) return;
+  const filterSel = document.getElementById('zuchtbuch-filter');
+  const filter = filterSel ? filterSel.value : 'alle';
+  const filtered = applyZuchtbuchSort(filterRelativesCache(currentRelatednessCache, filter));
+  // "auf Inzuchtbasis" = wouldCauseInbreeding in der Edge Function - würde
+  // eine Verpaarung mit DIESEM Pferd im gemeinsamen Fohlen tatsächlich
+  // einen Namen doppeln (nicht nur "irgendwo verwandt", das deckt die
+  // Beziehung/Filter oben bereits ab).
+  const inbreedingCount = currentRelatednessCache.filter((r) => r.inbreeding).length;
+
+  const updatedText = currentRelatednessUpdatedAt
+    ? `Stand der Verwandtschaftsdaten: ${new Date(currentRelatednessUpdatedAt).toLocaleString('de-DE')}`
+    : 'Verwandtschaftsdaten werden gerade zum ersten Mal berechnet - erscheinen automatisch innerhalb der nächsten Minuten, kein erneutes Laden nötig.';
+  let html = `<p class="small">Verwandt mit <strong>${currentRelatednessCache.length}</strong> Pferden aus der Datenbank, davon <strong>${inbreedingCount}</strong> auf Inzuchtbasis (würde bei Verpaarung mit diesem Pferd Inzucht im gemeinsamen Fohlen verursachen).</p>`;
+  html += `<p class="small muted">${filtered.length} von ${currentRelatednessCache.length} Verwandten angezeigt (aktueller Filter). ${escapeHtml(updatedText)}</p>`;
+
+  if (!filtered.length) {
+    html += '<p class="small muted">Keine passenden Verwandten gefunden.</p>';
+    container.innerHTML = html;
+    return;
+  }
+
+  const rows = filtered.map((r) => {
+    const nameCell = r.id
+      ? `<a href="view.html?id=${encodeURIComponent(r.id)}">${escapeHtml(r.name || '(ohne Name)')}</a>`
+      : escapeHtml(r.name || '(ohne Name)');
+    const pill = r.inbreeding
+      ? '<span class="pill no">Inzucht-Gefahr</span>'
+      : '<span class="pill yes">Unbedenklich</span>';
+    return `<tr>
+      <td>${nameCell}</td>
+      <td>${tagsBadgesHtml(r.tags)}</td>
+      <td>${r.gender ? escapeHtml(r.gender) : '–'}</td>
+      <td${r.beziehungDetail ? ` title="${escapeHtml(r.beziehungDetail)}"` : ''}>${escapeHtml(r.beziehung)}${r.otherParent ? ` (${escapeHtml(r.otherParent.label)}: ${escapeHtml(r.otherParent.name)})` : ''}</td>
+      <td>${r.owner ? escapeHtml(r.owner) : '–'}</td>
+      <td style="${zuchtbuchCompareColor(r.gp, currentProfileDerived.gp, 'gp')}">${r.gp != null ? r.gp : '–'}</td>
+      <td style="${zuchtbuchCompareColor(r.ext, currentProfileDerived.ext, 'ext')}">${r.ext != null ? r.ext.toFixed(2) : '–'}</td>
+      <td style="${zuchtbuchCompareColor(r.extPct, currentProfileDerived.extPct, 'extPct')}">${r.extPct != null ? r.extPct + '%' : '–'}</td>
+      <td style="${zuchtbuchCompareColor(r.int, currentProfileDerived.int, 'int')}">${r.int != null ? r.int.toFixed(2) : '–'}</td>
+      <td>${pill}</td>
+    </tr>`;
+  }).join('');
+  html += `<div class="table-wrap"><table id="zuchtbuch-relatives-table">
+    <thead><tr>
+      <th data-sort="name">Pferd${zuchtbuchSortArrow('name')}</th>
+      <th data-sort="tag">Schlagwort${zuchtbuchSortArrow('tag')}</th>
+      <th data-sort="gender">Geschlecht${zuchtbuchSortArrow('gender')}</th>
+      <th data-sort="beziehung">Beziehung${zuchtbuchSortArrow('beziehung')}</th>
+      <th data-sort="owner">Besitzer${zuchtbuchSortArrow('owner')}</th>
+      <th data-sort="gp">GP${zuchtbuchSortArrow('gp')}</th>
+      <th data-sort="ext">Ext${zuchtbuchSortArrow('ext')}</th>
+      <th data-sort="extpct">Ext%${zuchtbuchSortArrow('extpct')}</th>
+      <th data-sort="int">Int${zuchtbuchSortArrow('int')}</th>
+      <th data-sort="inbreeding">Bei Verpaarung${zuchtbuchSortArrow('inbreeding')}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+  container.innerHTML = html;
+}
+
+function wireZuchtbuchFilter() {
+  const sel = document.getElementById('zuchtbuch-filter');
+  if (sel) sel.addEventListener('change', renderZuchtbuchTab);
+}
+
 // hasPedigreeData siehe parser.js (dort geteilt mit list.js).
 
 const PEDIGREE_SECTION_ORDER = [
@@ -1465,10 +1719,62 @@ const PEDIGREE_SECTION_ORDER = [
   'Urgroßeltern (Großvater mütterlicherseits)', 'Urgroßeltern (Großmutter mütterlicherseits)',
 ];
 
-function pedigreeGroupTableHtml(title, entries) {
+// Sucht alle Vorfahren-Namen im Stammbaum als eigene (echte) Pferde in der
+// Datenbank nach (Nutzerwunsch 2026-09-07: Namen sollen zum jeweiligen
+// Profil verlinkt sein UND, wo vorhanden, dessen echte GP/Ext/Ext%/Int-
+// Werte zeigen). EIN gebündelter Abruf für alle Namen zugleich (max. 14 -
+// deutlich günstiger als eine Volltabellen-Abfrage). Die meisten Vorfahren
+// sind selbst NICHT in der eigenen Datenbank erfasst - für die gilt weiter
+// nur der beim Speichern mitkopierte "potential"-Wert (GP) aus dem
+// Stammbaum-Text selbst, kein Ext/Ext%/Int (das kennt das Spiel dort
+// nicht).
+async function fetchAncestorLookup(names) {
+  const uniqueNames = [...new Set(names.filter(Boolean))];
+  if (!uniqueNames.length) return new Map();
+  const { data, error } = await supabaseClient
+    .from('horses')
+    .select('id, name, gender, tournament_potential, exterior_descriptive, exterior_genetics, temperament')
+    .in('name', uniqueNames);
+  if (error || !data) return new Map();
+  return new Map(data.map((h) => [h.name, h]));
+}
+
+// Eigene Werte, falls dieser Vorfahre selbst in der Datenbank steht -
+// sonst nur der im Stammbaum mitkopierte GP-Schnappschuss (potentialFromPedigree).
+function ancestorDerived(matchedHorse, potentialFromPedigree) {
+  if (!matchedHorse) return { gp: potentialFromPedigree ?? null, ext: null, extPct: null, int: null };
+  const gpRaw = matchedHorse.tournament_potential?.['Gesamtpotenzial'];
+  return {
+    gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : (potentialFromPedigree ?? null),
+    ext: averageScore(matchedHorse.exterior_descriptive, scoreExteriorTerm),
+    extPct: matchedHorse.exterior_genetics?.overall?.percent ?? null,
+    int: averageScore(matchedHorse.temperament, scoreTemperamentTerm),
+  };
+}
+
+function pedigreeGroupTableHtml(title, entries, ancestorLookup) {
   if (!entries?.length) return '';
-  const body = entries.map((p) => `<tr><th>${escapeHtml(p.name)}</th><td>${escapeHtml(normalizeBreed(p.breed) || '')}</td></tr>`).join('');
-  return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p><table class="detail-table">${body}</table>`;
+  const body = entries.map((p) => {
+    const matched = ancestorLookup.get(p.name);
+    const d = ancestorDerived(matched, p.potential);
+    const nameCell = matched
+      ? `<a href="view.html?id=${encodeURIComponent(matched.id)}">${escapeHtml(p.name)}</a>`
+      : escapeHtml(p.name);
+    return `<tr>
+      <th>${nameCell}</th>
+      <td>${matched?.gender ? escapeHtml(matched.gender) : '–'}</td>
+      <td>${escapeHtml(normalizeBreed(p.breed) || '')}</td>
+      <td>${d.gp != null ? d.gp : '–'}</td>
+      <td>${d.ext != null ? d.ext.toFixed(2) : '–'}</td>
+      <td>${d.extPct != null ? d.extPct + '%' : '–'}</td>
+      <td>${d.int != null ? d.int.toFixed(2) : '–'}</td>
+    </tr>`;
+  }).join('');
+  return `<p class="small muted" style="margin-bottom:0.1rem;">${escapeHtml(title)}</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Geschlecht</th><th>Rasse</th><th>GP</th><th>Ext</th><th>Ext%</th><th>Int</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
 }
 
 // "pedigree" ist entweder das alte, flache Array (bereits gespeicherte
@@ -1478,25 +1784,30 @@ function pedigreeGroupTableHtml(title, entries) {
 // "ancestors" gespeichert) - das Feld bleibt hier nur zur Anzeige bereits
 // vor dieser Änderung gespeicherter Datensätze erhalten, bei denen es noch
 // gefüllt ist.
-function pedigreeHtml(pedigree) {
+async function pedigreeHtml(pedigree) {
   const isLegacyArray = Array.isArray(pedigree);
   const ancestors = isLegacyArray ? pedigree.slice(1) : (pedigree.ancestors || []);
   const sections = isLegacyArray ? null : pedigree.sections;
 
+  const allNames = sections
+    ? PEDIGREE_SECTION_ORDER.flatMap((label) => (sections[label] || []).map((p) => p.name))
+    : ancestors.map((p) => p.name);
+  const ancestorLookup = await fetchAncestorLookup(allNames);
+
   let body;
   let note;
   if (sections) {
-    body = PEDIGREE_SECTION_ORDER.map((label) => pedigreeGroupTableHtml(label, sections[label])).join('');
+    body = PEDIGREE_SECTION_ORDER.map((label) => pedigreeGroupTableHtml(label, sections[label], ancestorLookup)).join('');
     note = 'Einteilung anhand der im Text enthaltenen Abschnittsüberschriften (mobile Ansicht).';
   } else {
     const parents = ancestors.slice(0, 2);
     const grandparents = ancestors.slice(2, 6);
     const greatGrandparents = ancestors.slice(6, 14);
     const rest = ancestors.slice(14);
-    body = pedigreeGroupTableHtml('Eltern', parents)
-      + pedigreeGroupTableHtml('Großeltern', grandparents)
-      + pedigreeGroupTableHtml('Urgroßeltern', greatGrandparents)
-      + pedigreeGroupTableHtml('Weitere Vorfahren', rest);
+    body = pedigreeGroupTableHtml('Eltern', parents, ancestorLookup)
+      + pedigreeGroupTableHtml('Großeltern', grandparents, ancestorLookup)
+      + pedigreeGroupTableHtml('Urgroßeltern', greatGrandparents, ancestorLookup)
+      + pedigreeGroupTableHtml('Weitere Vorfahren', rest, ancestorLookup);
     note = 'Einteilung anhand der Reihenfolge im kopierten Text – keine Garantie bei künftigen Layout-Änderungen im Spiel.';
   }
 
