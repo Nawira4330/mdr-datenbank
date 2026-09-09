@@ -117,7 +117,6 @@ async function init() {
   if (!session) return;
   currentSession = session;
   currentIdentity = session.user.email.split('@')[0];
-  await renderSharedNav(session);
   if (!isAdminSession(session)) {
     // Löschen (einzeln wie mehrfach) bleibt in der Übersicht dem Admin
     // vorbehalten - versteckt per CSS (siehe style.css), damit rowHtml()
@@ -138,21 +137,37 @@ async function init() {
   wireSortPresets();
   wireScrollTop();
   showFlashBanner();
-  await loadUserSettings(session);
+
+  // Gruppe A: voneinander unabhängige Supabase-Abfragen parallel statt
+  // seriell (Nutzerwunsch 2026-09-09, "Ladezeit weiter beschleunigen") -
+  // liefen bisher alle acht strikt nacheinander, obwohl bis auf
+  // checkAgeNotices (braucht hiddenNotices aus loadUserSettings) keine
+  // von einer anderen abhängt. renderSharedNav macht selbst nur einen
+  // einzelnen, schreibgeschützten user_settings-Query (Verpaarungs-Log-
+  // Sichtbarkeit) und kann ebenfalls uneingeschränkt mitlaufen.
+  const userSettingsPromise = loadUserSettings(session);
+  await Promise.all([
+    renderSharedNav(session),
+    userSettingsPromise,
+    loadAllHorsesCache(),
+    showMissingDataNotice(session),
+    userSettingsPromise.then(() => checkAgeNotices(session)),
+    loadTagSuggestions(),
+    loadFilterPresets(),
+    loadSortPresets(),
+  ]);
+
+  // Gruppe B: hängt von Gruppe A ab (allHorsesCache/bestChildBadgesEnabled),
+  // läuft rein synchron auf dem bereits geladenen Cache (siehe Kommentar
+  // bei loadAllHorsesCache) - kein weiterer Netzwerk-Abruf nötig.
   document.body.classList.toggle('hide-best-child', !bestChildBadgesEnabled);
-  // EIN gemeinsamer Vollabrauf statt vorher drei separaten (siehe
-  // Kommentar bei loadAllHorsesCache) - geneIndex braucht ihn immer,
-  // bestChildBadges/eigene Kacheln lesen bei Bedarf mit aus demselben
-  // Ergebnis, ganz ohne eigenen weiteren Netzwerk-Abruf.
-  await loadAllHorsesCache();
   loadGeneIndex();
   if (bestChildBadgesEnabled) loadBestChildBadges();
-  await showMissingDataNotice(session);
-  await checkAgeNotices(session);
-  await loadTagSuggestions();
-  await populateFilterOptions();
-  await loadFilterPresets();
-  await loadSortPresets();
+  populateFilterOptions();
+
+  // Gruppe C: muss zuletzt laufen, braucht defaultFilterPresetId/
+  // defaultSortPresetId (loadUserSettings), die Vorlagen-Dropdowns
+  // (loadFilterPresets/loadSortPresets) und den Pferde-Cache.
   await applyInitialFilterState();
 }
 
