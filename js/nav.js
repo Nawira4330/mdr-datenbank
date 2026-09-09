@@ -13,11 +13,14 @@
 // Feste Liste der MDR-Planer-Tools (anderes Repo,
 // https://nawira4330.github.io/mdr-planer/) - hier nur als Links
 // hinterlegt, keine gemeinsame Code-Basis zwischen den beiden Projekten.
+// Turnierplaner/Zuchtbuch bewusst NICHT mehr gelistet (Nutzerwunsch
+// 2026-09-09, analog zu MDR-Planer/js/nav.js dort) - beide sind jetzt
+// direkt ins Pferdeprofil hier integriert (Reiter "Turnierwerte"/
+// "Zuchtbuch"). Die Seiten selbst bestehen im MDR-Planer weiter (fuer
+// datenbankfremde Pferde per Freitext), sind hier nur nicht mehr verlinkt.
 const MDR_PLANER_LINKS = [
   { label: 'alle Tools', url: 'https://nawira4330.github.io/mdr-planer/' },
   { label: 'Zuchtplaner', url: 'https://nawira4330.github.io/mdr-planer/zuchtplaner.html' },
-  { label: 'Turnierplaner', url: 'https://nawira4330.github.io/mdr-planer/turnierplaner.html' },
-  { label: 'Zuchtbuch', url: 'https://nawira4330.github.io/mdr-planer/zuchtbuch.html' },
   { label: 'Fohlen-Tracker', url: 'https://nawira4330.github.io/mdr-planer/fohlen-tracker.html' },
   { label: 'Verwandtschaftsmatrix', url: 'https://nawira4330.github.io/mdr-planer/verwandtschaft.html' },
 ];
