@@ -23,6 +23,7 @@ const MDR_PLANER_LINKS = [
   { label: 'Zuchtplaner', url: 'https://nawira4330.github.io/mdr-planer/zuchtplaner.html' },
   { label: 'Fohlen-Tracker', url: 'https://nawira4330.github.io/mdr-planer/fohlen-tracker.html' },
   { label: 'Verwandtschaftsmatrix', url: 'https://nawira4330.github.io/mdr-planer/verwandtschaft.html' },
+  { label: 'Pferdeprüfung', url: 'https://nawira4330.github.io/mdr-planer/pferdepruefung.html' },
 ];
 
 function navEscapeHtml(str) {
