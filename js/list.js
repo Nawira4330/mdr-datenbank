@@ -1830,7 +1830,22 @@ const LIST_STATE_STORAGE_KEY = 'mdr_list_return_state';
 // Tabs von selbst. "pagehide" statt "beforeunload" feuert zuverlässig bei
 // JEDER Art des Verlassens (Link-Klick, Zurück-Button, Tab schließen),
 // auch wenn die Seite aus dem bfcache wiederhergestellt wird.
+//
+// Bugfix (Nutzerfeedback 2026-09-09, "Sortiervorlage springt nicht immer
+// an"): "pagehide" feuert nicht nur beim Ansehen eines Pferdeprofils,
+// sondern bei JEDEM Verlassen der Seite - auch bei einem simplen Neuladen
+// (F5), Schließen des Tabs oder Wechsel zu einer ganz anderen Seite. Ohne
+// diese Einschränkung wurde bei jedem Neuladen im selben Tab erneut ein
+// Rückkehr-Zustand gespeichert, der beim nächsten Aufruf wieder Vorrang
+// vor der Standard-Filter-/Sortier-Vorlage hatte - die Vorlage "griff"
+// dadurch nur beim allerersten Laden in einem frischen Tab zuverlässig.
+// "leavingToHorseDetail" wird nur bei einem tatsächlichen Klick auf einen
+// Link zu horse.html/view.html gesetzt (siehe wireListStatePersistence) -
+// nur dann lohnt sich überhaupt ein "zurück zu dem, wo ich war".
+let leavingToHorseDetail = false;
+
 function saveListReturnState() {
+  if (!leavingToHorseDetail) return;
   try {
     sessionStorage.setItem(LIST_STATE_STORAGE_KEY, JSON.stringify({
       filters: collectFilterState(),
@@ -1844,6 +1859,14 @@ function saveListReturnState() {
 }
 
 function wireListStatePersistence() {
+  // Setzt das Flag NUR bei einem echten Klick auf einen Pferdeprofil-Link
+  // (Name/Bild/Bearbeiten-Stift in Tabelle, Hinweisboxen, Vorschlägen) -
+  // per Delegation auf document, deckt damit automatisch alle Stellen ab,
+  // ohne jede einzeln extra verdrahten zu müssen.
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="horse.html"], a[href^="view.html"]');
+    if (link) leavingToHorseDetail = true;
+  });
   window.addEventListener('pagehide', saveListReturnState);
 }
 
