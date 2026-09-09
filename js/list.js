@@ -140,8 +140,13 @@ async function init() {
   showFlashBanner();
   await loadUserSettings(session);
   document.body.classList.toggle('hide-best-child', !bestChildBadgesEnabled);
-  await loadGeneIndex();
-  if (bestChildBadgesEnabled) await loadBestChildBadges();
+  // EIN gemeinsamer Vollabrauf statt vorher drei separaten (siehe
+  // Kommentar bei loadAllHorsesCache) - geneIndex braucht ihn immer,
+  // bestChildBadges/eigene Kacheln lesen bei Bedarf mit aus demselben
+  // Ergebnis, ganz ohne eigenen weiteren Netzwerk-Abruf.
+  await loadAllHorsesCache();
+  loadGeneIndex();
+  if (bestChildBadgesEnabled) loadBestChildBadges();
   await showMissingDataNotice(session);
   await checkAgeNotices(session);
   await loadTagSuggestions();
@@ -265,34 +270,31 @@ async function loadUserSettings(session) {
   // NOT NULL DEFAULT true - fehlt nur, solange nie gespeichert.
   bestChildBadgesEnabled = !error && data?.best_child_badges_enabled != null ? data.best_child_badges_enabled : true;
   defaultOwnerFilterEnabled = !error && data?.default_owner_filter_enabled != null ? data.default_owner_filter_enabled : true;
-  if (customDashboardTiles.length) await loadAllHorsesCache();
 }
 
-// Einmaliger, ungefilterter Voll-Abruf für angepinnte Kacheln (siehe
-// computeCustomTileValue) - nur, wenn tatsächlich eigene Kacheln existieren,
-// um den zusätzlichen Request im Normalfall zu vermeiden.
+// Einmaliger, ungefilterter Voll-Abruf über den kompletten Bestand -
+// gemeinsam genutzt von angepinnten Dashboard-Kacheln (computeCustomTileValue),
+// den Farbgenetik-Eltern-Hinweisen (geneIndex) UND den "Bestes Kind"/
+// Hengst-Status-Abzeichen (loadBestChildBadges). Bugfix (Nutzerfeedback
+// 2026-09-09): das waren bisher DREI unabhängige, sich stark überschneidende
+// Vollabfragen des gesamten (>1200 Pferde umfassenden) Bestands bei jedem
+// Aufruf der Übersicht - spürbar langsam, weil jede davon eigene, über das
+// serverseitige 1000-Zeilen-Limit paginierte Anfragen brauchte.
+// HORSE_LIST_COLUMNS deckt als bewusst breite Spaltenliste (dieselbe wie
+// buildQuery) alle drei Verwendungszwecke gleichzeitig ab, ein einziger
+// fetchAllRows()-Durchlauf genügt jetzt für alle drei.
 async function loadAllHorsesCache() {
-  // fetchAllRows statt einer einzelnen .select() - der Gesamtbestand kann
-  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
-  // sonst würden angepinnte Kacheln stillschweigend zu niedrig zählen.
-  // HORSE_LIST_COLUMNS statt select('*') - dieselben Felder wie buildQuery,
-  // da matchesPresetFilters/matchesCustomTileFilters dieselbe Logik wie die
-  // normale Tabellenfilterung nutzen (siehe computeCustomTileValue).
   const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(HORSE_LIST_COLUMNS));
   allHorsesCache = !error && data ? data : [];
 }
 
-// Einmaliger, ungefilterter Voll-Abruf nur der für die Eltern-Hinweise
-// nötigen Spalten (siehe geneIndex oben) - läuft IMMER beim Laden der
-// Übersicht, unabhängig von eigenen Dashboard-Kacheln (anders als
-// loadAllHorsesCache), da Tabelle/Filter/Kacheln die Farbgenetik-Anzeige
-// gleichermaßen brauchen. Bewusst nur die schlanken Spalten statt select('*')
-// wie bei loadAllHorsesCache, um die Nutzlast klein zu halten.
-async function loadGeneIndex() {
-  const { data, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('name, colors, coat_color, notes, color_gene_overrides'),
-  );
-  geneIndex = new Map((!error && data ? data : []).map((h) => [h.name, h]));
+// Baut den Farbgenetik-Eltern-Hinweis-Index aus dem bereits geladenen
+// allHorsesCache (siehe dortiger Kommentar) - läuft IMMER, unabhängig von
+// eigenen Dashboard-Kacheln, da Tabelle/Filter/Kacheln die
+// Farbgenetik-Anzeige gleichermaßen brauchen. Kein eigener Netzwerk-Abruf
+// mehr nötig, deshalb jetzt synchron.
+function loadGeneIndex() {
+  geneIndex = new Map((allHorsesCache || []).map((h) => [h.name, h]));
 }
 
 // --- "Bestes Kind"-Abzeichen (Nutzerwunsch) ---
@@ -399,11 +401,12 @@ function assignBestChildBadges(children, parentStats, badges, childLabel, parent
 // geneIndex oben) - nur die für die Leistungswerte und den Stammbaum
 // nötigen Spalten. Wird in init() nur aufgerufen, wenn die Funktion in
 // den Einstellungen nicht abgeschaltet ist (siehe bestChildBadgesEnabled).
-async function loadBestChildBadges() {
-  const { data, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('id, name, gender, breeding_allowed, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament'),
-  );
-  if (error || !data) {
+function loadBestChildBadges() {
+  // Liest aus dem bereits geladenen allHorsesCache (siehe dortiger
+  // Kommentar zur Konsolidierung) statt einem eigenen Netzwerk-Abruf -
+  // HORSE_LIST_COLUMNS deckt alle hier benötigten Felder bereits ab.
+  const data = allHorsesCache;
+  if (!data) {
     bestChildBadges = new Map();
     stallionBadges = new Map();
     return;
@@ -820,12 +823,13 @@ function showFlashBanner() {
   document.addEventListener('submit', dismiss, { once: true });
 }
 
-async function populateFilterOptions() {
-  // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
-  // Besitzer-/Rasse-/Krankheits-/Locus-Werte, die nur bei Pferden jenseits
-  // der ersten 1000 Zeilen vorkommen, in den Filter-Dropdowns fehlen.
-  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('owner, gender, breed, genetic_diseases, colors'));
-  if (error || !data) return;
+function populateFilterOptions() {
+  // Liest aus dem bereits geladenen allHorsesCache (siehe Kommentar bei
+  // loadAllHorsesCache) statt einem eigenen weiteren Vollabruf - deckt
+  // dieselben Spalten (owner/gender/breed/genetic_diseases/colors)
+  // bereits ab, kein separater Netzwerk-Request mehr nötig.
+  const data = allHorsesCache;
+  if (!data) return;
 
   fillSelect('#f-owner', [...new Set(data.map((d) => d.owner).filter(Boolean))].sort());
   // Für das Freitextfeld "Besitzer wechseln" (siehe wireBulkOwnerChange) -
