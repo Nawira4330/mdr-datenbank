@@ -173,6 +173,16 @@ async function applyInitialFilterState() {
   // nur einen generischen Standard (Nutzerwunsch 2026-09-07).
   if (await restoreListReturnState()) return;
 
+  // Bugfix (Nutzerfeedback 2026-09-09): eine Standard-Filtervorlage
+  // "gewann" bisher IMMER gegen eine eigenstaendig gesetzte
+  // Standard-Sortierung, weil dieser Block vorher direkt zurueckkehrte,
+  // ohne die Sortierung unten je zu pruefen - dabei blieb es einfach bei
+  // der Sortierung, die zufaellig aktiv war, als die Filtervorlage
+  // gespeichert wurde (Filtervorlagen speichern ueber collectFilterState()
+  // ebenfalls sortField/sortDir mit ab). "filterApplied" merkt sich nur,
+  // ob wir schon geladen haben - die eigentliche Standard-Sortierung wird
+  // trotzdem noch geprueft und hat als eigenstaendige Einstellung Vorrang.
+  let filterApplied = false;
   if (defaultFilterPresetId) {
     const { data, error } = await supabaseClient
       .from('filter_presets')
@@ -187,7 +197,7 @@ async function applyInitialFilterState() {
       if ([...presetSelect.options].some((o) => o.value === defaultFilterPresetId)) {
         presetSelect.value = defaultFilterPresetId;
       }
-      return;
+      filterApplied = true;
     }
   }
 
@@ -207,10 +217,17 @@ async function applyInitialFilterState() {
         sortPresetSelect.value = defaultSortPresetId;
       }
       applyDefaultOwnerFilter();
+      // Erneutes Laden noetig, damit die jetzt korrigierte Sortierung auch
+      // wirklich greift (applyDefaultOwnerFilter ist ungefaehrlich erneut
+      // aufrufbar - setzt nur, wenn das Besitzer-Feld noch leer ist).
+      // Passiert nur in dem schmalen Fall, dass BEIDE Standards gleichzeitig
+      // gesetzt sind - sonst ganz normal nur ein Ladevorgang.
       await loadHorses();
       return;
     }
   }
+
+  if (filterApplied) return;
 
   try {
     const saved = JSON.parse(localStorage.getItem(LAST_SORT_STORAGE_KEY));
