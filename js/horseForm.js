@@ -979,7 +979,16 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
   }
 
   if (error) {
-    errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
+    // Der Name wurde (beim Bearbeiten eines bereits geladenen Pferds greift
+    // die Dopplungs-Erkennung aus resolveSaveTarget bewusst nicht, siehe
+    // dort) auf einen bereits von einem ANDEREN Pferd verwendeten Namen
+    // geändert - statt der rohen Postgres-Fehlermeldung eine verständliche
+    // Meldung anzeigen.
+    if (error.code === '23505' && error.message.includes('horses_name_unique_idx')) {
+      errorEl.textContent = 'Speichern fehlgeschlagen: Ein Pferd mit diesem Namen existiert bereits. Bitte einen anderen Namen wählen.';
+    } else {
+      errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
+    }
     return;
   }
 
