@@ -1551,6 +1551,12 @@ let currentRelatednessUpdatedAt = null;
 // dieselbe Konvention wie MDR-Planer/js/zuchtbuch.js (compareColor):
 // grün = besser als dieses Pferd, rot = schlechter, keine Farbe = gleich.
 let currentProfileDerived = { gp: null, ext: null, extPct: null, int: null };
+// Auswahl fuer den CSV-Export der Verwandten-Tabelle (Nutzerwunsch) - als
+// Namen statt IDs gefuehrt (bleibt so ueber Sortierung/Filterwechsel
+// stabil, ohne bei jedem renderZuchtbuchTab neu gemappt werden zu
+// muessen), da Pferdenamen in dieser Datenbank ohnehin eindeutig sind
+// (siehe horses_name_unique_idx).
+let zuchtbuchSelectedNames = new Set();
 
 const ZUCHTBUCH_METRIC_HIGHER_IS_BETTER = { gp: true, ext: false, extPct: true, int: false };
 function zuchtbuchCompareColor(value, reference, metric) {
@@ -1676,6 +1682,13 @@ function renderZuchtbuchTab() {
     return;
   }
 
+  // Nicht mehr angezeigte Auswahl (z.B. nach Filterwechsel) wird bewusst
+  // NICHT geloescht - bleibt "im Hintergrund" ausgewaehlt, falls wieder
+  // zurueckgefiltert wird (analog zur Pferde-Uebersicht, deren
+  // selectedIds ebenfalls filterunabhaengig sind).
+  const allSelected = filtered.length > 0 && filtered.every((r) => zuchtbuchSelectedNames.has(r.name));
+  const someSelected = filtered.some((r) => zuchtbuchSelectedNames.has(r.name));
+
   const rows = filtered.map((r) => {
     const nameCell = r.id
       ? `<a href="view.html?id=${encodeURIComponent(r.id)}">${escapeHtml(r.name || '(ohne Name)')}</a>`
@@ -1684,6 +1697,7 @@ function renderZuchtbuchTab() {
       ? '<span class="pill no">Inzucht-Gefahr</span>'
       : '<span class="pill yes">Unbedenklich</span>';
     return `<tr>
+      <td data-label="Auswählen"><input type="checkbox" data-zb-select="${encodeURIComponent(r.name)}"${zuchtbuchSelectedNames.has(r.name) ? ' checked' : ''} /></td>
       <td>${nameCell}</td>
       <td>${tagsBadgesHtml(r.tags)}</td>
       <td>${r.gender ? escapeHtml(r.gender) : '–'}</td>
@@ -1696,8 +1710,13 @@ function renderZuchtbuchTab() {
       <td>${pill}</td>
     </tr>`;
   }).join('');
+  html += `<div class="form-actions">
+    <button type="button" id="zuchtbuch-export-csv-btn" class="secondary small" title="Exportiert die ausgewählten Verwandten (Kästchen) - ohne Auswahl alle aktuell angezeigten">📄 CSV exportieren</button>
+    ${someSelected ? `<span class="small muted">${filtered.filter((r) => zuchtbuchSelectedNames.has(r.name)).length} ausgewählt</span>` : ''}
+  </div>`;
   html += `<div class="table-wrap"><table id="zuchtbuch-relatives-table">
     <thead><tr>
+      <th><input type="checkbox" id="zuchtbuch-select-all"${allSelected ? ' checked' : ''} /></th>
       <th data-sort="name">Pferd${zuchtbuchSortArrow('name')}</th>
       <th data-sort="tag">Schlagwort${zuchtbuchSortArrow('tag')}</th>
       <th data-sort="gender">Geschlecht${zuchtbuchSortArrow('gender')}</th>
@@ -1712,6 +1731,92 @@ function renderZuchtbuchTab() {
     <tbody>${rows}</tbody>
   </table></div>`;
   container.innerHTML = html;
+  wireZuchtbuchSelection(filtered);
+}
+
+// Checkboxen (einzeln + "alle") und CSV-Export-Button - muss nach jedem
+// renderZuchtbuchTab() neu verdrahtet werden, da container.innerHTML das
+// komplette Markup (inkl. Button) jedes Mal ersetzt.
+function wireZuchtbuchSelection(filtered) {
+  const container = document.getElementById('detail-zuchtbuch');
+  container.querySelectorAll('[data-zb-select]').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const name = decodeURIComponent(cb.dataset.zbSelect);
+      if (cb.checked) zuchtbuchSelectedNames.add(name);
+      else zuchtbuchSelectedNames.delete(name);
+      renderZuchtbuchTab();
+    });
+  });
+  const selectAllBox = document.getElementById('zuchtbuch-select-all');
+  if (selectAllBox) {
+    selectAllBox.addEventListener('change', () => {
+      filtered.forEach((r) => {
+        if (selectAllBox.checked) zuchtbuchSelectedNames.add(r.name);
+        else zuchtbuchSelectedNames.delete(r.name);
+      });
+      renderZuchtbuchTab();
+    });
+  }
+  const exportBtn = document.getElementById('zuchtbuch-export-csv-btn');
+  if (exportBtn) exportBtn.addEventListener('click', () => exportZuchtbuchCsv(filtered));
+}
+
+const ZUCHTBUCH_CSV_COLUMNS = ['Pferd', 'Schlagwörter', 'Geschlecht', 'Beziehung', 'Besitzer', 'GP', 'Ext', 'Ext%', 'Int', 'Bei Verpaarung'];
+
+// Semikolon statt Komma + deutsches Dezimalkomma - gleiche Begruendung wie
+// beim CSV-Export der Pferdeliste (siehe csvEscape/deDecimal in js/list.js,
+// hier dupliziert statt geteilt, da horse.html/view.html js/list.js nicht
+// laden).
+function zuchtbuchCsvEscape(value) {
+  const str = String(value ?? '');
+  return /[;"\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+}
+
+function zuchtbuchDeDecimal(value) {
+  return String(value).replace('.', ',');
+}
+
+function zuchtbuchCsvRowOf(r) {
+  const tagsCell = (r.tags || []).map((t) => t.note ? `${t.label}: ${t.note}` : t.label).join(', ');
+  const beziehungCell = (r.beziehung || '') + (r.otherParent ? ` (${r.otherParent.label}: ${r.otherParent.name})` : '');
+  return [
+    r.name || '',
+    tagsCell,
+    r.gender || '',
+    beziehungCell,
+    r.owner || '',
+    r.gp ?? '',
+    r.ext != null ? zuchtbuchDeDecimal(r.ext.toFixed(2)) : '',
+    r.extPct != null ? zuchtbuchDeDecimal(r.extPct) + '%' : '',
+    r.int != null ? zuchtbuchDeDecimal(r.int.toFixed(2)) : '',
+    r.inbreeding ? 'Inzucht-Gefahr' : 'Unbedenklich',
+  ];
+}
+
+// Sind über die Kästchen einzelne Verwandte ausgewählt, werden nur diese
+// exportiert - ohne Auswahl exportiert der Button stattdessen alle aktuell
+// angezeigten (gefilterten/sortierten) Zeilen, analog zum CSV-Export der
+// Pferdeliste (js/list.js/exportCsv).
+function exportZuchtbuchCsv(filtered) {
+  const rows = zuchtbuchSelectedNames.size > 0
+    ? filtered.filter((r) => zuchtbuchSelectedNames.has(r.name))
+    : filtered;
+  if (!rows.length) return;
+
+  const lines = [ZUCHTBUCH_CSV_COLUMNS, ...rows.map(zuchtbuchCsvRowOf)]
+    .map((row) => row.map(zuchtbuchCsvEscape).join(';'));
+  // BOM voranstellen, damit Excel die UTF-8-Kodierung (Umlaute) korrekt erkennt.
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const horseName = document.getElementById('name')?.value.trim() || 'pferd';
+  a.download = `zuchtbuch_${horseName.replace(/[^\w-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function wireZuchtbuchFilter() {
