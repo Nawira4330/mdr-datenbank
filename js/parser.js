@@ -420,18 +420,11 @@ const PEDIGREE_SECTION_LABELS = new Set([
 function parsePedigree(lines, mainBreed) {
   // Anker ist "Besitzhistorie", nicht "Stammbaum": beim Kopieren von der
   // mobilen Ansicht fehlt die Überschrift "Stammbaum" komplett, während
-  // "Besitzhistorie" in beiden Varianten unmittelbar davor steht. Steht
-  // "Stammbaum" (Desktop-Navigationspunkt) kurz danach noch im Text, wird
-  // es zusätzlich übersprungen, damit es nicht fälschlich als Pferdename
-  // interpretiert wird.
+  // "Besitzhistorie" in beiden Varianten unmittelbar davor steht.
   let startIdx = lines.indexOf('Besitzhistorie');
   if (startIdx === -1) {
     startIdx = lines.indexOf('Stammbaum');
     if (startIdx === -1) return { ancestors: [], sections: null };
-  } else {
-    for (let i = startIdx + 1; i < Math.min(startIdx + 4, lines.length); i++) {
-      if (lines[i] === 'Stammbaum') { startIdx = i; break; }
-    }
   }
   let endIdx = lines.length;
   for (let i = startIdx + 1; i < lines.length; i++) {
@@ -440,7 +433,21 @@ function parsePedigree(lines, mainBreed) {
       break;
     }
   }
-  const segment = lines.slice(startIdx + 1, endIdx).filter(Boolean);
+  // Bei einem bereits gekauften/verkauften Pferd listet "Besitzhistorie"
+  // VOR dem eigentlichen Stammbaum noch echte Besitzwechsel-Zeilen auf
+  // (Tab-getrennt: Datum/Uhrzeit, Name, Transaktionsart wie "Privatkauf")
+  // - ohne diese rauszufiltern, wuerde die erste solche Zeile faelschlich
+  // als "das Pferd selbst" gelesen (siehe sawSelf unten) und der komplette
+  // Stammbaum (inkl. Vater/Mutter) um einen Eintrag verschoben landen
+  // (Bugfix, Nutzerfeedback: Krone-Abzeichen erschien faelschlich trotz
+  // bereits vorhandenem Sohn, weil dessen gespeicherter "Vater"-Name in
+  // Wahrheit diese Kauf-Zeile war). "Stammbaum" selbst (Desktop-
+  // Navigationspunkt) wird ebenfalls ueberall rausgefiltert, nicht nur
+  // direkt nach der Ueberschrift, aus demselben Grund.
+  const segment = lines.slice(startIdx + 1, endIdx)
+    .filter(Boolean)
+    .filter((l) => l !== 'Stammbaum')
+    .filter((l) => !/^\d{1,2}\.\d{1,2}\.\d{4},\s*\d{1,2}:\d{2}\t/.test(l));
 
   const ancestors = [];
   let current = null;
