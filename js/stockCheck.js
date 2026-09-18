@@ -132,11 +132,33 @@ function parseOwnHorseListText(rawText) {
   return entries;
 }
 
+// Pferdenamen sind in der Datenbank eindeutig (horses_name_unique_idx)
+// und auch im Spiel darf ein Konto keine zwei Pferde mit demselben Namen
+// haben - tauchen beim Einlesen trotzdem doppelte Namen auf, ist das kein
+// echter Bestandsfall, sondern ein Hinweis auf einen Parsing-Fehler (z.B.
+// eine verschobene Zeile, wodurch sich Name/Rasse/... aller nachfolgenden
+// Pferde verschieben) - wird deshalb prominent gewarnt statt die Werte
+// stillschweigend zu verwenden.
+function stockCheckDuplicateWarningHtml(entries) {
+  const seen = new Map();
+  for (const e of entries) {
+    const key = e.name.toLowerCase();
+    seen.set(key, (seen.get(key) || 0) + 1);
+  }
+  const duplicateNames = [...seen.entries()].filter(([, count]) => count > 1).map(([name]) => name);
+  if (!duplicateNames.length) return '';
+  const names = entries
+    .filter((e) => duplicateNames.includes(e.name.toLowerCase()))
+    .map((e) => e.name);
+  return `<p class="error">⚠️ ${duplicateNames.length} Name${duplicateNames.length === 1 ? '' : 'n'} mehrfach im eingefügten Text erkannt (${[...new Set(names)].map(stockCheckEscapeHtml).join(', ')}) - das deutet auf einen Fehler beim Einlesen hin (z.B. eine verschobene Zeile), da Pferdenamen eigentlich eindeutig sein müssen. Bitte den eingefügten Text prüfen, bevor du dich auf das Ergebnis unten verlässt.</p>`;
+}
+
 async function runStockCheck(ownIdentity) {
   const selectedBreeds = selectedStockCheckBreeds();
   const resultEl = document.getElementById('stock-check-result');
   const rawText = document.getElementById('stock-check-input').value;
   const allEntries = parseOwnHorseListText(rawText);
+  const duplicateWarningHtml = stockCheckDuplicateWarningHtml(allEntries);
 
   if (!allEntries.length) {
     resultEl.innerHTML = '<p class="error">Keine Pferde erkannt - bitte prüfen, ob die komplette Profilseite mit aufgeklapptem "Pferde anzeigen?" eingefügt wurde.</p>';
@@ -205,6 +227,7 @@ async function runStockCheck(ownIdentity) {
   const missingInGameHtml = missingInGame.map((h) => `<li>${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` (${stockCheckEscapeHtml(h.breed)})` : ''}</li>`);
 
   resultEl.innerHTML = `
+    ${duplicateWarningHtml}
     <p class="small muted">${entries.length} von ${allEntries.length} erkannten Pferden berücksichtigt (Rassen: ${[...selectedBreeds].map(stockCheckEscapeHtml).join(', ')}), ${ownHorses.length} eigene Pferde in der Datenbank (Besitzer „${stockCheckEscapeHtml(ownIdentity)}").</p>
     <p class="group-heading">🆕 Im Spiel vorhanden, aber (noch) nicht bei deinen Pferden in der Datenbank</p>
     ${list(missingInDbHtml, 'Keine – alles eingetragen.')}
