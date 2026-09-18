@@ -288,25 +288,29 @@
         umgekehrt Pferde unter deinem Besitzernamen in der Datenbank stehen, die im Spiel
         nicht mehr auftauchen (z.B. weil sie verkauft wurden). Da die MDR-Datenbank keinen
         direkten Zugriff auf das Spiel hat, läuft der Abgleich über einen eingefügten Text:
-        im Spiel auf dein Profil → Reiter <strong>„Zucht"</strong> → bei der gewünschten
-        Zuchtlinie auf <strong>„Pferde anzeigen?"</strong> klicken, danach die komplette
-        Seite (Strg+A, Strg+C) kopieren und unten einfügen. Fehlt ein Pferd noch in der
-        Datenbank, wird zusätzlich geprüft, ob es dort schon unter einem <strong>anderen</strong>
-        Besitzernamen steht (z.B. Namensabweichung oder Vorbesitzer) – die Prüfung auf
-        „möglicherweise verkauft" läuft dagegen ausschließlich gegen deine eigenen Pferde
-        (Besitzer <strong id="stock-check-identity">…</strong>).
+        im Spiel auf dein Profil → Reiter <strong>„Zucht"</strong> → auf
+        <strong>„Pferde anzeigen?"</strong> klicken (zeigt den gesamten Bestand, unabhängig
+        von der Zuchtlinie), danach die komplette Seite (Strg+A, Strg+C) kopieren und unten
+        einfügen. Fehlt ein Pferd noch in der Datenbank, wird zusätzlich geprüft, ob es dort
+        schon unter einem <strong>anderen</strong> Besitzernamen steht (z.B. Namensabweichung
+        oder Vorbesitzer) – die Prüfung auf „möglicherweise verkauft" läuft dagegen
+        ausschließlich gegen deine eigenen Pferde (Besitzer <strong id="stock-check-identity">…</strong>).
       </p>
       <div>
         <label for="stock-check-input">Seite mit "Pferde anzeigen?" aus dem Spiel einfügen</label>
         <textarea id="stock-check-input" rows="8" placeholder="Komplette Profilseite mit aufgeklappter Pferdeliste einfügen …"></textarea>
       </div>
-      <div class="form-grid">
-        <div>
-          <label for="stock-check-breed">Rasse</label>
-          <select id="stock-check-breed">
-            <option value="">Alle</option>
-          </select>
-        </div>
+      <p class="muted small">
+        Zu prüfende Rassen (Mehrfachauswahl) – die Liste richtet sich nach deiner Auswahl
+        bei „Sichtbare Rassen in der Übersicht" oben; ist dort nichts ausgewählt, stehen
+        alle vorkommenden Rassen zur Auswahl.
+      </p>
+      <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">
+        <input type="checkbox" id="stock-check-breed-all" style="width: auto;" checked />
+        <strong>Alle</strong>
+      </label>
+      <div id="stock-check-breed-checkboxes" class="checkbox-list">
+        <p class="muted small">Lade Rassen…</p>
       </div>
       <p>
         <button type="button" id="stock-check-btn" class="secondary">🔍 Abgleichen</button>

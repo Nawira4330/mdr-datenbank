@@ -17,14 +17,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ownIdentity = session.user.email.split('@')[0];
   document.getElementById('stock-check-identity').textContent = ownIdentity;
 
-  // Automatisches Rassen-Dropdown beim Einfuegen, wie #raw-text in
-  // horse.html - setTimeout(0), weil der eingefuegte Text im "paste"-
-  // Event selbst noch nicht im Feld steht.
-  document.getElementById('stock-check-input').addEventListener('paste', () => {
-    setTimeout(() => populateStockCheckBreeds(parseOwnHorseListText(document.getElementById('stock-check-input').value)), 0);
-  });
+  await loadStockCheckBreedCheckboxes(session.user.id);
+  wireStockCheckBreedAllToggle();
   document.getElementById('stock-check-btn').addEventListener('click', () => runStockCheck(ownIdentity));
 });
+
+// Rassen-Auswahl richtet sich nach "Sichtbare Rassen in der Übersicht"
+// oben auf derselben Seite (user_settings.preferred_breeds) statt jede
+// Rasse aus der Datenbank anzubieten (Nutzerwunsch) - ist dort nichts
+// ausgewählt (leer = "alle Rassen", gleiche Konvention wie beim
+// Rasse-Filter der Übersicht selbst), stehen ersatzweise alle
+// tatsächlich vorkommenden Rassen zur Auswahl (wie populateBreedCheckboxes
+// oben auf dieser Seite).
+async function loadStockCheckBreedCheckboxes(userId) {
+  const container = document.getElementById('stock-check-breed-checkboxes');
+  const { data: settingsData } = await supabaseClient
+    .from('user_settings')
+    .select('preferred_breeds')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  let breeds = settingsData?.preferred_breeds?.length ? settingsData.preferred_breeds : null;
+  if (!breeds) {
+    const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('breed'));
+    if (error || !data) {
+      container.innerHTML = '<p class="error">Rassen konnten nicht geladen werden.</p>';
+      return;
+    }
+    const set = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
+    set.add('Rasselos');
+    breeds = [...set];
+  }
+  breeds = [...breeds].sort((a, b) => a.localeCompare(b, 'de'));
+  container.innerHTML = breeds.map((b) =>
+    `<label><input type="checkbox" data-stock-check-breed value="${stockCheckEscapeHtml(b)}" checked /> ${stockCheckEscapeHtml(b)}</label>`
+  ).join('');
+}
+
+function wireStockCheckBreedAllToggle() {
+  const allBox = document.getElementById('stock-check-breed-all');
+  allBox.addEventListener('change', () => {
+    document.querySelectorAll('#stock-check-breed-checkboxes [data-stock-check-breed]').forEach((cb) => {
+      cb.checked = allBox.checked;
+    });
+  });
+  // Wird eine einzelne Rasse abgewaehlt, soll "Alle" nicht mehr angehakt
+  // bleiben - umgekehrt (alle einzeln wieder anhaken) springt "Alle"
+  // automatisch wieder an, statt manuell mitgepflegt werden zu muessen.
+  document.getElementById('stock-check-breed-checkboxes').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-stock-check-breed]')) return;
+    const boxes = [...document.querySelectorAll('#stock-check-breed-checkboxes [data-stock-check-breed]')];
+    allBox.checked = boxes.every((cb) => cb.checked);
+  });
+}
+
+function selectedStockCheckBreeds() {
+  return new Set(
+    [...document.querySelectorAll('#stock-check-breed-checkboxes [data-stock-check-breed]:checked')].map((cb) => cb.value)
+  );
+}
 
 function stockCheckEscapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
@@ -78,28 +129,23 @@ function parseOwnHorseListText(rawText) {
   return entries;
 }
 
-function populateStockCheckBreeds(entries) {
-  const sel = document.getElementById('stock-check-breed');
-  const current = sel.value;
-  const breeds = [...new Set(entries.map((e) => e.breed).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
-  sel.innerHTML = '<option value="">Alle</option>' + breeds.map((b) => `<option value="${stockCheckEscapeHtml(b)}">${stockCheckEscapeHtml(b)}</option>`).join('');
-  if (breeds.includes(current)) sel.value = current;
-}
-
 async function runStockCheck(ownIdentity) {
-  const breed = document.getElementById('stock-check-breed').value;
+  const selectedBreeds = selectedStockCheckBreeds();
   const resultEl = document.getElementById('stock-check-result');
   const rawText = document.getElementById('stock-check-input').value;
   const allEntries = parseOwnHorseListText(rawText);
-  populateStockCheckBreeds(allEntries);
 
   if (!allEntries.length) {
     resultEl.innerHTML = '<p class="error">Keine Pferde erkannt - bitte prüfen, ob die komplette Profilseite mit aufgeklapptem "Pferde anzeigen?" eingefügt wurde.</p>';
     return;
   }
-  const entries = breed ? allEntries.filter((e) => e.breed === breed) : allEntries;
+  if (!selectedBreeds.size) {
+    resultEl.innerHTML = '<p class="error">Bitte mindestens eine Rasse auswählen.</p>';
+    return;
+  }
+  const entries = allEntries.filter((e) => selectedBreeds.has(e.breed));
   if (!entries.length) {
-    resultEl.innerHTML = `<p class="error">Keines der ${allEntries.length} erkannten Pferde hat die Rasse „${stockCheckEscapeHtml(breed)}".</p>`;
+    resultEl.innerHTML = `<p class="error">Keines der ${allEntries.length} erkannten Pferde hat eine der ausgewählten Rassen.</p>`;
     return;
   }
 
@@ -116,7 +162,7 @@ async function runStockCheck(ownIdentity) {
 
   const allHorses = data || [];
   const isOwn = (h) => (h.owner || '').toLowerCase() === ownIdentity.toLowerCase();
-  const ownHorses = allHorses.filter((h) => isOwn(h) && (!breed || h.breed === breed));
+  const ownHorses = allHorses.filter((h) => isOwn(h) && selectedBreeds.has(h.breed));
 
   const byNameLower = new Map();
   for (const h of allHorses) {
@@ -156,7 +202,7 @@ async function runStockCheck(ownIdentity) {
   const missingInGameHtml = missingInGame.map((h) => `<li>${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` (${stockCheckEscapeHtml(h.breed)})` : ''}</li>`);
 
   resultEl.innerHTML = `
-    <p class="small muted">${entries.length} von ${allEntries.length} erkannten Pferden berücksichtigt${breed ? ` (Rasse „${stockCheckEscapeHtml(breed)}")` : ''}, ${ownHorses.length} eigene Pferde${breed ? ` dieser Rasse` : ''} in der Datenbank (Besitzer „${stockCheckEscapeHtml(ownIdentity)}").</p>
+    <p class="small muted">${entries.length} von ${allEntries.length} erkannten Pferden berücksichtigt (Rassen: ${[...selectedBreeds].map(stockCheckEscapeHtml).join(', ')}), ${ownHorses.length} eigene Pferde in der Datenbank (Besitzer „${stockCheckEscapeHtml(ownIdentity)}").</p>
     <p class="group-heading">🆕 Im Spiel vorhanden, aber (noch) nicht bei deinen Pferden in der Datenbank</p>
     ${list(missingInDbHtml, 'Keine – alles eingetragen.')}
     <p class="group-heading">❓ Bei dir in der Datenbank, aber nicht (mehr) in der eingefügten Liste</p>
