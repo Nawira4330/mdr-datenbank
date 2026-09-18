@@ -1,19 +1,22 @@
 // --- Bestandsabgleich: eigene Pferde im Spiel vs. Datenbank -------------
 //
-// Ohne Spiel-API laesst sich das nur ueber einen manuellen Text-Abgleich
-// loesen (wie der normale Pferde-Import auch). Quelle ist NICHT die
-// einzelne Pferdeseite (das ist horse.html/js/parser.js), sondern der
+// Eigenstaendige Seite (bestandsabgleich.html) statt Teil der Einstellungen
+// oder Verwaltung (Nutzerwunsch) - eigener Menuepunkt im Benutzernamen-
+// Dropdown (siehe js/nav.js), fuer jedes Konto nutzbar (nicht nur Admin).
+// Ohne Spiel-API laesst sich der Abgleich nur ueber einen manuellen Text-
+// Abgleich loesen (wie der normale Pferde-Import auch). Quelle ist NICHT
+// die einzelne Pferdeseite (das ist horse.html/js/parser.js), sondern der
 // eigene "Zucht"-Reiter im Nutzerprofil mit aufgeklapptem "Pferde
 // anzeigen?" - dort steht je Pferd EIN Feld pro Zeile in fester
 // Reihenfolge (Name, Rasse, Geschlecht, Alter, GP, Farbe), siehe
-// parseOwnHorseListText. Fuer jedes Konto nutzbar (nicht nur Admin, daher
-// hier statt in verwaltung.html/js) - der Besitzer wird dabei nicht mehr
-// manuell ausgewaehlt, sondern automatisch aus dem eingeloggten
-// Benutzernamen abgeleitet (wie formIdentity in horseForm.js).
+// parseOwnHorseListText. Der Besitzer wird nicht manuell ausgewaehlt,
+// sondern automatisch aus dem eingeloggten Benutzernamen abgeleitet (wie
+// formIdentity in horseForm.js).
 
 document.addEventListener('DOMContentLoaded', async () => {
   const session = await requireSession();
   if (!session) return;
+  await renderSharedNav(session);
   const ownIdentity = session.user.email.split('@')[0];
   document.getElementById('stock-check-identity').textContent = ownIdentity;
 
