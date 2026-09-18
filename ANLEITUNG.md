@@ -14,9 +14,10 @@ es gedacht ist und *wann* du es brauchst.
 6. [Verpaarungs-Log](#6-verpaarungs-log)
 7. [Verwaltung](#7-verwaltung)
 8. [Durchschnittsrechner](#8-durchschnittsrechner)
-9. [Einstellungen](#9-einstellungen)
-10. [Zucht-/Turnierplaner](#10-zucht-turnierplaner)
-11. [Häufige Fragen](#11-häufige-fragen)
+9. [Bestandsabgleich](#9-bestandsabgleich)
+10. [Einstellungen](#10-einstellungen)
+11. [Zucht-/Turnierplaner](#11-zucht-turnierplaner)
+12. [Häufige Fragen](#12-häufige-fragen)
 
 ---
 
@@ -61,7 +62,7 @@ auszuwählen.
 „Ø Gesamtpotential”, „ZZL-Pferde”, „Favoriten”) Zahlen zur gerade
 gefilterten/sortierten Tabelle – nicht zum Gesamtbestand. Welche Kacheln
 in welcher Reihenfolge angezeigt werden, legst du in den
-[Einstellungen](#9-einstellungen) fest – „⚙ Kacheln anpassen” ganz
+[Einstellungen](#10-einstellungen) fest – „⚙ Kacheln anpassen” ganz
 rechts in der Kachelreihe bringt dich direkt dorthin.
 
 ### 3.1 Kopfzeile
@@ -73,15 +74,16 @@ sonst „← Zur Übersicht“):
 
 - **MDR-Planer** – Links zu unserem separaten Zucht-Planungs-Tool
   (öffnen jeweils in einem neuen Tab, siehe
-  [Abschnitt 10](#10-zucht-turnierplaner)): alle Tools, Zuchtplaner,
+  [Abschnitt 11](#11-zucht-turnierplaner)): alle Tools, Zuchtplaner,
   Turnierplaner, Zuchtbuch, Fohlen-Tracker, Verwandtschaftsmatrix.
 - **MDR-DB** – Anleitung (diese Seite), Update-Log sowie 💞
   Verpaarungs-Log (siehe [Abschnitt 6](#6-verpaarungs-log)) – Letzteres
-  nur, wenn du es nicht unter [Einstellungen](#9-einstellungen)
+  nur, wenn du es nicht unter [Einstellungen](#10-einstellungen)
   ausgeblendet hast.
 - **Dein Benutzername** – ⚙️ Einstellungen (siehe
-  [Abschnitt 9](#9-einstellungen)), 📊 Durchschnitt (siehe
-  [Abschnitt 8](#8-durchschnittsrechner)), 🛠️ Verwaltung (nur mit
+  [Abschnitt 10](#10-einstellungen)), 📊 Durchschnitt (siehe
+  [Abschnitt 8](#8-durchschnittsrechner)), 📋 Bestandsabgleich (siehe
+  [Abschnitt 9](#9-bestandsabgleich)), 🛠️ Verwaltung (nur mit
   Verwaltungszugriff, siehe [Abschnitt 7](#7-verwaltung)) sowie
   „Abmelden“.
 
@@ -105,7 +107,7 @@ auf die Überschrift), ist beim Öffnen der Seite aber immer erst
 aufgeklappt.
 
 **Vorgeschlagene Schlagwörter**: Darunter kann ein ähnlicher Hinweiskasten
-erscheinen, wenn z.B. der [Zucht-/Turnierplaner](#10-zucht-turnierplaner)
+erscheinen, wenn z.B. der [Zucht-/Turnierplaner](#11-zucht-turnierplaner)
 ein Schlagwort für ein Pferd vorschlägt (aus Zuchtbuch, Fohlen-Tracker
 oder Verwandtschaftsmatrix). Diese Vorschläge werden **nicht automatisch**
 übernommen, sondern nur zwischengespeichert – du siehst pro Vorschlag das
@@ -158,7 +160,7 @@ Suchfelder, der Sortierung sowie des Ø-Vergleichs (An/Aus und
 Vergleichsbasis) für dein Konto. Speicherst du erneut unter demselben
 Namen, wird die Vorlage überschrieben. Über das Dropdown „Vorlage
 laden…“ wendest du eine gespeicherte Vorlage sofort an. Löschen geht
-nur über [Einstellungen](#9-einstellungen), nicht direkt in der
+nur über [Einstellungen](#10-einstellungen), nicht direkt in der
 Übersicht. Dort lässt sich außerdem eine Vorlage als **Standard beim
 Öffnen** festlegen – die Übersicht startet dann direkt gefiltert und
 sortiert wie beim Speichern dieser Vorlage, statt leer. Ohne
@@ -173,7 +175,7 @@ nur die aktuelle Sortierung (Spalte + Richtung) benannt speichern –
 Speicherst du erneut unter demselben Namen, wird sie überschrieben.
 Über das Dropdown „Sortierung laden…“ wendest du eine gespeicherte
 Sortierung sofort an (ändert nur die Sortierung, keine Filter). Löschen
-geht nur über [Einstellungen](#9-einstellungen), dort lässt sich auch
+geht nur über [Einstellungen](#10-einstellungen), dort lässt sich auch
 eine Sortier-Vorlage als **Standard beim Öffnen** festlegen – sie greift
 aber nur, wenn keine Standard-Filtervorlage gesetzt ist (die bringt ihre
 eigene Sortierung schon mit).
@@ -186,7 +188,7 @@ eigene Sortierung schon mit).
   „Rasselos“ zeigt gezielt Pferde ohne eingetragene Rasse. Der Button
   „Nur meine“ neben Besitzer setzt den Filter direkt auf dein eigenes
   Konto. Hast du unter
-  [Einstellungen](#9-einstellungen) bevorzugte Rassen ausgewählt, listet
+  [Einstellungen](#10-einstellungen) bevorzugte Rassen ausgewählt, listet
   der Rasse-Filter nur noch diese als Optionen auf – „Alle (auch
   außerhalb meiner Auswahl)“ hebt das für den Moment wieder auf und zeigt
   alle Pferde unabhängig von deiner Auswahl.
@@ -288,7 +290,7 @@ legst du fest, welche Pferde in die Durchschnittsberechnung einfließen
 leerer Wert (Fehlanzeige) bei GP/Ext/Ext%/Int bleibt unmarkiert.
 Unterhalb der Dropdowns zeigt eine Zeile die berechneten
 Durchschnittswerte selbst an (z.B. „Ø GP: 367 (±5)“) – die Zahl in
-Klammern ist deine [persönliche Toleranz](#9-einstellungen) für den
+Klammern ist deine [persönliche Toleranz](#10-einstellungen) für den
 jeweiligen Wert, falls eingetragen. Die Checkbox **Toleranz
 berücksichtigen** daneben schaltet die Toleranz für die Färbung ganz
 ein oder aus, ohne dass du sie in den Einstellungen löschen musst.
@@ -462,6 +464,17 @@ Eigenschaft.
 standen, gruppiert nach Eltern/Großeltern/Urgroßeltern/weitere Vorfahren.
 Die ersten beiden Einträge sind dabei immer zuverlässig Vater, dann
 Mutter.
+
+**Zuchtbuch** – listet alle mit diesem Pferd verwandten Pferde aus der
+Datenbank (Filter „Verwandtschaft“: Alle/Gleicher Vater/Gleiche
+Mutter/Kinder/Alle Nachkommen), inklusive GP/Ext/Ext%/Int farblich im
+Vergleich zu diesem Pferd sowie einem Hinweis, ob eine Verpaarung mit
+diesem Pferd Inzucht im gemeinsamen Fohlen verursachen würde. Sortierbar
+per Klick auf die Spaltenköpfe. Über die Kästchen je Zeile (oder „alle
+auswählen“ im Tabellenkopf) lässt sich eine Auswahl treffen und per
+„📄 CSV exportieren“ als Datei herunterladen – ohne Auswahl exportiert
+der Button stattdessen alle gerade angezeigten (gefilterten/sortierten)
+Verwandten.
 
 ### 4.5 Zwischen Pferden wechseln
 
@@ -669,7 +682,51 @@ aus allen). „Zurücksetzen“ leert alle Filter wieder.
 
 ---
 
-## 9. Einstellungen
+## 9. Bestandsabgleich
+
+Erreichbar über dein Benutzername-Menü oben rechts (📋 Bestandsabgleich).
+Prüft, ob alle deine eigenen Pferde aus dem Spiel auch in der Datenbank
+stehen – und ob umgekehrt Pferde unter deinem Besitzernamen in der
+Datenbank stehen, die im Spiel nicht mehr auftauchen (z.B. weil sie
+verkauft wurden). Da die Datenbank keinen direkten Zugriff auf das Spiel
+hat, läuft der Abgleich über einen Text, den du selbst einfügst.
+
+1. Im Spiel auf dein Profil gehen, Reiter „Zucht“ öffnen und auf „Pferde
+   anzeigen?“ klicken – das zeigt deinen gesamten Bestand, unabhängig von
+   der Zuchtlinie. Die komplette Seite markieren (Strg+A) und kopieren
+   (Strg+C).
+2. Den Text in das Feld „Seite mit 'Pferde anzeigen?' aus dem Spiel
+   einfügen“ einfügen.
+3. Bei „Zu prüfende Rassen“ per Kästchen auswählen, welche Rassen in den
+   Abgleich einbezogen werden sollen (oder „Alle“ für den kompletten
+   Bestand). Angeboten werden nur die Rassen, die du unter
+   [„Sichtbare Rassen in der Übersicht“](#10-einstellungen) in den
+   Einstellungen ausgewählt hast – ist dort nichts ausgewählt, stehen
+   alle im Spiel vorkommenden Rassen zur Auswahl.
+4. „🔍 Abgleichen“ klicken.
+
+Das Ergebnis zeigt zwei Listen:
+
+- **🆕 Im Spiel vorhanden, aber (noch) nicht bei deinen Pferden in der
+  Datenbank** – fehlende Neuzugänge. Steht ein Pferd davon bereits unter
+  einem **anderen** Besitzernamen in der Datenbank (z.B. abweichende
+  Schreibweise oder ein Vorbesitzer-Eintrag), wird das mit ⚠️ direkt
+  dazu vermerkt, statt es als komplette Neuanlage erscheinen zu lassen.
+- **❓ Bei dir in der Datenbank, aber nicht (mehr) in der eingefügten
+  Liste** – möglicherweise verkaufte/abgegebene Pferde, oder eine leicht
+  abweichende Schreibweise. Diese Prüfung läuft ausschließlich gegen
+  deine eigenen Pferde (Besitzer = dein Benutzername).
+
+Tauchen dabei Warnungen zu doppelt erkannten Namen auf, deutet das auf
+einen Fehler beim Einlesen hin (z.B. eine verrutschte Zeile im
+eingefügten Text) – Pferdenamen sind sowohl im Spiel als auch in der
+Datenbank eindeutig, ein „echtes“ Duplikat kann es also nicht geben.
+Bitte in dem Fall den eingefügten Text prüfen, bevor du dich auf das
+Ergebnis verlässt.
+
+---
+
+## 10. Einstellungen
 
 Persönliche Einstellungen, die nur für dein eigenes Konto gelten.
 
@@ -741,7 +798,7 @@ sich dadurch nicht. 0 oder leer = wie bisher, keine Toleranz.
 
 ---
 
-## 10. Zucht-/Turnierplaner
+## 11. Zucht-/Turnierplaner
 
 Die Links unter „MDR-Planer“ in der Kopfzeile führen zu unserem
 separaten Zucht-Planungs-Tool (alle Tools, Zuchtplaner, Turnierplaner,
@@ -751,7 +808,7 @@ eigener Bedienung – diese Anleitung deckt es nicht mit ab.
 
 ---
 
-## 11. Häufige Fragen
+## 12. Häufige Fragen
 
 **Warum sehe ich bei einem Pferd andere Werte als im Spiel?**
 GP, Ext, Ext% und Int werden nicht 1:1 aus dem Spiel übernommen, sondern
