@@ -75,6 +75,34 @@
       <progress id="backfill-progress-bar" value="0" max="100" style="width: 100%; margin-top: 0.5rem;" hidden></progress>
       <ul id="backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
     </fieldset>
+
+    <fieldset>
+      <legend>Bestandsabgleich</legend>
+      <p class="muted small">
+        Prüft anhand einer aus dem Spiel eingefügten Liste, ob alle eigenen Pferde eines
+        Besitzers in der Datenbank stehen – und ob umgekehrt Pferde in der Datenbank
+        stehen, die im Spiel unter diesem Besitzernamen nicht mehr auftauchen (z.B. weil
+        sie verkauft wurden). Da die MDR-Datenbank keinen direkten Zugriff auf das Spiel
+        hat, läuft der Abgleich über eine eingefügte Textliste statt automatisch – bitte
+        die eigene Pferdeliste aus dem Spiel kopieren und unten einfügen (eine Zeile pro
+        Pferd reicht, zusätzliche Spalten in derselben Zeile werden ignoriert). Die
+        erkannten Namen werden mit angezeigt, damit Fehlinterpretationen sofort auffallen.
+      </p>
+      <div class="form-grid">
+        <div>
+          <label for="stock-check-owner">Besitzer (wie in der Datenbank eingetragen)</label>
+          <select id="stock-check-owner"></select>
+        </div>
+      </div>
+      <div>
+        <label for="stock-check-input">Eigene-Pferde-Liste aus dem Spiel einfügen</label>
+        <textarea id="stock-check-input" rows="8" placeholder="Eine Zeile pro Pferdename …"></textarea>
+      </div>
+      <p>
+        <button type="button" id="stock-check-btn" class="secondary">🔍 Abgleichen</button>
+      </p>
+      <div id="stock-check-result"></div>
+    </fieldset>
   </main>
 
   <script src="js/config.js"></script>
