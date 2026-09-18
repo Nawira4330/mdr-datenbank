@@ -22,8 +22,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadStockCheckBreedCheckboxes(session.user.id);
   wireStockCheckBreedAllToggle();
+  wireStockCheckMissingActions();
   document.getElementById('stock-check-btn').addEventListener('click', () => runStockCheck(ownIdentity));
 });
+
+// Aktuell angezeigte "moeglicherweise verkauft"-Treffer (siehe
+// missingInGame in runStockCheck) samt Mehrfachauswahl - als Modul-Status
+// gehalten (nicht nur lokale Variablen in runStockCheck), damit Loeschen/
+// Besitzerwechsel danach nur DIESEN Teilbereich neu rendern koennen, ohne
+// den kompletten Abgleich (samt Datenbank-Abruf) erneut laufen zu lassen.
+let currentMissingInGame = [];
+const stockCheckMissingSelected = new Set();
 
 // Rassen-Auswahl richtet sich nach "Sichtbare Rassen in der Übersicht"
 // oben auf derselben Seite (user_settings.preferred_breeds) statt jede
@@ -153,6 +162,142 @@ function stockCheckDuplicateWarningHtml(entries) {
   return `<p class="error">⚠️ ${duplicateNames.length} Name${duplicateNames.length === 1 ? '' : 'n'} mehrfach im eingefügten Text erkannt (${[...new Set(names)].map(stockCheckEscapeHtml).join(', ')}) - das deutet auf einen Fehler beim Einlesen hin (z.B. eine verschobene Zeile), da Pferdenamen eigentlich eindeutig sein müssen. Bitte den eingefügten Text prüfen, bevor du dich auf das Ergebnis unten verlässt.</p>`;
 }
 
+// Baut NUR den "moeglicherweise verkauft"-Abschnitt (Ueberschrift,
+// Mehrfachauswahl-Aktionen, Liste) - eigene Funktion statt Teil des
+// grossen Template-Strings in runStockCheck, da Loeschen/Besitzerwechsel
+// danach nur diesen Teil per innerHTML ersetzen, um nicht jedes Mal einen
+// kompletten neuen Abgleich (samt Datenbank-Abruf) anzustossen.
+function missingInGameSectionHtml() {
+  const rows = currentMissingInGame;
+  const list = rows.length
+    ? `<ul class="stock-check-missing-list">${rows.map((h) => `
+        <li>
+          <label style="display:flex; align-items:center; gap:0.4rem; font-weight:normal;">
+            <input type="checkbox" data-stock-missing-select="${stockCheckEscapeHtml(h.id)}" style="width:auto;"${stockCheckMissingSelected.has(h.id) ? ' checked' : ''} />
+            ${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` (${stockCheckEscapeHtml(h.breed)})` : ''}
+          </label>
+        </li>`).join('')}</ul>`
+    : '<p class="small muted">Keine – alle deine Datenbank-Einträge tauchen auch in der Liste auf.</p>';
+
+  const allChecked = rows.length > 0 && rows.every((h) => stockCheckMissingSelected.has(h.id));
+  const actions = rows.length ? `
+    <div class="form-actions" style="margin: 0.4rem 0;">
+      <label style="display:flex; align-items:center; gap:0.4rem; font-weight:normal;">
+        <input type="checkbox" id="stock-check-missing-select-all" style="width:auto;"${allChecked ? ' checked' : ''} /> Alle auswählen
+      </label>
+      <button type="button" id="stock-check-missing-owner-btn" class="secondary small">Besitzer wechseln</button>
+      <button type="button" id="stock-check-missing-delete-btn" class="danger small">🗑️ Löschen</button>
+      <span class="small muted">${stockCheckMissingSelected.size} ausgewählt</span>
+    </div>` : '';
+
+  return `
+    <p class="group-heading">❓ Bei dir in der Datenbank, aber nicht (mehr) in der eingefügten Liste</p>
+    <p class="small muted">Möglicherweise verkauft/abgegeben, oder die Schreibweise weicht leicht ab (z.B. Groß-/Kleinschreibung, Sonderzeichen) – bitte vor dem Löschen/Ändern kurz prüfen. Über die Kästchen mehrere auswählen und direkt löschen oder auf einen neuen Besitzer übertragen (z.B. bei einem Verkauf).</p>
+    ${actions}
+    ${list}
+  `;
+}
+
+function renderMissingInGameSection() {
+  document.getElementById('stock-check-missing-section').innerHTML = missingInGameSectionHtml();
+}
+
+// Delegiert auf "document" statt auf #stock-check-result, da runStockCheck
+// dessen Inhalt bei jedem "Abgleichen"-Klick komplett per innerHTML neu
+// aufbaut - ein Listener direkt darauf wuerde dabei jedes Mal verloren
+// gehen (analog zu wireTagSuggestHandlers in js/tagSuggest.js).
+function wireStockCheckMissingActions() {
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('[data-stock-missing-select]')) {
+      const id = e.target.dataset.stockMissingSelect;
+      if (e.target.checked) stockCheckMissingSelected.add(id);
+      else stockCheckMissingSelected.delete(id);
+      renderMissingInGameSection();
+    } else if (e.target.id === 'stock-check-missing-select-all') {
+      currentMissingInGame.forEach((h) => {
+        if (e.target.checked) stockCheckMissingSelected.add(h.id);
+        else stockCheckMissingSelected.delete(h.id);
+      });
+      renderMissingInGameSection();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'stock-check-missing-delete-btn') openStockCheckDeleteModal();
+    else if (e.target.id === 'stock-check-missing-owner-btn') openStockCheckOwnerModal();
+  });
+
+  document.getElementById('delete-modal-cancel').addEventListener('click', () => {
+    document.getElementById('delete-modal').hidden = true;
+  });
+  document.getElementById('delete-modal-confirm').addEventListener('click', confirmStockCheckDelete);
+  document.getElementById('bulk-owner-cancel').addEventListener('click', () => {
+    document.getElementById('bulk-owner-modal').hidden = true;
+  });
+  document.getElementById('bulk-owner-confirm').addEventListener('click', confirmStockCheckOwnerChange);
+}
+
+function selectedMissingRows() {
+  return currentMissingInGame.filter((h) => stockCheckMissingSelected.has(h.id));
+}
+
+function openStockCheckDeleteModal() {
+  const rows = selectedMissingRows();
+  if (!rows.length) return;
+  document.getElementById('delete-modal-list').innerHTML = rows.map((h) =>
+    `<li>${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` — ${stockCheckEscapeHtml(h.breed)}` : ''}</li>`
+  ).join('');
+  document.getElementById('delete-modal-count').textContent =
+    rows.length === 1 ? '1 Pferd wirklich unwiderruflich löschen?' : `${rows.length} Pferde wirklich unwiderruflich löschen?`;
+  document.getElementById('delete-modal').hidden = false;
+}
+
+async function confirmStockCheckDelete() {
+  const rows = selectedMissingRows();
+  document.getElementById('delete-modal').hidden = true;
+  if (!rows.length) return;
+  const ids = rows.map((h) => h.id);
+  const { error } = await supabaseClient.from('horses').delete().in('id', ids);
+  if (error) {
+    alert('Löschen fehlgeschlagen: ' + error.message);
+    return;
+  }
+  currentMissingInGame = currentMissingInGame.filter((h) => !ids.includes(h.id));
+  ids.forEach((id) => stockCheckMissingSelected.delete(id));
+  renderMissingInGameSection();
+}
+
+async function openStockCheckOwnerModal() {
+  const rows = selectedMissingRows();
+  if (!rows.length) return;
+  document.getElementById('bulk-owner-count').textContent = `${rows.length} Pferd${rows.length === 1 ? '' : 'e'} ausgewählt`;
+  document.getElementById('bulk-owner-name').value = '';
+  const { data } = await supabaseClient.from('horses').select('owner');
+  const owners = [...new Set((data || []).map((h) => h.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+  document.getElementById('known-owners').innerHTML = owners.map((o) => `<option value="${stockCheckEscapeHtml(o)}"></option>`).join('');
+  document.getElementById('bulk-owner-modal').hidden = false;
+}
+
+async function confirmStockCheckOwnerChange() {
+  const newOwner = document.getElementById('bulk-owner-name').value.trim();
+  document.getElementById('bulk-owner-modal').hidden = true;
+  if (!newOwner) return;
+  const rows = selectedMissingRows();
+  if (!rows.length) return;
+  const ids = rows.map((h) => h.id);
+  const { error } = await supabaseClient.from('horses').update({ owner: newOwner }).in('id', ids);
+  if (error) {
+    alert('Besitzerwechsel fehlgeschlagen: ' + error.message);
+    return;
+  }
+  // Nach der Uebertragung gehoert das Pferd nicht mehr zum eigenen
+  // Bestand - raus aus der Liste, statt weiterhin als "moeglicherweise
+  // verkauft" unter dem alten Besitzer zu erscheinen.
+  currentMissingInGame = currentMissingInGame.filter((h) => !ids.includes(h.id));
+  ids.forEach((id) => stockCheckMissingSelected.delete(id));
+  renderMissingInGameSection();
+}
+
 async function runStockCheck(ownIdentity) {
   const selectedBreeds = selectedStockCheckBreeds();
   const resultEl = document.getElementById('stock-check-result');
@@ -215,24 +360,22 @@ async function runStockCheck(ownIdentity) {
   // "Moeglicherweise verkauft" laeuft bewusst NUR gegen die eigenen
   // Pferde (Nutzerwunsch) - ein fremdes Pferd, das gerade nicht in der
   // eigenen Spiel-Liste steht, ist schlicht nicht relevant.
-  const missingInGame = ownHorses
+  currentMissingInGame = ownHorses
     .filter((h) => !gameSet.has((h.name || '').toLowerCase()))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
+  stockCheckMissingSelected.clear();
 
   const list = (items, empty) => items.length ? `<ul>${items.join('')}</ul>` : `<p class="small muted">${empty}</p>`;
 
   const missingInDbHtml = missingInDb.map((e) => e.elsewhereOwner
     ? `<li>${stockCheckEscapeHtml(e.name)} (${stockCheckEscapeHtml(e.breed)}) – ⚠️ steht bereits unter Besitzer „${stockCheckEscapeHtml(e.elsewhereOwner)}" in der Datenbank</li>`
     : `<li>${stockCheckEscapeHtml(e.name)} (${stockCheckEscapeHtml(e.breed)})</li>`);
-  const missingInGameHtml = missingInGame.map((h) => `<li>${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` (${stockCheckEscapeHtml(h.breed)})` : ''}</li>`);
 
   resultEl.innerHTML = `
     ${duplicateWarningHtml}
     <p class="small muted">${entries.length} von ${allEntries.length} erkannten Pferden berücksichtigt (Rassen: ${[...selectedBreeds].map(stockCheckEscapeHtml).join(', ')}), ${ownHorses.length} eigene Pferde in der Datenbank (Besitzer „${stockCheckEscapeHtml(ownIdentity)}").</p>
     <p class="group-heading">🆕 Im Spiel vorhanden, aber (noch) nicht bei deinen Pferden in der Datenbank</p>
     ${list(missingInDbHtml, 'Keine – alles eingetragen.')}
-    <p class="group-heading">❓ Bei dir in der Datenbank, aber nicht (mehr) in der eingefügten Liste</p>
-    <p class="small muted">Möglicherweise verkauft/abgegeben, oder die Schreibweise weicht leicht ab (z.B. Groß-/Kleinschreibung, Sonderzeichen) – bitte vor dem Löschen/Ändern kurz prüfen.</p>
-    ${list(missingInGameHtml, 'Keine – alle deine Datenbank-Einträge tauchen auch in der Liste auf.')}
+    <div id="stock-check-missing-section">${missingInGameSectionHtml()}</div>
   `;
 }

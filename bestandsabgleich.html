@@ -56,6 +56,37 @@
     </fieldset>
   </main>
 
+  <!-- Löschen/Besitzerwechsel für die Treffer bei "Bei dir in der Datenbank,
+       aber nicht mehr in der Liste" (möglicherweise verkauft) - gleiches
+       Markup/gleiche Klassen wie die Mehrfachauswahl-Aktionen in index.html
+       (js/list.js), hier aber eigenständig verdrahtet (js/stockCheck.js),
+       da diese Seite js/list.js nicht lädt. -->
+  <div id="delete-modal" class="modal-overlay" hidden>
+    <div class="modal-box">
+      <h2>Löschen bestätigen</h2>
+      <p id="delete-modal-count"></p>
+      <ul id="delete-modal-list"></ul>
+      <div class="modal-actions">
+        <button type="button" id="delete-modal-cancel" class="secondary">Abbrechen</button>
+        <button type="button" id="delete-modal-confirm" class="danger">Löschen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bulk-owner-modal" class="modal-overlay" hidden>
+    <div class="modal-box">
+      <h2>Besitzer wechseln</h2>
+      <p id="bulk-owner-count" class="small muted"></p>
+      <label for="bulk-owner-name">Neuer Besitzer</label>
+      <input type="text" id="bulk-owner-name" list="known-owners" placeholder="Benutzername…" />
+      <datalist id="known-owners"></datalist>
+      <div class="modal-actions">
+        <button type="button" id="bulk-owner-cancel" class="secondary">Abbrechen</button>
+        <button type="button" id="bulk-owner-confirm">Übertragen</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
