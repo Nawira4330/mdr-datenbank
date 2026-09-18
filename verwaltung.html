@@ -75,40 +75,6 @@
       <progress id="backfill-progress-bar" value="0" max="100" style="width: 100%; margin-top: 0.5rem;" hidden></progress>
       <ul id="backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
     </fieldset>
-
-    <fieldset>
-      <legend>Bestandsabgleich</legend>
-      <p class="muted small">
-        Prüft, ob alle eigenen Pferde eines Besitzers in der Datenbank stehen – und ob
-        umgekehrt Pferde in der Datenbank stehen, die im Spiel nicht mehr auftauchen (z.B.
-        weil sie verkauft wurden). Da die MDR-Datenbank keinen direkten Zugriff auf das
-        Spiel hat, läuft der Abgleich über einen eingefügten Text: im Spiel auf das eigene
-        Profil → Reiter <strong>„Zucht"</strong> → bei der gewünschten Zuchtlinie auf
-        <strong>„Pferde anzeigen?"</strong> klicken, danach die komplette Seite (Strg+A,
-        Strg+C) kopieren und unten einfügen. Die erkannten Pferde (samt Rasse) werden mit
-        angezeigt, damit Fehlinterpretationen sofort auffallen.
-      </p>
-      <div>
-        <label for="stock-check-input">Seite mit "Pferde anzeigen?" aus dem Spiel einfügen</label>
-        <textarea id="stock-check-input" rows="8" placeholder="Komplette Profilseite mit aufgeklappter Pferdeliste einfügen …"></textarea>
-      </div>
-      <div class="form-grid">
-        <div>
-          <label for="stock-check-owner">Besitzer (wie in der Datenbank eingetragen)</label>
-          <select id="stock-check-owner"></select>
-        </div>
-        <div>
-          <label for="stock-check-breed">Rasse</label>
-          <select id="stock-check-breed">
-            <option value="">Alle</option>
-          </select>
-        </div>
-      </div>
-      <p>
-        <button type="button" id="stock-check-btn" class="secondary">🔍 Abgleichen</button>
-      </p>
-      <div id="stock-check-result"></div>
-    </fieldset>
   </main>
 
   <script src="js/config.js"></script>

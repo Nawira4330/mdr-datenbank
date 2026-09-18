@@ -281,6 +281,39 @@
       </p>
     </fieldset>
 
+    <fieldset>
+      <legend>Bestandsabgleich</legend>
+      <p class="muted small">
+        Prüft, ob alle deine eigenen Pferde aus dem Spiel in der Datenbank stehen – und ob
+        umgekehrt Pferde unter deinem Besitzernamen in der Datenbank stehen, die im Spiel
+        nicht mehr auftauchen (z.B. weil sie verkauft wurden). Da die MDR-Datenbank keinen
+        direkten Zugriff auf das Spiel hat, läuft der Abgleich über einen eingefügten Text:
+        im Spiel auf dein Profil → Reiter <strong>„Zucht"</strong> → bei der gewünschten
+        Zuchtlinie auf <strong>„Pferde anzeigen?"</strong> klicken, danach die komplette
+        Seite (Strg+A, Strg+C) kopieren und unten einfügen. Fehlt ein Pferd noch in der
+        Datenbank, wird zusätzlich geprüft, ob es dort schon unter einem <strong>anderen</strong>
+        Besitzernamen steht (z.B. Namensabweichung oder Vorbesitzer) – die Prüfung auf
+        „möglicherweise verkauft" läuft dagegen ausschließlich gegen deine eigenen Pferde
+        (Besitzer <strong id="stock-check-identity">…</strong>).
+      </p>
+      <div>
+        <label for="stock-check-input">Seite mit "Pferde anzeigen?" aus dem Spiel einfügen</label>
+        <textarea id="stock-check-input" rows="8" placeholder="Komplette Profilseite mit aufgeklappter Pferdeliste einfügen …"></textarea>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label for="stock-check-breed">Rasse</label>
+          <select id="stock-check-breed">
+            <option value="">Alle</option>
+          </select>
+        </div>
+      </div>
+      <p>
+        <button type="button" id="stock-check-btn" class="secondary">🔍 Abgleichen</button>
+      </p>
+      <div id="stock-check-result"></div>
+    </fieldset>
+
     <div class="form-actions">
       <button type="button" id="save-settings-btn">Speichern</button>
       <span id="settings-status" class="muted small"></span>
@@ -307,5 +340,6 @@
   <script src="js/nav.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/einstellungen.js"></script>
+  <script src="js/stockCheck.js"></script>
 </body>
 </html>
