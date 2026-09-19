@@ -828,6 +828,45 @@ async function autoUpdateParentFlaxenCarriers(payload) {
   return { updated, warnings };
 }
 
+// --- Automatische Flaxen-Trägerschaft beim Fohlen selbst (Nutzerwunsch) -
+//
+// Gegenstück zu autoUpdateParentFlaxenCarriers oben: ist mindestens ein
+// Elternteil sichtbar Flaxen (reinerbig, "flfl"), MUSS dieses Pferd selbst
+// zwingend mindestens eine Kopie tragen (rezessives Merkmal) - wird hier
+// VOR dem eigentlichen Speichern direkt am payload dieses Pferds
+// nachgetragen, falls dort noch nichts (Stärkeres) manuell eingetragen
+// ist. Die Anzeige (Genetik-Tab, Übersicht) leitet das bereits live aus
+// den Eltern-Daten ab (siehe fetchParentColorHints/parentColorHints) -
+// hier wird es zusätzlich EXPLIZIT am Datensatz hinterlegt, analog zur
+// umgekehrten Richtung bei den Eltern, damit es z.B. auch im CSV-Export
+// oder bei zukünftigen Auswertungen ohne die Eltern-Herleitung sichtbar
+// bleibt.
+async function autoInheritFlaxenFromParents(payload) {
+  const current = payload.color_gene_overrides?.Flaxen;
+  if (current === 'het' || current === 'hom') return null; // schon (mind.) Träger bestätigt
+
+  const ancestors = Array.isArray(payload.pedigree) ? payload.pedigree.slice(1) : (payload.pedigree?.ancestors || []);
+  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  if (!parentNames.length) return null;
+
+  const { data: parents, error } = await supabaseClient
+    .from('horses')
+    .select('name, colors, coat_color, notes, color_gene_overrides')
+    .in('name', parentNames);
+  if (error || !parents?.length) return null;
+
+  const flaxenParent = parents.find((p) => {
+    const genes = presentGenesSummary(p.colors, p.coat_color, p.notes, p.name, null, p.color_gene_overrides);
+    return genes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl');
+  });
+  if (!flaxenParent) return null;
+
+  if (current === 'absent') return { warning: flaxenParent.name };
+
+  payload.color_gene_overrides = { ...(payload.color_gene_overrides || {}), Flaxen: 'het' };
+  return { updated: flaxenParent.name };
+}
+
 // Führt "payload" (das frisch ausgefüllte/geparste Formular) mit einem
 // gefundenen bestehenden Datensatz zusammen - für Felder, die in payload
 // bereits stehen, per mergeFieldValue (leer im neuen Formular -> alten
@@ -963,6 +1002,12 @@ async function resolveSaveTarget(formData, payload) {
 async function performSave(formData, payload, session, targetId, beforeRecord) {
   const errorEl = document.getElementById('form-error');
 
+  // Muss VOR dem eigentlichen Schreiben laufen (anders als
+  // autoUpdateParentFlaxenCarriers weiter unten) - trägt eine ggf. von
+  // einem Elternteil geerbte Flaxen-Trägerschaft direkt in DIESES
+  // payload ein, damit sie mit demselben INSERT/UPDATE gespeichert wird.
+  const ownFlaxenResult = await autoInheritFlaxenFromParents(payload);
+
   let error;
   let insertedId;
   if (targetId) {
@@ -1018,6 +1063,8 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
       changedFields: targetId ? computeChangedFields(beforeRecord, payload) : [],
       flaxenUpdated: flaxenResult.updated,
       flaxenWarnings: flaxenResult.warnings,
+      ownFlaxenInheritedFrom: ownFlaxenResult?.updated || null,
+      ownFlaxenWarningFrom: ownFlaxenResult?.warning || null,
     }));
   }
   if (saveRedirect === null) {
