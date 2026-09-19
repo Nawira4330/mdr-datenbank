@@ -829,6 +829,15 @@ function showFlashBanner() {
   if (flash.flaxenWarnings?.length) {
     text += ` ⚠️ Widerspruch: ${flash.flaxenWarnings.join(', ')} ${flash.flaxenWarnings.length > 1 ? 'sind' : 'ist'} als "Flaxen nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
   }
+  // Siehe autoInheritFlaxenFromParents in horseForm.js: Gegenrichtung -
+  // dieses Pferd selbst automatisch als Flaxen-Träger markiert, weil ein
+  // Elternteil sichtbar Flaxen ist.
+  if (flash.ownFlaxenInheritedFrom) {
+    text += ` Automatisch als Flaxen-Träger markiert (Elternteil „${flash.ownFlaxenInheritedFrom}" ist Flaxen).`;
+  }
+  if (flash.ownFlaxenWarningFrom) {
+    text += ` ⚠️ Widerspruch: Dieses Pferd ist als "Flaxen nicht vorhanden" markiert, müsste laut Elternteil „${flash.ownFlaxenWarningFrom}" (Flaxen) aber Träger sein - bitte manuell prüfen.`;
+  }
   banner.textContent = text;
   banner.hidden = false;
 
