@@ -123,15 +123,21 @@ gelistete Eintrag hat neben dem ✏️-Bearbeiten-Button zusätzlich einen
 ist):
 
 - **„X Fohlen ist/sind 6 Monate alt“** – Fohlen brauchen ab 6 Monaten
-  einen eigenen Stall, dieser Hinweis erinnert daran. Verschwindet von
-  selbst wieder, sobald das Fohlen 7 Monate alt wird.
+  einen eigenen Stall, dieser Hinweis erinnert daran. Über den
+  „✓ Erledigt“-Button neben einem Eintrag blendest du ihn sofort für
+  dieses eine Fohlen aus (z.B. weil der Stall schon vergeben ist), sonst
+  verschwindet er von selbst, sobald das Fohlen 7 Monate alt wird.
 - **„X Pferd(e) ist/sind 3 Jahre alt geworden“** – im Spiel ändert sich
   das Pferdebild meist mit 3 Jahren, dieser Hinweis erinnert daran, das
-  Bild zu prüfen und ggf. zu aktualisieren. Er verschwindet, sobald du
-  das Pferd danach erneut speicherst (z.B. nach dem Bild-Update) oder
-  spätestens wenn es 4 wird. War ein Pferd bei der Ersteingabe bereits
-  über 3 Jahre alt, erscheint der Hinweis für dieses Pferd gar nicht
-  erst.
+  Bild zu prüfen und ggf. zu aktualisieren. Verschwindet für ein Pferd
+  erst, wenn du dort auf „✓ Erledigt“ klickst (bestätigt: Bild geprüft) –
+  ein bloßes erneutes Speichern aus einem anderen Grund (z.B. neue
+  Turnierwerte, ein Besitzerwechsel im
+  [Bestandsabgleich](#9-bestandsabgleich)) reicht dafür bewusst NICHT
+  aus, damit der Hinweis nicht fälschlich verschwindet, ohne dass das
+  Bild wirklich geprüft wurde. Spätestens wenn das Pferd 4 wird,
+  verschwindet er ohnehin. War ein Pferd bei der Ersteingabe bereits über
+  3 Jahre alt, erscheint der Hinweis für dieses Pferd gar nicht erst.
 - **„X Pferd(e) über 25 Jahre – automatisch mit „GBH“ markiert“** –
   Pferde über 25 Jahren bekommen automatisch das Schlagwort „GBH“
   zugewiesen (falls noch nicht vorhanden), dieser Kasten listet sie zur

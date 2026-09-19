@@ -588,7 +588,7 @@ async function checkAgeNotices(session) {
   const identity = session.user.email.split('@')[0];
   const { data, error } = await supabaseClient
     .from('horses')
-    .select('id, name, birthdate, tags, created_at, updated_at, external_id, foal_stall_confirmed')
+    .select('id, name, birthdate, tags, created_at, updated_at, external_id, foal_stall_confirmed, image_check_confirmed')
     .ilike('owner', identity);
   if (error || !data) return;
 
@@ -596,7 +596,7 @@ async function checkAgeNotices(session) {
     .map((h) => ({ ...h, age: gameAgeYearsMonths(h.birthdate) }))
     .filter((h) => h.age != null);
 
-  // "Erledigt" (siehe onConfirmFoalStall) blendet ein einzelnes Fohlen
+  // "Erledigt" (siehe onConfirmAgeNotice) blendet ein einzelnes Fohlen
   // sofort aus, ohne auf das natürliche Verschwinden mit 7 Monaten zu
   // warten müssen.
   const needsStall = withAge.filter((h) => h.age.years === 0 && h.age.months === 6 && !h.foal_stall_confirmed);
@@ -606,28 +606,28 @@ async function checkAgeNotices(session) {
     needsStall,
     `${needsStall.length} Fohlen ${needsStall.length === 1 ? 'ist' : 'sind'} 6 Monate alt`,
     '<p>Fohlen brauchen ab 6 Monaten einen eigenen Stall:</p>',
-    true,
+    'foalStall',
   );
 
-  // "Ist 3 geworden" gilt technisch das ganze 4. Spieljahr (30 Tage) -
-  // zwei Einschränkungen, damit der Hinweis nur bei tatsächlich neu
-  // relevanten Fällen erscheint:
-  // - das Formular erneut zu speichern (z.B. nach dem Bild-Update) gilt
-  //   als "erledigt": bleibt das Pferd seitdem unangetastet (updated_at
-  //   vor dem 3.-Geburtstag), wird der Hinweis gezeigt, sonst
-  //   verschwindet er sofort statt erst nach Ablauf des ganzen
-  //   Spieljahres.
-  // - neu eingetragene Pferde, die schon bei der Ersteingabe älter als
-  //   3 Jahre waren (created_at nach dem 3.-Geburtstag), bekommen den
-  //   Hinweis gar nicht erst - die haben vermutlich schon ein aktuelles
-  //   Bild, das "Bild ändert sich mit 3 Jahren" ist hier nicht relevant.
+  // "Ist 3 geworden" gilt technisch das ganze 4. Spieljahr (30 Tage).
+  // Bugfix (Nutzerfeedback: Hinweise "nicht aktuell"): frueher galt jedes
+  // erneute Speichern als "erledigt" (updated_at nach dem 3. Geburtstag)
+  // - dadurch verschwand der Hinweis auch dann, wenn das Pferd nur aus
+  // einem ganz anderen Grund gespeichert wurde (z.B. neue Turnierwerte
+  // per Reimport, oder ein Massen-Besitzerwechsel im Bestandsabgleich),
+  // OHNE dass das Bild je geprueft wurde. Jetzt wie beim Fohlenstall-
+  // Hinweis ein explizites "✓ Erledigt" (image_check_confirmed, siehe
+  // migration_042_image_check_confirmed.sql) statt der reinen
+  // Speicherzeitpunkt-Vermutung.
+  // Weiterhin ausgenommen: neu eingetragene Pferde, die schon bei der
+  // Ersteingabe älter als 3 Jahre waren (created_at nach dem 3.-
+  // Geburtstag) - die haben vermutlich schon ein aktuelles Bild, das
+  // "Bild ändert sich mit 3 Jahren" ist hier nicht relevant.
   const turningThree = withAge.filter((h) => {
-    if (h.age.years !== 3) return false;
+    if (h.age.years !== 3 || h.image_check_confirmed) return false;
     const turnedThreeAt = new Date(h.birthdate).getTime() + 3 * REAL_DAYS_PER_GAME_YEAR * 86400000;
     const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
-    if (createdAt >= turnedThreeAt) return false;
-    const savedAt = h.updated_at ? new Date(h.updated_at).getTime() : 0;
-    return savedAt < turnedThreeAt;
+    return createdAt < turnedThreeAt;
   });
   renderAgeNoticeIfEnabled(
     'age3',
@@ -635,6 +635,7 @@ async function checkAgeNotices(session) {
     turningThree,
     `${turningThree.length} Pferd${turningThree.length === 1 ? '' : 'e'} ${turningThree.length === 1 ? 'ist' : 'sind'} 3 Jahre alt geworden`,
     '<p>Im Spiel ändert sich das Pferdebild meist mit 3 Jahren - bitte prüfen und ggf. aktualisieren:</p>',
+    'age3',
   );
 
   const over25 = withAge.filter((h) => h.age.years > 25);
@@ -654,19 +655,29 @@ async function checkAgeNotices(session) {
   );
 }
 
+// Welche Datenbank-Spalte ein "✓ Erledigt"-Klick setzt, je Hinweis-Key
+// (siehe checkAgeNotices/onConfirmAgeNotice) - "über 25 Jahre" hat
+// bewusst keinen Eintrag, dort gibt es keinen Bestätigen-Button (die
+// GBH-Vergabe läuft ohnehin automatisch, ein "Erledigt" wäre da nichts
+// zu bestätigen).
+const AGE_NOTICE_CONFIRM_COLUMN = {
+  foalStall: 'foal_stall_confirmed',
+  age3: 'image_check_confirmed',
+};
+
 // Zeigt einen der 3 einzeln abschaltbaren Alters-Hinweise nur, wenn er
 // nicht in den Einstellungen ausgeblendet wurde (siehe hiddenNotices) -
 // die zugrunde liegende Automatik (z.B. GBH-Vergabe bei "Über 25 Jahre")
 // läuft unabhängig davon immer, betroffen ist nur die Anzeige.
-function renderAgeNoticeIfEnabled(key, selector, horses, summaryText, introHtml, confirmable) {
+function renderAgeNoticeIfEnabled(key, selector, horses, summaryText, introHtml, confirmKey) {
   if (hiddenNotices.has(key)) {
     document.querySelector(selector).hidden = true;
     return;
   }
-  renderAgeNotice(selector, horses, summaryText, introHtml, confirmable);
+  renderAgeNotice(selector, horses, summaryText, introHtml, confirmKey);
 }
 
-function renderAgeNotice(selector, horses, summaryText, introHtml, confirmable) {
+function renderAgeNotice(selector, horses, summaryText, introHtml, confirmKey) {
   const notice = document.querySelector(selector);
   if (!horses.length) {
     notice.hidden = true;
@@ -677,30 +688,35 @@ function renderAgeNotice(selector, horses, summaryText, introHtml, confirmable) 
       const linkBtn = h.external_id
         ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
         : '';
-      // "✓ Erledigt" gibt es nur beim Fohlenstall-Hinweis (confirmable,
-      // siehe checkAgeNotices) - blendet dieses eine Pferd sofort aus,
-      // z.B. wenn der Stall schon vergeben ist, ohne auf das natürliche
-      // Verschwinden mit 7 Monaten warten zu müssen.
-      const confirmBtn = confirmable
-        ? `<button type="button" class="secondary small" data-confirm-foal-stall="${h.id}">✓ Erledigt</button>`
+      // "✓ Erledigt" markiert dieses eine Pferd explizit als geprueft
+      // (siehe AGE_NOTICE_CONFIRM_COLUMN/onConfirmAgeNotice) - blendet es
+      // sofort aus, ohne auf das natürliche Verschwinden (Fohlenstall:
+      // 7 Monate: / Bild: 4 Jahre) warten zu müssen, UND ohne dass ein
+      // Speichern aus einem ganz anderen Grund es faelschlich schon als
+      // erledigt gelten laesst.
+      const confirmBtn = confirmKey
+        ? `<button type="button" class="secondary small" data-confirm-age-notice="${confirmKey}" data-confirm-age-notice-id="${h.id}">✓ Erledigt</button>`
         : '';
       return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name)} ${linkBtn} ${confirmBtn}</li>`;
     })
     .join('');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> ${summaryText}</summary>${introHtml}<ul>${list}</ul>`;
   notice.hidden = false;
-  if (confirmable) {
-    notice.querySelectorAll('[data-confirm-foal-stall]').forEach((btn) => {
-      btn.addEventListener('click', () => onConfirmFoalStall(btn.dataset.confirmFoalStall));
+  if (confirmKey) {
+    notice.querySelectorAll('[data-confirm-age-notice]').forEach((btn) => {
+      btn.addEventListener('click', () => onConfirmAgeNotice(btn.dataset.confirmAgeNotice, btn.dataset.confirmAgeNoticeId));
     });
   }
 }
 
-// Markiert ein einzelnes Fohlen als "Stall erledigt" (siehe
-// migration_035_foal_stall_confirmed.sql) und lädt die Alters-Hinweise
-// neu, damit es sofort aus der Liste verschwindet.
-async function onConfirmFoalStall(id) {
-  const { error } = await supabaseClient.from('horses').update({ foal_stall_confirmed: true }).eq('id', id);
+// Markiert ein einzelnes Pferd als "Hinweis erledigt" (siehe
+// AGE_NOTICE_CONFIRM_COLUMN, migration_035_foal_stall_confirmed.sql bzw.
+// migration_042_image_check_confirmed.sql) und lädt die Alters-Hinweise
+// neu, damit es sofort aus der jeweiligen Liste verschwindet.
+async function onConfirmAgeNotice(confirmKey, id) {
+  const column = AGE_NOTICE_CONFIRM_COLUMN[confirmKey];
+  if (!column) return;
+  const { error } = await supabaseClient.from('horses').update({ [column]: true }).eq('id', id);
   if (!error) await checkAgeNotices(currentSession);
 }
 
