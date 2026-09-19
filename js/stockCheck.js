@@ -104,12 +104,16 @@ const STOCK_CHECK_STOP_HEADINGS = new Set(['Reiterkönnen', 'Abzeichen', 'Ausbil
 // Erwartet die komplette, kopierte Profilseite mit aufgeklapptem "Pferde
 // anzeigen?" (Reiter "Zucht") - Anker ist genau diese Zeile, danach folgt
 // optional eine einzelne Tabellenkopf-Zeile ("Pferd Rasse Geschlecht
-// Alter GP Farbe", wird uebersprungen) und anschliessend je Pferd GENAU
-// sechs Zeilen (Name, Rasse, Geschlecht, Alter, GP, Farbe - je ein Feld
-// pro Zeile, so wie es das Spiel beim Kopieren dieser Tabelle liefert).
-// Eine unvollstaendige letzte Gruppe (z.B. falls das Ende nicht exakt
-// getroffen wurde) wird verworfen statt als falsches Pferd interpretiert
-// zu werden.
+// Alter GP Farbe", wird uebersprungen). Das Spiel liefert die eigentliche
+// Tabelle je nach Gerät in zwei unterschiedlichen Formaten (Bugfix,
+// Nutzerfeedback: am PC wurden bisher 6 Zeilen zu einem Pferd
+// zusammengewuerfelt):
+// - Handy: JEDES Feld in einer eigenen Zeile, sechs Zeilen pro Pferd
+//   (Name, Rasse, Geschlecht, Alter, GP, Farbe).
+// - PC: EINE Zeile pro Pferd, alle sechs Felder Tab-getrennt darin.
+// Erkennung anhand der ersten Datenzeile nach dem Kopf: enthaelt sie ein
+// Tab-Zeichen, ist es das PC-Format (ein reiner Pferdename/Farbwert
+// enthaelt nie ein Tab) - sonst das Handy-Format.
 function parseOwnHorseListText(rawText) {
   const lines = rawText.replace(/\r\n/g, '\n').split('\n').map((l) => l.trim());
   const startIdx = lines.indexOf('Pferde anzeigen?');
@@ -119,24 +123,32 @@ function parseOwnHorseListText(rawText) {
   while (i < lines.length && !lines[i]) i++;
   if (lines[i] && /^Pferd\b.*Rasse.*Geschlecht/.test(lines[i])) i++;
 
-  const fields = [];
+  const rawLines = [];
   for (; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
     if (STOCK_CHECK_STOP_HEADINGS.has(line)) break;
-    fields.push(line);
+    rawLines.push(line);
   }
 
   const entries = [];
-  for (let j = 0; j + 6 <= fields.length; j += 6) {
-    entries.push({
-      name: fields[j],
-      breed: fields[j + 1],
-      gender: fields[j + 2],
-      age: fields[j + 3],
-      gp: fields[j + 4],
-      color: fields[j + 5],
-    });
+  if (rawLines.length && rawLines[0].includes('\t')) {
+    for (const line of rawLines) {
+      const parts = line.split('\t').map((p) => p.trim());
+      if (parts.length < 6 || !parts[0]) continue;
+      entries.push({ name: parts[0], breed: parts[1], gender: parts[2], age: parts[3], gp: parts[4], color: parts[5] });
+    }
+  } else {
+    for (let j = 0; j + 6 <= rawLines.length; j += 6) {
+      entries.push({
+        name: rawLines[j],
+        breed: rawLines[j + 1],
+        gender: rawLines[j + 2],
+        age: rawLines[j + 3],
+        gp: rawLines[j + 4],
+        color: rawLines[j + 5],
+      });
+    }
   }
   return entries;
 }
