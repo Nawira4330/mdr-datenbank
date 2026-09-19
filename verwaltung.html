@@ -75,6 +75,26 @@
       <progress id="backfill-progress-bar" value="0" max="100" style="width: 100%; margin-top: 0.5rem;" hidden></progress>
       <ul id="backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
     </fieldset>
+
+    <fieldset>
+      <legend>Flaxen-Trägerschaft nachpflegen</legend>
+      <p class="muted small">
+        Flaxen ist rezessiv: ist ein Elternteil sichtbar Flaxen (reinerbig), muss
+        jedes seiner Fohlen zwingend mindestens eine Kopie tragen. Beim Speichern
+        wird das seitdem automatisch nachgetragen – dieses Tool holt das einmalig
+        für den kompletten, bereits vorhandenen Bestand rückwirkend nach (prüft
+        jedes Pferd gegen seine gespeicherten Eltern und trägt „Träger“ nach, wo
+        das noch fehlt). Bereits als „Flaxen nicht vorhanden“ bestätigte Pferde
+        werden NICHT automatisch überschrieben, sondern nur als Widerspruch
+        aufgelistet – die musst du dir einzeln ansehen. Beliebig oft wiederholbar,
+        bereits erledigte Pferde werden beim nächsten Durchlauf übersprungen.
+      </p>
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" id="flaxen-backfill-start-btn" class="secondary">▶️ Start</button>
+        <span id="flaxen-backfill-status" class="muted small"></span>
+      </div>
+      <ul id="flaxen-backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
+    </fieldset>
   </main>
 
   <script src="js/config.js"></script>
@@ -84,5 +104,6 @@
   <script src="js/parser.js"></script>
   <script src="js/verwaltung.js"></script>
   <script src="js/imageBackfill.js"></script>
+  <script src="js/flaxenBackfill.js"></script>
 </body>
 </html>
