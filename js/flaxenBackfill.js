@@ -9,6 +9,15 @@
 // holt das für den kompletten, bereits vorhandenen Bestand rückwirkend
 // nach (einmalig, danach hält der laufende Speicher-Hook alles aktuell).
 //
+// Prüft AUSSERDEM jedes Pferd auf einen früheren Bugfall (Bugreport
+// "Hollow Dusk"): war ein Pferd selbst schon sichtbar Flaxen (flfl,
+// eigene Fellfarbe/Notiz) UND hatte zusätzlich einen Flaxen-Elternteil,
+// trug die alte Version von autoInheritFlaxenFromParents dort fälschlich
+// nur "het" (Träger) nach - das unterdrückte die eigentlich korrekte
+// "flfl"-Anzeige (Overrides haben Vorrang vor abgeleiteten Hinweisen).
+// Wird hier korrigiert (Override entfernt, die richtige "flfl"-Ableitung
+// greift danach wieder automatisch).
+//
 // Läuft komplett im Browser der Verwaltung (kein eigenes Backend nötig) -
 // lädt einmal den gesamten Bestand (Name, Stammbaum, Farbe, Notizen,
 // Overrides), baut daraus eine Name->Pferd(e)-Zuordnung für die
@@ -39,6 +48,14 @@ async function runFlaxenBackfill() {
     return genes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl');
   }
 
+  // Wie isVisiblyFlaxen, aber IGNORIERT Overrides - für den Bugfix-Check
+  // unten braucht es die "nackte" Ableitung aus Fellfarbe/Notiz, nicht das
+  // (evtl. falsche) manuell/automatisch gesetzte "het".
+  function isOwnPhenotypeFlaxen(h) {
+    const genes = presentGenesSummary(h.colors, h.coat_color, h.notes, h.name, null, null);
+    return genes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl');
+  }
+
   function logLine(text) {
     const li = document.createElement('li');
     li.textContent = text;
@@ -47,6 +64,7 @@ async function runFlaxenBackfill() {
   }
 
   let updatedCount = 0;
+  let correctedCount = 0;
   let warningCount = 0;
   let failedCount = 0;
 
@@ -55,6 +73,26 @@ async function runFlaxenBackfill() {
     statusEl.textContent = `${i + 1}/${horses.length} geprüft…`;
 
     const current = horse.color_gene_overrides?.Flaxen;
+    const ownFlaxen = isOwnPhenotypeFlaxen(horse);
+
+    if (current === 'het' && ownFlaxen) {
+      const { Flaxen, ...rest } = horse.color_gene_overrides || {};
+      const { error: fixError } = await supabaseClient.from('horses').update({ color_gene_overrides: rest }).eq('id', horse.id);
+      if (fixError) {
+        failedCount++;
+        logLine(`❌ ${horse.name}: Fehler beim Korrigieren (${fixError.message})`);
+      } else {
+        correctedCount++;
+        horse.color_gene_overrides = rest; // für Eltern-Lookups weiter unten aktuell halten
+        logLine(`🔧 ${horse.name}: war fälschlich nur als Träger (fl) markiert, ist aber selbst sichtbar Flaxen (flfl) - korrigiert.`);
+      }
+      continue;
+    }
+    if (current === 'absent' && ownFlaxen) {
+      warningCount++;
+      logLine(`⚠️ ${horse.name}: eigene Fellfarbe/Notiz zeigt Flaxen (flfl), aber als "nicht vorhanden" markiert - Widerspruch, bitte manuell prüfen.`);
+      continue;
+    }
     if (current === 'het' || current === 'hom') continue; // schon (mind.) Träger bestätigt
 
     const ancestors = Array.isArray(horse.pedigree) ? horse.pedigree.slice(1) : (horse.pedigree?.ancestors || []);
@@ -83,8 +121,8 @@ async function runFlaxenBackfill() {
     logLine(`✅ ${horse.name}: als Flaxen-Träger markiert (Elternteil „${flaxenParentName}" ist Flaxen).`);
   }
 
-  statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${updatedCount} als Flaxen-Träger nachgetragen, ${warningCount} Widerspruch/-sprüche gefunden, ${failedCount} fehlgeschlagen.`;
-  if (!updatedCount && !warningCount && !failedCount) {
+  statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${updatedCount} als Flaxen-Träger nachgetragen, ${correctedCount} fälschlich als "nur Träger" markierte korrigiert, ${warningCount} Widerspruch/-sprüche gefunden, ${failedCount} fehlgeschlagen.`;
+  if (!updatedCount && !correctedCount && !warningCount && !failedCount) {
     logLine('Keine Änderungen nötig - der Bestand ist bereits aktuell.');
   }
 }
