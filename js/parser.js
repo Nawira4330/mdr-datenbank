@@ -1045,8 +1045,9 @@ function sortGenesForDisplay(genes) {
 // aus getesteten Loci (siehe extractPresentAlleles), dann - nur für Loci,
 // die nicht getestet wurden (bzw. die es als Locus gar nicht gibt, wie
 // Sooty/Flaxen) - manuelle Bestätigungen (overrides, siehe
-// LOCUS_PRIMARY_ALLELE) mit Vorrang, sonst Hinweise im Fellfarbe-Namen, in
-// der Notiz, im Pferdenamen (siehe inferGeneticHintsFromPhenotype) und
+// LOCUS_PRIMARY_ALLELE) mit Vorrang, sonst Hinweise im Fellfarbe-Namen und
+// in der Notiz (siehe inferGeneticHintsFromPhenotype - NICHT im frei
+// wählbaren Pferdenamen, der zu unzuverlässig ist, siehe dort) und
 // optional aus reinerbig-vorhandenen Loci der Eltern (parentHints, siehe
 // homozygousPresentHints - wird von horseForm.js anhand des Stammbaums
 // befüllt, falls Vater/Mutter in der Datenbank stehen). Das Ergebnis wird
@@ -1084,17 +1085,16 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     manual.push({ locus, alleles: alleleCode, source: 'manuell' });
   }
 
-  // Ein noch nicht umbenanntes Fohlen heißt automatisch "Fohlen_<Mutter>
-  // X <Vater>" (siehe parseHorseText) - der Name ist dann KEINE eigene
-  // Fellfarben-Beschreibung, sondern nur eine Verkettung der Namen beider
-  // Eltern. Ein Farbwort im Namen eines Elternteils (z.B. "Sir Classic" ->
-  // "Classic" = Black-Champagne) würde sonst fälschlich als Merkmal des
-  // Fohlens selbst gedeutet, obwohl es nur zufällig im Elternnamen steckt.
-  const isAutoFoalName = /^Fohlen_.+ X .+$/.test(horseName || '');
+  // Der frei wählbare Pferdename wird NICHT mehr nach Farbwörtern
+  // durchsucht (anders als früher) - ein Pferd namens "Pearl Mirrow" oder
+  // "Sir Classic" hieß fälschlich Pearl-Träger bzw. Champagne, nur weil
+  // der Name zufällig wie ein Farbwort aussah, obwohl "Pearl"/"Classic"
+  // hier eindeutig Teil des gewählten Namens war (Nutzer-Bugreport). Echte
+  // Farbangaben stehen zuverlässig in "coatColorName" (Fellfarbe-Feld) bzw.
+  // "notes" - nur die beiden werden hier noch ausgewertet.
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
     ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
-    ...(isAutoFoalName ? [] : inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' }))),
     ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, source: 'elternteil' })),
   ];
   const seen = new Set();
@@ -1173,7 +1173,9 @@ function parentColorHints(parents) {
 // vorhanden, muss ein sichtbar "Pinto" bezeichnetes Fohlen genau diese
 // geerbt haben.
 function pintoParentHints(parents, coatColorName, notes, horseName) {
-  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''} ${horseName || ''}`);
+  // Nur Fellfarbe/Notiz zählen als echte Farbangabe (siehe presentGenesSummary
+  // weiter oben) - der Pferdename wird bewusst NICHT mehr durchsucht.
+  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''}`);
   if (!isPinto) return [];
 
   const combined = new Set();

@@ -1357,10 +1357,12 @@ function geneOverrideBadge(key, state, allelePrefix) {
 // Hinweisen.
 function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl) {
   const ov = overrides || {};
+  // Der Pferdename wird bewusst NICHT mehr nach Farbwörtern durchsucht
+  // (siehe presentGenesSummary in parser.js) - nur Fellfarbe/Notiz gelten
+  // als echte Farbangabe.
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl),
     ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl),
-    ...inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl),
     ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, fromParent: true })),
   ];
   const hintsByLocus = {};
