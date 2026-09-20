@@ -805,7 +805,7 @@ async function autoUpdateParentFlaxenCarriers(payload) {
 
   const { data: parents, error } = await supabaseClient
     .from('horses')
-    .select('id, name, color_gene_overrides')
+    .select('id, name, colors, coat_color, notes, color_gene_overrides')
     .in('name', parentNames);
   if (error || !parents?.length) return { updated: [], warnings: [] };
 
@@ -819,6 +819,14 @@ async function autoUpdateParentFlaxenCarriers(payload) {
       warnings.push(parent.name);
       continue;
     }
+    // Ist der Elternteil selbst schon (unabhängig von Overrides) laut
+    // eigener Fellfarbe/Notiz sichtbar Flaxen (flfl), wäre ein
+    // nachgetragenes "het" falsch UND würde die stärkere abgeleitete
+    // Anzeige "flfl" auf "fl" heruntersetzen (Overrides haben Vorrang vor
+    // abgeleiteten Hinweisen, siehe presentGenesSummary) - Bugreport
+    // "Hollow Dusk". In diesem Fall gibt es nichts nachzutragen.
+    const ownGenes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name, null, null);
+    if (ownGenes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl')) continue;
     const { error: updateError } = await supabaseClient
       .from('horses')
       .update({ color_gene_overrides: { ...overrides, Flaxen: 'het' } })
@@ -842,6 +850,24 @@ async function autoUpdateParentFlaxenCarriers(payload) {
 // oder bei zukünftigen Auswertungen ohne die Eltern-Herleitung sichtbar
 // bleibt.
 async function autoInheritFlaxenFromParents(payload) {
+  // Ist das Pferd selbst (unabhängig von Overrides) schon laut eigener
+  // Fellfarbe/Notiz sichtbar Flaxen (flfl), wäre ein nachgetragenes "het"
+  // falsch UND würde die stärkere abgeleitete Anzeige "flfl" auf "fl"
+  // (nur Träger) heruntersetzen (Overrides haben Vorrang vor abgeleiteten
+  // Hinweisen, siehe presentGenesSummary) - Bugreport "Hollow Dusk": war
+  // selbst sichtbar Flaxen, hatte aber zusätzlich einen Flaxen-Elternteil,
+  // wodurch hier fälschlich "het" nachgetragen wurde. Ein dadurch bereits
+  // fälschlich gesetztes "het" wird hier entfernt (Selbstheilung beim
+  // nächsten Speichern).
+  const ownGenes = presentGenesSummary(payload.colors, payload.coat_color, payload.notes, payload.name, null, null);
+  if (ownGenes.some((g) => g.locus === 'Flaxen' && g.alleles === 'flfl')) {
+    if (payload.color_gene_overrides?.Flaxen) {
+      const { Flaxen, ...rest } = payload.color_gene_overrides;
+      payload.color_gene_overrides = rest;
+    }
+    return null;
+  }
+
   const current = payload.color_gene_overrides?.Flaxen;
   if (current === 'het' || current === 'hom') return null; // schon (mind.) Träger bestätigt
 
