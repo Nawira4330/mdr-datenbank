@@ -117,45 +117,6 @@ Repository vorbehalten.
   Sortieren.
 - **Bearbeiten/Löschen**: über die Aktionen in der Tabelle bzw. auf der Detailseite.
 
-## Basar-Verkaufsliste
-
-Eigenständige Seite ([`basar.html`](basar.html), Menüpunkt „🧺 Basar" im
-Konto-Menü) neben der Pferdedatenbank, nutzt aber denselben Login/dieselben
-Konten. Damit lässt sich der Warenbestand eines Basars/Flohmarkts
-verwalten:
-
-- **Foto(s) einer Verkaufsliste hochladen** (oder Text einfügen) - die
-  Texterkennung läuft direkt im Browser ([Tesseract.js](https://github.com/naptha/tesseract.js),
-  keine eigene Server-Komponente nötig, passt also zum GitHub-Pages-Ansatz
-  dieses Projekts). [`js/basarParser.js`](js/basarParser.js) schlägt daraus
-  Artikelzeilen vor (Artikelnr., Name, Beschreibung, Preis) - die
-  Verkäufernummer wird einmal je Import angegeben/bestätigt.
-- **Vorschau vor dem Speichern**: jede erkannte Zeile wird in einer
-  editierbaren Tabelle angezeigt und muss bestätigt werden - nichts wird
-  ungeprüft übernommen. Unsicher erkannte Zeilen sind gelb markiert.
-- **Übersichtstabelle** aller Artikel mit Verkäufernr., Artikelnr., Name,
-  Beschreibung, Art, Preis und Status-Symbol (📦 im Bestand / ✅ verkauft /
-  🔻 Preissenkung / ❌ verloren), filterbar nach Verkäufernr., Art, Status
-  und Suchtext.
-- **Je Artikel einzeln** als verkauft, im Preis gesenkt (mit neuem Preis)
-  oder verloren markierbar, jederzeit auf „Im Bestand" zurücksetzbar, sowie
-  bearbeitbar oder löschbar.
-- **Verlaufs-Historie je Artikel** (Button „🕘"): jede Statusänderung und
-  Bearbeitung wird mit Zeitstempel und dem Benutzernamen der eingeloggten
-  Person protokolliert.
-
-Für bestehende Supabase-Projekte einmalig
-[`supabase/migration_042_basar.sql`](supabase/migration_042_basar.sql) im
-SQL-Editor ausführen (bei einem neuen Projekt ist das bereits Teil von
-`schema.sql`).
-
-**Grenzen der Texterkennung**: Tesseract.js erkennt gedruckten/gut
-leserlichen Text zuverlässig, bei handschriftlichen Listen ist die
-Trefferquote deutlich geringer - deshalb immer die Vorschau vor dem
-Speichern prüfen. Das Originalfoto wird zusätzlich im Storage-Bucket
-`basar-fotos` abgelegt (verlinkt über `foto_url` am Artikel), damit sich
-unklare Erkennungen später am Original nachprüfen lassen.
-
 ## Grenzen des Text-Parsers
 
 Das Spiel bietet keine offizielle Export-Funktion – der Parser (`js/parser.js`) liest

@@ -6,24 +6,6 @@ drin.
 
 ---
 
-## 21.09.2026
-
-- **Neu: Basar-Verkaufsliste** (eigene Seite [`basar.html`](basar.html),
-  Menüpunkt „🧺 Basar" im Konto-Menü) - Fotos handschriftlicher/gedruckter
-  Verkaufslisten hochladen, Texterkennung direkt im Browser (Tesseract.js)
-  schlägt daraus Artikelzeilen vor (Verkäufernr., Artikelnr., Name,
-  Beschreibung, Art, Preis), die vor dem Speichern in einer editierbaren
-  Vorschau geprüft/korrigiert werden. Danach je Artikel einzeln als
-  **verkauft**, **Preissenkung** (mit neuem Preis) oder **verloren**
-  markierbar, mit Symbol für den aktuellen Status. Jede Änderung wird mit
-  Zeitstempel und Benutzername in einer Verlaufs-Historie je Artikel
-  festgehalten (Button „🕘"). Nutzt denselben Login wie die restliche
-  Datenbank. Für bestehende Supabase-Projekte:
-  [`supabase/migration_042_basar.sql`](supabase/migration_042_basar.sql)
-  einmalig im SQL-Editor ausführen.
-
----
-
 ## 25.08.2026
 
 - **Dashboard-Kacheln: Klick übernimmt ihre Filterkriterien**: eigene,
