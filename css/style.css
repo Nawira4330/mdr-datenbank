@@ -420,6 +420,17 @@ label {
   margin-bottom: 1rem;
   font-weight: 600;
 }
+/* Fehler-Variante des Banners (siehe flashBasar in js/basar.js) - gleiches
+   Markup, nur rot statt grün. */
+.flash-banner.error { background: rgba(200, 65, 73, 0.12); border-color: var(--danger); }
+
+/* --- Basar-Verkaufsliste (siehe basar.html/js/basar.js) --- */
+/* Zeilen in der Foto-/Text-Erkennungs-Vorschau, die nicht sicher erkannt
+   wurden (fehlende Artikelnummer und/oder fehlender Preis) - trotzdem
+   normal editierbar, nur optisch hervorgehoben. */
+.review-row-unsicher td { background: rgba(181, 134, 10, 0.12); }
+#basar-table td { vertical-align: top; }
+#review-table input { width: 100%; }
 
 /* --- Hinweis: fehlende Daten bei eigenen Pferden --- */
 .missing-data-notice {

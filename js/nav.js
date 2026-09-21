@@ -68,6 +68,7 @@ async function renderSharedNav(session) {
         <a href="einstellungen.html">⚙️ Einstellungen</a>
         <a href="durchschnitt.html">📊 Durchschnitt</a>
         <a href="bestandsabgleich.html">📋 Bestandsabgleich</a>
+        <a href="basar.html">🧺 Basar</a>
         <a href="verwaltung.html" id="verwaltung-link" hidden>🛠️ Verwaltung</a>
         <hr />
         <button type="button" id="logout-btn">Abmelden</button>
