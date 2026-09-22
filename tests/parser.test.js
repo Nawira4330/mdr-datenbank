@@ -15,6 +15,7 @@ const {
   presentGenesSummary, parentColorHints,
   missingDataLabels,
   cycleTristateItem,
+  RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -99,9 +100,22 @@ describe('Farbgenetik-Ableitung aus Fellfarbe/Notiz/Name (presentGenesSummary)',
     assert.ok(!genes.some((g) => g.locus === 'Champagne'), 'Champagne sollte NICHT aus "Sir Classic" im Fohlennamen abgeleitet werden');
   });
 
-  test('Farbwörter im eigenen (nicht auto-generierten) Namen werden weiterhin erkannt', () => {
+  // Regressionstest für den am 20.09.2026 behobenen Fall ("Pearl Mirrow"):
+  // der Pferdename wird NICHT MEHR nach Farbwörtern durchsucht (anders als
+  // früher, siehe Test oben) - ein Pferd namens "Pearl Mirrow" oder
+  // "Classic Beauty" wurde fälschlich als Pearl-Träger bzw. Champagne
+  // gewertet, nur weil der Name zufällig wie ein Farbwort aussah, obwohl
+  // "Pearl"/"Classic" hier eindeutig Teil des gewählten Namens war. Echte
+  // Farbangaben stehen zuverlässig im Fellfarbe-Feld bzw. in der Notiz.
+  test('Farbwörter im eigenen (frei gewählten) Namen werden NICHT mehr als Fellfarben-Hinweis gewertet', () => {
     const genes = presentGenesSummary([], null, null, 'Classic Beauty', null, null);
-    assert.ok(genes.some((g) => g.locus === 'Champagne'), 'ein echter eigener Name darf weiterhin als Fellfarben-Hinweis zählen');
+    assert.ok(!genes.some((g) => g.locus === 'Champagne'), 'ein frei gewählter Name darf NICHT als Fellfarben-Hinweis zählen (nur Fellfarbe-Feld/Notiz)');
+  });
+
+  test('echte Farbangabe im Fellfarbe-Feld wird weiterhin erkannt, unabhängig vom Namen', () => {
+    const genes = presentGenesSummary([], 'Pearl', null, 'Pearl Mirrow', null, null);
+    const cream = genes.find((g) => g.locus === 'Cream');
+    assert.deepEqual(cream, { locus: 'Cream', alleles: 'plpl', source: 'abgeleitet' });
   });
 });
 
@@ -175,5 +189,35 @@ describe('Genetik-/EKH-/Schlagwörter-Filter: Dreifach-Zustand (Tristate)', () =
     const item = { dataset: {} };
     cycleTristateItem(item);
     assert.equal(item.dataset.state, 'neutral');
+  });
+});
+
+// Regressionstest für den am 22.09.2026 behobenen Fall ("Hollow Dusk"):
+// isVisiblyHomozygousForTrait(record, trait, considerOverrides) ist die
+// gemeinsame Grundlage für autoInheritFromParents/autoUpdateParentCarriers
+// (horseForm.js) und den Bestands-Check in carrierBackfill.js - "false"
+// muss dabei IMMER die reine Textableitung liefern (unabhängig von einem
+// evtl. fälschlich gesetzten "het"-Override), sonst würde die
+// Selbstkorrektur den Bugfall nicht mehr erkennen.
+describe('isVisiblyHomozygousForTrait (Flaxen/Pearl, gemeinsame Grundlage für Träger-Nachpflege)', () => {
+  const FLAXEN = RECESSIVE_CARRIER_TRAITS.find((t) => t.label === 'Flaxen');
+  const PEARL = RECESSIVE_CARRIER_TRAITS.find((t) => t.label === 'Pearl');
+
+  test('Flaxen: eigene Fellfarbe "Flaxen ..." gilt unabhängig von Overrides als reinerbig', () => {
+    const horse = { name: 'Hollow Dusk', coat_color: 'Flaxen Sorrel Roan', notes: null, colors: [], color_gene_overrides: { Flaxen: 'het' } };
+    assert.equal(isVisiblyHomozygousForTrait(horse, FLAXEN, false), true, 'ignoriert das (fälschliche) het-Override');
+    assert.equal(isVisiblyHomozygousForTrait(horse, FLAXEN, true), false, 'MIT Override zählt das gesetzte "het" (zeigt den Bugfall)');
+  });
+
+  test('Pearl: eigene Fellfarbe "Pearl ..." gilt unabhängig von Overrides als reinerbig', () => {
+    const horse = { name: 'Irgendein Name', coat_color: 'Pearl Bay Dun', notes: null, colors: [], color_gene_overrides: null };
+    assert.equal(isVisiblyHomozygousForTrait(horse, PEARL, false), true);
+    assert.equal(isVisiblyHomozygousForTrait(horse, PEARL, true), true);
+  });
+
+  test('kein Treffer bei unauffälliger Fellfarbe', () => {
+    const horse = { name: 'Irgendein Name', coat_color: 'Bay', notes: null, colors: [], color_gene_overrides: null };
+    assert.equal(isVisiblyHomozygousForTrait(horse, FLAXEN, false), false);
+    assert.equal(isVisiblyHomozygousForTrait(horse, PEARL, false), false);
   });
 });
