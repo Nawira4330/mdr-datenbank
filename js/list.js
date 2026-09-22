@@ -836,23 +836,23 @@ function showFlashBanner() {
   if (flash.action === 'updated' && flash.changedFields?.length) {
     text += ` Geändert: ${flash.changedFields.join(', ')}.`;
   }
-  // Siehe autoUpdateParentFlaxenCarriers in horseForm.js: automatische
-  // Flaxen-Trägerschaft bei den Eltern, wenn dieses Pferd sichtbar Flaxen
-  // ist.
-  if (flash.flaxenUpdated?.length) {
-    text += ` Elternteil${flash.flaxenUpdated.length > 1 ? 'e' : ''} automatisch als Flaxen-Träger markiert: ${flash.flaxenUpdated.join(', ')}.`;
+  // Siehe autoUpdateParentCarriers in horseForm.js: automatische
+  // Trägerschaft (Flaxen/Pearl) bei den Eltern, wenn dieses Pferd sichtbar
+  // reinerbig für das jeweilige Merkmal ist.
+  for (const entry of flash.carrierUpdatedParents || []) {
+    text += ` Elternteil${entry.names.length > 1 ? 'e' : ''} automatisch als ${entry.trait}-Träger markiert: ${entry.names.join(', ')}.`;
   }
-  if (flash.flaxenWarnings?.length) {
-    text += ` ⚠️ Widerspruch: ${flash.flaxenWarnings.join(', ')} ${flash.flaxenWarnings.length > 1 ? 'sind' : 'ist'} als "Flaxen nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
+  for (const entry of flash.carrierWarningParents || []) {
+    text += ` ⚠️ Widerspruch: ${entry.names.join(', ')} ${entry.names.length > 1 ? 'sind' : 'ist'} als "${entry.trait} nicht vorhanden" markiert, müsste laut diesem Fohlen aber Träger sein - bitte manuell prüfen.`;
   }
-  // Siehe autoInheritFlaxenFromParents in horseForm.js: Gegenrichtung -
-  // dieses Pferd selbst automatisch als Flaxen-Träger markiert, weil ein
-  // Elternteil sichtbar Flaxen ist.
-  if (flash.ownFlaxenInheritedFrom) {
-    text += ` Automatisch als Flaxen-Träger markiert (Elternteil „${flash.ownFlaxenInheritedFrom}" ist Flaxen).`;
+  // Siehe autoInheritFromParents in horseForm.js: Gegenrichtung - dieses
+  // Pferd selbst automatisch als Träger markiert, weil ein Elternteil
+  // sichtbar reinerbig für das jeweilige Merkmal ist.
+  for (const entry of flash.ownCarrierInherited || []) {
+    text += ` Automatisch als ${entry.trait}-Träger markiert (Elternteil „${entry.from}" ist ${entry.trait}).`;
   }
-  if (flash.ownFlaxenWarningFrom) {
-    text += ` ⚠️ Widerspruch: Dieses Pferd ist als "Flaxen nicht vorhanden" markiert, müsste laut Elternteil „${flash.ownFlaxenWarningFrom}" (Flaxen) aber Träger sein - bitte manuell prüfen.`;
+  for (const entry of flash.ownCarrierWarning || []) {
+    text += ` ⚠️ Widerspruch: Dieses Pferd ist als "${entry.trait} nicht vorhanden" markiert, müsste laut Elternteil „${entry.from}" (${entry.trait}) aber Träger sein - bitte manuell prüfen.`;
   }
   banner.textContent = text;
   banner.hidden = false;

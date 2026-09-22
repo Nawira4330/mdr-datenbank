@@ -1125,6 +1125,35 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
   return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
 }
 
+// Rezessive Merkmale, die sich nur reinerbig zeigen (Flaxen: "flfl",
+// Pearl: "plpl") - ein sichtbar reinerbiges Pferd MUSS zwingend beide
+// Eltern als mindestens Träger gehabt haben und vererbt selbst an jedes
+// eigene Nachkommen mindestens eine Kopie. "overrideKey" ist der Schlüssel
+// in color_gene_overrides (Flaxen ist ein bloßer Locus-Name, Pearl/
+// "Cream:pl" ein Mehr-Allel-Schlüssel, siehe LOCUS_MULTI_ALLELES).
+// Gebraucht sowohl von horseForm.js (autoInheritFromParents/
+// autoUpdateParentCarriers beim Speichern) als auch von
+// carrierBackfill.js (Verwaltung, rückwirkender Check über den
+// Gesamtbestand - lädt kein horseForm.js).
+const RECESSIVE_CARRIER_TRAITS = [
+  { label: 'Flaxen', locus: 'Flaxen', homAllele: 'flfl', overrideKey: 'Flaxen' },
+  { label: 'Pearl', locus: 'Cream', homAllele: 'plpl', overrideKey: 'Cream:pl' },
+];
+
+// "considerOverrides" = true: reflektiert den tatsächlich angezeigten
+// Stand (inkl. manueller Bestätigung). "false": ignoriert Overrides,
+// prüft NUR die "nackte" Ableitung aus eigener Fellfarbe/Notiz - genutzt,
+// um den Bugfall zu erkennen, dass ein (fälschlich oder veraltet)
+// gesetztes "het" die eigentlich stärkere abgeleitete "flfl"/"plpl"-
+// Anzeige unterdrückt (Bugreport "Hollow Dusk").
+function isVisiblyHomozygousForTrait(record, trait, considerOverrides) {
+  const genes = presentGenesSummary(
+    record.colors, record.coat_color, record.notes, record.name, null,
+    considerOverrides ? record.color_gene_overrides : null,
+  );
+  return genes.some((g) => g.locus === trait.locus && g.alleles === trait.homAllele);
+}
+
 // Reinerbig vorhandene Loci eines Elternteils - sowohl bestätigt
 // (getestet) als auch abgeleitet (z.B. aus dem Namen "Cremello" oder
 // einem doppelten Kürzel "SPLSPL" in der Notiz). Ein reinerbiger
@@ -1651,5 +1680,6 @@ if (typeof module !== 'undefined' && module.exports) {
     presentGenesSummary, parentHomozygousLoci, parentColorHints,
     pintoParentHints, parentsMightHavePearl, missingDataLabels,
     TRISTATE_CYCLE, cycleTristateItem,
+    RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
   };
 }
