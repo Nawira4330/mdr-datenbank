@@ -119,6 +119,26 @@
       </div>
       <ul id="carrier-audit-log" class="small" style="max-height: 320px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
     </fieldset>
+
+    <fieldset>
+      <legend>Stammbaum: vertauschten Name/Rasse prüfen</legend>
+      <p class="muted small">
+        Read-only: findet Pferde, deren Stammbaum vermutlich von einem älteren,
+        bereits behobenen Parser-Bug betroffen ist (Name und Rasse eines
+        Vorfahren um eine Zeile verschoben, z.B. „Rasselos“ als Vorfahren-Name
+        statt als dessen Rasse). Da der eingefügte Rohtext nach dem Speichern
+        nicht dauerhaft aufbewahrt wird, kann das nicht automatisch korrigiert
+        werden – die Liste zeigt aber, welche Pferde betroffen sind. Fix:
+        beim jeweiligen Pferd den aktuellen Spieltext nochmal ins Feld
+        „Automatisch auslesen“ einfügen und speichern. Ändert nichts an der
+        Datenbank, läuft automatisch beim Öffnen dieser Seite.
+      </p>
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" id="pedigree-audit-start-btn" class="secondary">▶️ Erneut prüfen</button>
+        <span id="pedigree-audit-status" class="muted small"></span>
+      </div>
+      <ul id="pedigree-audit-log" class="small" style="max-height: 320px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
+    </fieldset>
   </main>
 
   <script src="js/config.js"></script>
@@ -130,5 +150,6 @@
   <script src="js/imageBackfill.js"></script>
   <script src="js/carrierBackfill.js"></script>
   <script src="js/carrierAudit.js"></script>
+  <script src="js/pedigreeAudit.js"></script>
 </body>
 </html>
