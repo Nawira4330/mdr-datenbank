@@ -1241,6 +1241,9 @@ async function renderDetailTables(data) {
   currentRelatednessUpdatedAt = data.relatedness_updated_at || null;
   renderZuchtbuchTab();
 
+  currentTournamentValues = data.computed_tournament_values || [];
+  renderTurnierwerteTable();
+
   const legacyContainer = document.getElementById('detail-tables');
   if (legacyContainer) {
     const allParts = [...genetikParts, ...turnierParts, ...stammbaumParts];
@@ -1266,6 +1269,7 @@ function wireTabs() {
   });
   wireZuchtbuchFilter();
   wireZuchtbuchSort();
+  wireTurnierwerteSort();
 }
 
 function activateTab(tab) {
@@ -1593,20 +1597,95 @@ function lpResultHtml(lp) {
   return html;
 }
 
-function computedTournamentValuesHtml(values) {
-  if (!values?.length) return '';
-  const rows = values.map((v) => `<tr>
+// Aktuell geladene Turnierwerte-Zeilen + Sortierstand (Nutzerwunsch:
+// "Turnierwerte im Pferdeprofil sollen sortierbar sein") - gleiches
+// Klick-auf-Spaltenkopf-Muster wie die Zuchtbuch-Verwandten-Tabelle weiter
+// unten (zuchtbuchSort/applyZuchtbuchSort/wireZuchtbuchSort). "null" =
+// noch nicht sortiert, zeigt die Original-Reihenfolge (nach Kategorie
+// gruppiert, wie im Spiel/Turnierplaner) - bleibt beim Wechsel des
+// Pferdeprofils (Pfeil-Navigation) bewusst bestehen, analog zu
+// zuchtbuchSort.
+let currentTournamentValues = [];
+let turnierwerteSort = null;
+
+function turnierwerteSortValue(v, field) {
+  switch (field) {
+    case 'category': return (v.category || '').toLowerCase();
+    case 'name': return (v.name || '').toLowerCase();
+    case 'wert': return v.wert;
+    case 'interieur': return v.interieur;
+    case 'lk': return v.complete ? v.lk : null;
+    default: return null;
+  }
+}
+
+// Fehlende Werte (null) landen unabhängig von der Richtung immer am Ende,
+// wie beim gleichen Muster in applyZuchtbuchSort/js/list.js (applySort).
+function applyTurnierwerteSort(values) {
+  if (!turnierwerteSort) return values;
+  const mult = turnierwerteSort.dir === 'asc' ? 1 : -1;
+  return [...values].sort((a, b) => {
+    const va = turnierwerteSortValue(a, turnierwerteSort.field);
+    const vb = turnierwerteSortValue(b, turnierwerteSort.field);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return va.localeCompare(vb, 'de') * mult;
+    return (va - vb) * mult;
+  });
+}
+
+function turnierwerteSortArrow(field) {
+  return turnierwerteSort?.field === field ? (turnierwerteSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+}
+
+function wireTurnierwerteSort() {
+  document.addEventListener('click', (e) => {
+    const th = e.target.closest('#turnierwerte-table th[data-sort]');
+    if (!th) return;
+    const field = th.dataset.sort;
+    turnierwerteSort = turnierwerteSort?.field === field
+      ? { field, dir: turnierwerteSort.dir === 'asc' ? 'desc' : 'asc' }
+      : { field, dir: 'asc' };
+    renderTurnierwerteTable();
+  });
+}
+
+// Befüllt NUR den Platzhalter-Container (turnierwerte-table-wrap) - wird
+// sowohl beim initialen Laden (renderDetailTables, nachdem der Platzhalter
+// per fillDetailContainer im DOM existiert) als auch bei jedem
+// Sortier-Klick separat aufgerufen, ohne das restliche Profil neu zu
+// rendern (analog zu renderZuchtbuchTab).
+function renderTurnierwerteTable() {
+  const container = document.getElementById('turnierwerte-table-wrap');
+  if (!container) return;
+  if (!currentTournamentValues.length) {
+    container.innerHTML = '';
+    return;
+  }
+  const rows = applyTurnierwerteSort(currentTournamentValues).map((v) => `<tr>
     <td>${escapeHtml(v.category)}</td>
     <td>${escapeHtml(v.name)}</td>
     <td>${v.wert != null ? v.wert : '–'}</td>
     <td>${v.interieur != null ? v.interieur.toFixed(2) : '–'}</td>
     <td>${v.complete && v.lk != null ? 'LK' + v.lk : '–'}</td>
   </tr>`).join('');
+  container.innerHTML = `<div class="table-wrap"><table id="turnierwerte-table">
+    <thead><tr>
+      <th data-sort="category">Kategorie${turnierwerteSortArrow('category')}</th>
+      <th data-sort="name">Disziplin${turnierwerteSortArrow('name')}</th>
+      <th data-sort="wert">Wert${turnierwerteSortArrow('wert')}</th>
+      <th data-sort="interieur">Interieur${turnierwerteSortArrow('interieur')}</th>
+      <th data-sort="lk">LK${turnierwerteSortArrow('lk')}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function computedTournamentValuesHtml(values) {
+  if (!values?.length) return '';
   return `<div class="group-heading">Turnierwerte je Disziplin (Turnierplaner)</div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Kategorie</th><th>Disziplin</th><th>Wert</th><th>Interieur</th><th>LK</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
+    <div id="turnierwerte-table-wrap"></div>`;
 }
 
 // --- Zuchtbuch-Reiter: Verwandtschaft -----------------------------------
