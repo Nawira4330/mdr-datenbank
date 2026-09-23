@@ -15,7 +15,7 @@ function resolveLoginEmail(identifier) {
 // ein Muster (z.B. "keine @benutzer.mdr-datenbank.local-Adresse") - sonst
 // würde jedes Konto, das aus Versehen mit einer echten statt der
 // Benutzername-Adresse angelegt wird, fälschlich Admin-Rechte bekommen.
-const ADMIN_EMAILS = ['lisa-jacobi@hotmail.com'];
+const ADMIN_EMAILS = ['lisa-jacobi@hotmail.com', `nawira13@${USERNAME_LOGIN_DOMAIN}`];
 
 function isAdminSession(session) {
   const email = session?.user?.email || '';
