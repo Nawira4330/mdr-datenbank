@@ -33,12 +33,22 @@ async function runPedigreeAudit() {
 
   statusEl.textContent = 'Lade Pferdeliste…';
   const { data: horses, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('id, name, breed, pedigree'),
+    supabaseClient.from('horses').select('id, name, external_id, breed, pedigree'),
   );
   if (error || !horses) {
     statusEl.textContent = 'Fehler beim Laden der Pferdeliste: ' + (error?.message || 'unbekannt');
     return;
   }
+
+  const byName = new Map();
+  for (const h of horses) {
+    const list = byName.get(h.name) || [];
+    list.push(h);
+    byName.set(h.name, list);
+  }
+  // Der verdächtige Vorfahren-Name steht nur als Text im Stammbaum, nicht
+  // zwingend als eigener Datensatz - siehe linkedAncestorName weiter
+  // unten, das ohne Treffer auf den reinen Namen zurückfällt.
 
   const knownBreeds = new Set();
   for (const h of horses) {
@@ -48,11 +58,22 @@ async function runPedigreeAudit() {
     }
   }
 
-  function logLine(text) {
+  function logLine(html) {
     const li = document.createElement('li');
-    li.textContent = text;
+    li.innerHTML = html;
     logList.appendChild(li);
     logList.scrollTop = logList.scrollHeight;
+  }
+
+  // Bei einer vertauschten Zeile steht der ECHTE Name des Vorfahren meist
+  // im "breed"-Feld (siehe oben) - für den Spiel-Link deshalb beide
+  // Felder probieren, welches auch immer zu einem bekannten Pferd passt.
+  // Der angezeigte Text bleibt trotzdem "a.name" (zeigt exakt, was aktuell
+  // gespeichert ist).
+  function linkedAncestorName(a) {
+    const rec = (byName.get(a.name) || [])[0] || (byName.get(a.breed) || [])[0];
+    const label = escapeHtml(a.name);
+    return rec ? `${gameLinkPrefix(rec)}${label}` : label;
   }
 
   let flaggedCount = 0;
@@ -62,9 +83,9 @@ async function runPedigreeAudit() {
     if (!suspicious.length) continue;
     flaggedCount++;
     const details = suspicious
-      .map((a) => `„${a.name}" (Rasse-Feld zeigt stattdessen: „${a.breed || '–'}")`)
+      .map((a) => `„${linkedAncestorName(a)}" (Rasse-Feld zeigt stattdessen: „${escapeHtml(a.breed || '–')}")`)
       .join(', ');
-    logLine(`⚠️ ${horse.name}: ${suspicious.length} Vorfahre(n), deren Name einer Rasse entspricht - ${details}`);
+    logLine(`⚠️ ${linkedName(horse)}: ${suspicious.length} Vorfahre(n), deren Name einer Rasse entspricht - ${details}`);
   }
 
   statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${flaggedCount} mit vermutlich vertauschtem Name/Rasse im Stammbaum.`;

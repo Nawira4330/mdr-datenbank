@@ -30,16 +30,16 @@ async function runCarrierAudit() {
 
   statusEl.textContent = 'Lade Pferdeliste…';
   const { data: horses, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('id, name, colors, coat_color, notes, color_gene_overrides'),
+    supabaseClient.from('horses').select('id, name, external_id, colors, coat_color, notes, color_gene_overrides'),
   );
   if (error || !horses) {
     statusEl.textContent = 'Fehler beim Laden der Pferdeliste: ' + (error?.message || 'unbekannt');
     return;
   }
 
-  function logLine(text, warn) {
+  function logLine(html, warn) {
     const li = document.createElement('li');
-    li.textContent = text;
+    li.innerHTML = html;
     if (warn) li.style.color = '#b91c1c';
     logList.appendChild(li);
     logList.scrollTop = logList.scrollHeight;
@@ -59,15 +59,15 @@ async function runCarrierAudit() {
       checkedCount++;
 
       if (shown.source === 'getestet') {
-        logLine(`✅ ${horse.name} (${trait.label}): echter Spiel-Testwert.`);
+        logLine(`✅ ${linkedName(horse)} (${trait.label}): echter Spiel-Testwert.`);
         continue;
       }
       if (shown.source === 'manuell') {
-        logLine(`✅ ${horse.name} (${trait.label}): manuell als reinerbig bestätigt (2x vorhanden).`);
+        logLine(`✅ ${linkedName(horse)} (${trait.label}): manuell als reinerbig bestätigt (2x vorhanden).`);
         continue;
       }
       if (shown.source === 'elternteil') {
-        logLine(`✅ ${horse.name} (${trait.label}): beide Eltern bestätigt reinerbig (garantierte Vererbung).`);
+        logLine(`✅ ${linkedName(horse)} (${trait.label}): beide Eltern bestätigt reinerbig (garantierte Vererbung).`);
         continue;
       }
 
@@ -76,13 +76,13 @@ async function runCarrierAudit() {
       const fromColor = inferGeneticHintsFromPhenotype(horse.coat_color).some((h) => h.locus === trait.locus && h.allele === trait.homAllele);
       const fromNotes = inferGeneticHintsFromPhenotype(horse.notes).some((h) => h.locus === trait.locus && h.allele === trait.homAllele);
       if (fromColor) {
-        logLine(`✅ ${horse.name} (${trait.label}): eigene Fellfarbe „${horse.coat_color}" enthält „${trait.label}".`);
+        logLine(`✅ ${linkedName(horse)} (${trait.label}): eigene Fellfarbe „${escapeHtml(horse.coat_color)}" enthält „${trait.label}".`);
       } else if (fromNotes) {
         flaggedCount++;
-        logLine(`⚠️ ${horse.name} (${trait.label}): NUR aus eigener Notiz abgeleitet („${horse.notes}") - bitte prüfen, ob die Notiz wirklich DIESES Pferd beschreibt.`, true);
+        logLine(`⚠️ ${linkedName(horse)} (${trait.label}): NUR aus eigener Notiz abgeleitet („${escapeHtml(horse.notes)}") - bitte prüfen, ob die Notiz wirklich DIESES Pferd beschreibt.`, true);
       } else {
         flaggedCount++;
-        logLine(`⚠️ ${horse.name} (${trait.label}): reinerbig angezeigt, Quelle unklar - bitte manuell prüfen.`, true);
+        logLine(`⚠️ ${linkedName(horse)} (${trait.label}): reinerbig angezeigt, Quelle unklar - bitte manuell prüfen.`, true);
       }
     }
   }
