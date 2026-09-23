@@ -100,6 +100,25 @@
       </div>
       <ul id="carrier-backfill-log" class="small" style="max-height: 220px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
     </fieldset>
+
+    <fieldset>
+      <legend>Flaxen-/Pearl-Herkunft prüfen</legend>
+      <p class="muted small">
+        Read-only: listet jedes Pferd auf, das aktuell reinerbig Flaxen (flfl)
+        oder Pearl (plpl) anzeigt, zusammen mit der genauen Quelle. Fellfarbe,
+        ein echter Spiel-Testwert, ein manuell bestätigtes „2x vorhanden“ und
+        „beide Eltern reinerbig“ sind zuverlässig (✅). Kommt der Hinweis NUR
+        aus der eigenen Notiz, wird das gesondert markiert (⚠️) – Freitext
+        könnte theoretisch auch von einem Elternteil oder einem anderen Pferd
+        handeln und fälschlich als eigenes Merkmal gelesen worden sein. Ändert
+        nichts an der Datenbank, läuft automatisch beim Öffnen dieser Seite.
+      </p>
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" id="carrier-audit-start-btn" class="secondary">▶️ Erneut prüfen</button>
+        <span id="carrier-audit-status" class="muted small"></span>
+      </div>
+      <ul id="carrier-audit-log" class="small" style="max-height: 320px; overflow-y: auto; margin-top: 0.5rem; padding-left: 1.2rem;"></ul>
+    </fieldset>
   </main>
 
   <script src="js/config.js"></script>
@@ -110,5 +129,6 @@
   <script src="js/verwaltung.js"></script>
   <script src="js/imageBackfill.js"></script>
   <script src="js/carrierBackfill.js"></script>
+  <script src="js/carrierAudit.js"></script>
 </body>
 </html>
