@@ -31,6 +31,41 @@
 // spielt: zuerst werden ALLE Selbstkorrekturen (Bugfall oben) vorgenommen,
 // erst danach - mit garantiert korrigiertem Stand - die Weitergabe an
 // Eltern/Nachkommen geprüft.
+// escapeHtml/gameLinkPrefix/linkedName werden hier einmalig definiert und
+// auch von carrierAudit.js/pedigreeAudit.js genutzt (dieselbe Seite,
+// gemeinsamer globaler Scope über klassische <script>-Tags, siehe
+// verwaltung.html - Ladereihenfolge: dieses Skript zuerst).
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+// Nutzerwunsch: in den Fehler-/Warnmeldungen der Verwaltungs-Tools vor
+// jedem Pferdenamen einen Link zum echten Spielprofil setzen (1:1
+// dieselbe URL-Konvention wie der 🔗-Button in list.js) - erspart das
+// manuelle Suchen im Spiel. Ohne bekannte externe ID (external_id) gibt
+// es keinen Link, nur den (escapten) Namen.
+function gameLinkPrefix(horse) {
+  if (!horse?.external_id) return '';
+  return `<a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(horse.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a> `;
+}
+
+function linkedName(horse) {
+  return `${gameLinkPrefix(horse)}${escapeHtml(horse?.name ?? '')}`;
+}
+
+// Für Namen, die nur als Text vorliegen (z.B. ein Eltern-/Vorfahrenname
+// im Stammbaum, kein direkt verfügbares Pferde-Objekt) - "byName" ist
+// eine Map<name, Pferd[]>, wie sie jedes der drei Verwaltungs-Tools
+// (carrierBackfill/carrierAudit/pedigreeAudit) aus seiner eigenen
+// Pferdeliste aufbaut. Ohne Treffer bleibt es beim reinen (escapten)
+// Namen, ohne Link.
+function linkedNameByLookup(byName, name) {
+  const rec = (byName.get(name) || [])[0];
+  return rec ? linkedName(rec) : escapeHtml(name);
+}
+
 async function runCarrierBackfill() {
   const statusEl = document.getElementById('carrier-backfill-status');
   const logList = document.getElementById('carrier-backfill-log');
@@ -38,7 +73,7 @@ async function runCarrierBackfill() {
 
   statusEl.textContent = 'Lade Pferdeliste…';
   const { data: horses, error } = await fetchAllRows(
-    supabaseClient.from('horses').select('id, name, pedigree, colors, coat_color, notes, color_gene_overrides'),
+    supabaseClient.from('horses').select('id, name, external_id, pedigree, colors, coat_color, notes, color_gene_overrides'),
   );
   if (error || !horses) {
     statusEl.textContent = 'Fehler beim Laden der Pferdeliste: ' + (error?.message || 'unbekannt');
@@ -52,9 +87,9 @@ async function runCarrierBackfill() {
     byName.set(h.name, list);
   }
 
-  function logLine(text) {
+  function logLine(html) {
     const li = document.createElement('li');
-    li.textContent = text;
+    li.innerHTML = html;
     logList.appendChild(li);
     logList.scrollTop = logList.scrollHeight;
   }
@@ -71,7 +106,7 @@ async function runCarrierBackfill() {
     const { error: updateError } = await supabaseClient.from('horses').update({ color_gene_overrides: overrides }).eq('id', horse.id);
     if (updateError) {
       failedCount++;
-      logLine(`❌ ${horse.name} (${trait.label}): Fehler beim Speichern (${updateError.message})`);
+      logLine(`❌ ${linkedName(horse)} (${trait.label}): Fehler beim Speichern (${escapeHtml(updateError.message)})`);
       return false;
     }
     horse.color_gene_overrides = overrides; // für nachfolgende Lookups (byName) aktuell halten
@@ -94,11 +129,11 @@ async function runCarrierBackfill() {
       if (current === 'het' && ownHom) {
         if (await writeOverride(horse, trait, null)) {
           correctedCount++;
-          logLine(`🔧 ${horse.name} (${trait.label}): war fälschlich nur als Träger markiert, ist aber selbst sichtbar ${trait.label} - korrigiert.`);
+          logLine(`🔧 ${linkedName(horse)} (${trait.label}): war fälschlich nur als Träger markiert, ist aber selbst sichtbar ${trait.label} - korrigiert.`);
         }
       } else if (current === 'absent' && ownHom) {
         warningCount++;
-        logLine(`⚠️ ${horse.name}: eigene Fellfarbe/Notiz zeigt ${trait.label}, aber als "nicht vorhanden" markiert - Widerspruch, bitte manuell prüfen.`);
+        logLine(`⚠️ ${linkedName(horse)}: eigene Fellfarbe/Notiz zeigt ${trait.label}, aber als "nicht vorhanden" markiert - Widerspruch, bitte manuell prüfen.`);
       }
     }
 
@@ -118,13 +153,13 @@ async function runCarrierBackfill() {
             if (pCurrent === 'het' || pCurrent === 'hom') continue;
             if (pCurrent === 'absent') {
               warningCount++;
-              logLine(`⚠️ ${parent.name}: als "${trait.label} nicht vorhanden" markiert, müsste laut Nachkomme „${horse.name}" aber Träger sein - bitte manuell prüfen.`);
+              logLine(`⚠️ ${linkedName(parent)}: als "${trait.label} nicht vorhanden" markiert, müsste laut Nachkomme „${linkedName(horse)}" aber Träger sein - bitte manuell prüfen.`);
               continue;
             }
             if (isVisiblyHomozygousForTrait(parent, trait, false)) continue; // selbst schon sichtbar, nichts nachzutragen
             if (await writeOverride(parent, trait, 'het')) {
               updatedCount++;
-              logLine(`✅ ${parent.name}: als ${trait.label}-Träger markiert (Nachkomme „${horse.name}" ist ${trait.label}).`);
+              logLine(`✅ ${linkedName(parent)}: als ${trait.label}-Träger markiert (Nachkomme „${linkedName(horse)}" ist ${trait.label}).`);
             }
           }
         }
@@ -141,13 +176,13 @@ async function runCarrierBackfill() {
 
       if (current === 'absent') {
         warningCount++;
-        logLine(`⚠️ ${horse.name}: als "${trait.label} nicht vorhanden" markiert, müsste laut Elternteil „${traitParentName}" aber Träger sein - bitte manuell prüfen.`);
+        logLine(`⚠️ ${linkedName(horse)}: als "${trait.label} nicht vorhanden" markiert, müsste laut Elternteil „${linkedNameByLookup(byName, traitParentName)}" aber Träger sein - bitte manuell prüfen.`);
         continue;
       }
 
       if (await writeOverride(horse, trait, 'het')) {
         updatedCount++;
-        logLine(`✅ ${horse.name}: als ${trait.label}-Träger markiert (Elternteil „${traitParentName}" ist ${trait.label}).`);
+        logLine(`✅ ${linkedName(horse)}: als ${trait.label}-Träger markiert (Elternteil „${linkedNameByLookup(byName, traitParentName)}" ist ${trait.label}).`);
       }
     }
   }
