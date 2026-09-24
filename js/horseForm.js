@@ -124,12 +124,39 @@ document.getElementById('image_url')?.addEventListener('paste', async (e) => {
 // Dateiname des Bilds beginnt dabei mit der Spiel-ID des Pferds (z.B.
 // "864841_002.png") - wird deshalb hier gleich mit als ID übernommen,
 // spart bei komplett kopierten Seiten das manuelle Eintippen der ID.
+//
+// Bugreport: bei manchen Nutzer*innen (z.B. wenn sie über ein anderes
+// Betriebssystem/einen anderen Browser/eine App kopieren, die dabei keine
+// HTML-Fassung in die Zwischenablage legt) bleibt image_url beim Einfügen
+// komplett leer - alle ANDEREN Felder werden trotzdem korrekt erkannt, da
+// die für sie zuständige Text-Auswertung (parseHorseText/onParse) davon
+// unabhängig ist. Das passierte bisher VÖLLIG STILL, ohne jeden Hinweis -
+// betroffene Personen konnten also nicht wissen, dass beim Speichern kein
+// Bild übernommen wurde. Setzt jetzt IMMER eine sichtbare Rückmeldung
+// (#image-parse-status), auch im Fehlerfall, mit einem konkreten
+// Alternativweg (Bild im Spiel selbst per Rechtsklick "Bild kopieren",
+// dann direkt in das Bild-URL-Feld einfügen - siehe der andere
+// paste-Handler oben auf #image_url).
+function setImageParseStatus(message) {
+  const el = document.getElementById('image-parse-status');
+  if (el) el.textContent = message;
+}
+
+const IMAGE_FALLBACK_HINT =
+  'Bitte Bild manuell ergänzen: im Spiel Rechtsklick auf das Pferdebild → "Bild kopieren", dann direkt hier ins Bild-URL-Feld einfügen (Strg+V).';
+
 document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const html = e.clipboardData?.getData('text/html');
-  if (!html) return;
+  if (!html) {
+    setImageParseStatus(`⚠️ Kein Bild automatisch erkannt (die Zwischenablage enthielt nur reinen Text, keine Formatierung). ${IMAGE_FALLBACK_HINT}`);
+    return;
+  }
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const img = doc.getElementById('pferdebild');
-  if (!img?.src) return;
+  if (!img?.src) {
+    setImageParseStatus(`⚠️ Kein Pferdebild im eingefügten Text gefunden. ${IMAGE_FALLBACK_HINT}`);
+    return;
+  }
   // img.src ist bereits vom DOMParser gegen die Basis-URL des Dokuments
   // aufgelöst - ohne <base>-Tag im Fragment bleibt ein rein relativer Pfad
   // aus dem Spiel-HTML aber unaufgelöst, deshalb hier zusätzlich explizit
@@ -138,6 +165,8 @@ document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const rawSrc = img.getAttribute('src');
   const resolved = new URL(rawSrc, 'https://www.morning-dust-ranch.de/').href;
   document.getElementById('image_url').value = resolved;
+  updateImagePreview();
+  setImageParseStatus('✅ Bild automatisch erkannt.');
 
   // Der Dateiname selbst (letzter Pfadabschnitt, z.B. "864841_002.png")
   // beginnt mit der Spiel-ID - alles danach (Bild-Variante, beim lokalen
@@ -1118,6 +1147,7 @@ async function resetFormForNextEntry(savedName, savedId, wasUpdate) {
   document.getElementById('raw-text').value = '';
   document.getElementById('paste-details').open = true;
   document.getElementById('parse-status').textContent = '';
+  setImageParseStatus('');
   document.getElementById('form-error').textContent = '';
   fillTagCheckboxes([]);
   updateBreedCompositionVisibility();
