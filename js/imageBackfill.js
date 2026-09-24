@@ -1,8 +1,9 @@
-// Nachträgliche Komprimierung der Bestandsbilder (Verwaltung, Egress) -
-// siehe fieldset "Bestandsbilder komprimieren" in verwaltung.html. Nutzt
-// dieselbe compressImageFile()-Funktion wie der normale Bild-Upload beim
-// Pferd selbst (siehe js/horseForm.js/js/parser.js), wendet sie aber
-// rückwirkend auf bereits gespeicherte Bilder an.
+// Nachträgliche Komprimierung UND Migration der Bestandsbilder (Verwaltung,
+// Egress) - siehe fieldset "Bestandsbilder komprimieren & migrieren" in
+// verwaltung.html. Nutzt dieselbe compressImageFile()-Funktion wie der
+// normale Bild-Upload beim Pferd selbst (siehe js/horseForm.js/
+// js/parser.js), wendet sie aber rückwirkend auf bereits gespeicherte
+// Bilder an.
 //
 // Läuft komplett im Browser des Admins (kein eigenes Backend nötig) -
 // dieselben Supabase-Berechtigungen wie der normale Bild-Upload reichen
@@ -52,12 +53,23 @@ async function runImageBackfill() {
     return;
   }
 
-  // Nur Bilder im EIGENEN Speicher (nicht extern verlinkte, z.B. direkt
-  // vom Spiel) - erkennbar am gemeinsamen Präfix der öffentlichen Bucket-URL.
+  // Bugreport: der Discord-Bot zeigt manche Bilder gar nicht an, obwohl sie
+  // laut Datenbank vorhanden sind. Betroffen sind vermutlich Pferde, deren
+  // image_url noch direkt auf die Spiel-Domain zeigt statt auf den eigenen
+  // Speicher (siehe embeds.js: embed.setImage(horse.image_url)) - Discords
+  // Server laedt das Bild beim Anzeigen selbst nach, und externe Spiel-
+  // Bilder lassen sich von dort erfahrungsgemaess nicht immer zuverlaessig
+  // laden (Hotlink-Schutz/instabile URLs), waehrend der eigene Supabase-
+  // Speicher oeffentlich und stabil erreichbar ist. Diese Funktion migriert
+  // deshalb jetzt ZUSAETZLICH zur bisherigen Komprimierung auch extern
+  // verlinkte Bilder einmalig in den eigenen Speicher (unabhaengig von der
+  // Dateigroesse, da hier die Verlagerung selbst der Zweck ist, nicht die
+  // Groessenersparnis). Bereits im eigenen Speicher liegende Bilder werden
+  // wie bisher nur bei Bedarf komprimiert.
   const bucketUrlPrefix = supabaseClient.storage.from('horse-images').getPublicUrl('').data.publicUrl;
   const byUrl = new Map();
   for (const h of horses) {
-    if (!h.image_url || !h.image_url.startsWith(bucketUrlPrefix)) continue;
+    if (!h.image_url) continue;
     const list = byUrl.get(h.image_url) || [];
     list.push(h.id);
     byUrl.set(h.image_url, list);
@@ -65,11 +77,13 @@ async function runImageBackfill() {
 
   const urls = [...byUrl.keys()];
   const total = urls.length;
-  backfillLog(`${total} eigene Bild-URL(s) gefunden (${horses.length} Pferde insgesamt).`);
+  const externalTotal = urls.filter((u) => !u.startsWith(bucketUrlPrefix)).length;
+  backfillLog(`${total} Bild-URL(s) gefunden (${horses.length} Pferde insgesamt), davon ${externalTotal} extern verlinkt (z.B. direkt vom Spiel).`);
   progressBar.hidden = false;
   progressBar.max = total;
   progressBar.value = 0;
 
+  let migratedCount = 0;
   let compressedCount = 0;
   let skippedCount = 0;
   let failedCount = 0;
@@ -81,18 +95,27 @@ async function runImageBackfill() {
       break;
     }
     const url = urls[i];
+    const isOwn = url.startsWith(bucketUrlPrefix);
     const horseIds = byUrl.get(url);
     statusEl.textContent = `${i + 1}/${total} …`;
     try {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error('Download fehlgeschlagen (HTTP ' + resp.status + ')');
       const blob = await resp.blob();
-      if (blob.type === 'image/gif' || blob.size < BACKFILL_SKIP_THRESHOLD_BYTES) {
+      const tooSmallToCompress = blob.type === 'image/gif' || blob.size < BACKFILL_SKIP_THRESHOLD_BYTES;
+
+      if (isOwn && tooSmallToCompress) {
         skippedCount++;
       } else {
         const file = new File([blob], 'bestand', { type: blob.type });
-        const compressed = await compressImageFile(file);
-        if (compressed.size < blob.size) {
+        const compressed = tooSmallToCompress ? file : await compressImageFile(file);
+        // Eigene Bilder nur ersetzen, wenn die Komprimierung tatsaechlich
+        // etwas bringt (bisheriges Verhalten) - externe Bilder werden IMMER
+        // migriert, auch ohne Groessengewinn, da hier die Verlagerung in den
+        // eigenen, zuverlaessig erreichbaren Speicher selbst der Zweck ist.
+        if (isOwn && compressed.size >= blob.size) {
+          skippedCount++;
+        } else {
           const ext = IMAGE_EXTENSION_BY_MIME_TYPE[compressed.type] || 'jpg';
           const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
           const { error: upErr } = await supabaseClient.storage.from('horse-images').upload(path, compressed, {
@@ -103,22 +126,33 @@ async function runImageBackfill() {
           const newUrl = supabaseClient.storage.from('horse-images').getPublicUrl(path).data.publicUrl;
           const { error: updErr } = await supabaseClient.from('horses').update({ image_url: newUrl }).in('id', horseIds);
           if (updErr) throw updErr;
-          savedBytes += blob.size - compressed.size;
-          compressedCount++;
-          backfillLog(`✅ ${formatBytes(blob.size)} → ${formatBytes(compressed.size)} (${horseIds.length} Pferd${horseIds.length === 1 ? '' : 'e'})`);
-        } else {
-          skippedCount++;
+          const horseWord = `${horseIds.length} Pferd${horseIds.length === 1 ? '' : 'e'}`;
+          if (isOwn) {
+            savedBytes += blob.size - compressed.size;
+            compressedCount++;
+            backfillLog(`✅ Komprimiert: ${formatBytes(blob.size)} → ${formatBytes(compressed.size)} (${horseWord})`);
+          } else {
+            migratedCount++;
+            backfillLog(`📥 Extern migriert (jetzt im eigenen Speicher, Discord-fähig): ${formatBytes(blob.size)} → ${formatBytes(compressed.size)} (${horseWord})`);
+          }
         }
       }
     } catch (e) {
       failedCount++;
-      backfillLog(`❌ Fehler bei einem Bild (${horseIds.length} Pferd${horseIds.length === 1 ? '' : 'e'}): ${e.message}`);
+      // Bei extern verlinkten Bildern scheitert der Download hier haeufig an
+      // CORS (der Spiel-Server erlaubt keine browserseitigen Fremdabrufe) -
+      // in dem Fall bleibt nur der manuelle Weg: Bild im Spiel oeffnen,
+      // speichern, im Bearbeiten-Formular des Pferds per Zwischenablage neu
+      // einfuegen (siehe horseForm.js, laedt automatisch in den eigenen
+      // Speicher hoch).
+      const hint = isOwn ? '' : ' - bei extern verlinkten Bildern oft ein CORS-Problem, dann hilft nur manuelles Neu-Einfügen im Bearbeiten-Formular des Pferds.';
+      backfillLog(`❌ Fehler bei einem${isOwn ? '' : ' extern verlinkten'} Bild (${horseIds.length} Pferd${horseIds.length === 1 ? '' : 'e'}): ${e.message}${hint}`);
     }
     progressBar.value = i + 1;
   }
 
-  statusEl.textContent = `Fertig: ${compressedCount} komprimiert (${formatBytes(savedBytes)} gespart), ${skippedCount} übersprungen (schon klein), ${failedCount} fehlgeschlagen.`;
-  backfillLog(`--- Durchlauf beendet: ${compressedCount} komprimiert, ${skippedCount} übersprungen, ${failedCount} fehlgeschlagen, ${formatBytes(savedBytes)} gespart. ---`);
+  statusEl.textContent = `Fertig: ${migratedCount} extern migriert, ${compressedCount} komprimiert (${formatBytes(savedBytes)} gespart), ${skippedCount} übersprungen (schon klein/eigener Speicher), ${failedCount} fehlgeschlagen.`;
+  backfillLog(`--- Durchlauf beendet: ${migratedCount} migriert, ${compressedCount} komprimiert, ${skippedCount} übersprungen, ${failedCount} fehlgeschlagen, ${formatBytes(savedBytes)} gespart. ---`);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -55,17 +55,22 @@
     </fieldset>
 
     <fieldset>
-      <legend>Bestandsbilder komprimieren</legend>
+      <legend>Bestandsbilder komprimieren &amp; migrieren</legend>
       <p class="muted small">
         Komprimiert/verkleinert nachträglich alle bereits hochgeladenen Pferdebilder im
         eigenen Bild-Speicher (max. 1600px, JPEG 85% – wie beim normalen Bild-Upload,
         siehe horse.html) und trägt die neue, kleinere Bild-URL beim jeweiligen Pferd
         ein. Reduziert die Dateigröße typischerweise um 80–95% und senkt damit den
-        Egress-Verbrauch bei jedem künftigen Betrachten. Bereits kleine Bilder werden
-        übersprungen (erkennbar an der Dateigröße) – ein Durchlauf lässt sich also
-        jederzeit unterbrechen und später erneut starten, ohne bereits erledigte Bilder
-        doppelt anzufassen. Betrifft nur Bilder im eigenen Speicher, keine extern
-        verlinkten (z.B. direkt vom Spiel).
+        Egress-Verbrauch bei jedem künftigen Betrachten. Bereits kleine eigene Bilder
+        werden übersprungen (erkennbar an der Dateigröße) – ein Durchlauf lässt sich
+        also jederzeit unterbrechen und später erneut starten, ohne bereits erledigte
+        Bilder doppelt anzufassen. Migriert außerdem extern verlinkte Bilder (z.B.
+        direkt vom Spiel) einmalig in den eigenen Speicher, unabhängig von der
+        Dateigröße – behebt den Bug, dass der Discord-Bot manche Bilder nicht anzeigt,
+        obwohl sie in der Datenbank hinterlegt sind (extern verlinkte Bilder lassen
+        sich von Discords Servern oft nicht zuverlässig laden). Schlägt die Migration
+        bei einem extern verlinkten Bild fehl (meist ein CORS-Problem), hilft nur das
+        manuelle Neu-Einfügen im Bearbeiten-Formular des jeweiligen Pferds.
       </p>
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
         <button type="button" id="backfill-start-btn" class="secondary">▶️ Start</button>
