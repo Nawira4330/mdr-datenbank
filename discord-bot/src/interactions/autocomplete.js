@@ -1,4 +1,3 @@
-const supabase = require('../supabaseClient');
 const { getGuildSettings, getChannelSettings } = require('../settings');
 const { horseMatchesFilters } = require('../filters');
 const { fetchAllHorsesLight } = require('../pedigree');
@@ -15,27 +14,36 @@ const FETCH_LIMIT = 100;
 // Server/in diesem Kanal per "/mdrdb rassen"/"/mdrdb kanal" gesetzten
 // Einschraenkungen (siehe settings.js/filters.js), damit im Dropdown gar
 // nicht erst Pferde auftauchen, die dort ohnehin nicht angezeigt werden.
+//
+// Bugreport (Egress): las bisher bei JEDEM Tastendruck live aus der
+// Datenbank (eigene .ilike()-Abfrage) - dieses Feld feuert in DREI
+// Befehlen (/mdrdb, /mdrdb-verkaufen, /mdrdb-besitzer), war also der
+// mit Abstand haeufigste DB-Zugriff im ganzen Bot. Nutzt jetzt denselben
+// kurzlebigen Prozess-Cache wie handleTagPferdAutocomplete
+// (fetchAllHorsesLight, siehe pedigree.js) und filtert im Speicher statt
+// pro Tastendruck neu abzufragen - Verhalten (Reihenfolge/Limit/Filter)
+// bleibt identisch, nur die Datenquelle ist jetzt der Cache.
 async function handleAutocomplete(interaction) {
-  const focused = interaction.options.getFocused() || '';
+  const focused = (interaction.options.getFocused() || '').trim().toLowerCase();
 
-  let query = supabase
-    .from('horses')
-    .select('name, breed, breeding_allowed, gender')
-    .order('name')
-    .limit(FETCH_LIMIT);
-  if (focused.trim()) query = query.ilike('name', `%${focused.trim()}%`);
-
-  const { data, error } = await query;
-  if (error || !data) {
+  let allHorses;
+  try {
+    allHorses = await fetchAllHorsesLight();
+  } catch {
     await interaction.respond([]);
     return;
   }
 
-  let filtered = data;
+  let matches = focused ? allHorses.filter((h) => (h.name || '').toLowerCase().includes(focused)) : allHorses;
+  matches = [...matches]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+    .slice(0, FETCH_LIMIT);
+
+  let filtered = matches;
   if (interaction.inGuild()) {
     const guildSettings = getGuildSettings(interaction.guildId);
     const channelSettings = getChannelSettings(interaction.channelId);
-    filtered = data.filter((h) => horseMatchesFilters(h, guildSettings, channelSettings));
+    filtered = matches.filter((h) => horseMatchesFilters(h, guildSettings, channelSettings));
   }
 
   await interaction.respond(filtered.slice(0, RESULT_LIMIT).map((h) => ({ name: h.name, value: h.name })));
