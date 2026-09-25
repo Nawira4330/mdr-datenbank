@@ -1,6 +1,7 @@
 // Spalten, die die Übersichtstabelle/Filter/Sortierung/CSV-Export/
-// Dashboard-Kacheln tatsächlich lesen (siehe buildQuery/loadAllHorsesCache
-// weiter unten) - bewusst statt select('*'), das zusätzlich u.a.
+// Dashboard-Kacheln tatsächlich lesen (siehe loadAllHorsesCache weiter
+// unten, der EINZIGE Server-Abruf des kompletten Bestands) - bewusst statt
+// select('*'), das zusätzlich u.a.
 // "raw_text" (den kompletten eingefügten Spieltext, potenziell mehrere KB
 // je Pferd), "disciplines", "traits", "ico", "purebred_pct" und "user_id"
 // mitgeladen hätte, obwohl keins davon hier gebraucht wird - bei ~1150
@@ -14,17 +15,6 @@ const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composit
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
 let lastRenderedRows = [];
-// Rohdaten des letzten tatsächlichen Server-Abrufs (buildQuery-Ergebnis,
-// VOR applyClientFilters/applySort) - siehe renderFilteredTable/loadHorses:
-// Sortierung UND Ø-Vergleich laufen komplett clientseitig auf bereits
-// geladenen Daten (siehe computeDerived/applySort) und brauchten trotzdem
-// bisher jedes Mal einen kompletten Neu-Abruf des gesamten (gefilterten)
-// Bestands samt aller breiten JSON-Spalten (HORSE_LIST_COLUMNS) - bei
-// >1200 Pferden ein spürbarer, unnötiger Egress-Treiber bei jedem
-// Sortierklick/Ø-Vergleich-Toggle. Jetzt: nur echte Filteränderungen
-// (loadHorses) fragen neu beim Server an, Sortierung/Ø-Vergleich rendern
-// nur noch aus diesem Cache neu (renderFilteredTable, kein Netzwerk).
-let lastFetchedRows = [];
 let pendingDeleteIds = [];
 // Id der in den Einstellungen gewählten Standard-Filtervorlage (siehe
 // migration_028_default_filter_preset.sql) - null = keine, Übersicht
@@ -157,16 +147,33 @@ async function init() {
   // einzelnen, schreibgeschützten user_settings-Query (Verpaarungs-Log-
   // Sichtbarkeit) und kann ebenfalls uneingeschränkt mitlaufen.
   const userSettingsPromise = loadUserSettings(session);
+  const horsesCachePromise = loadAllHorsesCache();
   await Promise.all([
     renderSharedNav(session),
     userSettingsPromise,
-    loadAllHorsesCache(),
+    horsesCachePromise,
     showMissingDataNotice(session),
     userSettingsPromise.then(() => checkAgeNotices(session)),
     loadTagSuggestions(),
     loadFilterPresets(),
     loadSortPresets(),
   ]);
+
+  // loadAllHorsesCache() ist jetzt der EINZIGE Server-Abruf des kompletten
+  // Bestands für die ganze Seite (siehe dortiger Kommentar) - schlägt er
+  // fehl, zeigt applyInitialFilterState()/renderFilteredTable() später
+  // sonst fälschlich "Keine Pferde gefunden" statt einer echten
+  // Fehlermeldung (allHorsesCache wäre dann einfach eine leere Liste,
+  // nicht unterscheidbar von einem echten leeren Bestand) - deshalb hier
+  // sofort geprüft und bei Fehler abgebrochen, wie zuvor das (inzwischen
+  // entfernte) eigene Fehler-Handling in loadHorses()/buildQuery().
+  const { error: horsesCacheError } = await horsesCachePromise;
+  if (horsesCacheError) {
+    document.querySelector('#horse-table tbody').innerHTML =
+      `<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(horsesCacheError.message)}</td></tr>`;
+    document.querySelector('#result-count').textContent = '';
+    return;
+  }
 
   // Gruppe B: hängt von Gruppe A ab (allHorsesCache/bestChildBadgesEnabled),
   // läuft rein synchron auf dem bereits geladenen Cache (siehe Kommentar
@@ -248,12 +255,12 @@ async function applyInitialFilterState() {
         sortPresetSelect.value = defaultSortPresetId;
       }
       applyDefaultOwnerFilter();
-      // Erneutes Laden noetig, damit die jetzt korrigierte Sortierung auch
-      // wirklich greift (applyDefaultOwnerFilter ist ungefaehrlich erneut
-      // aufrufbar - setzt nur, wenn das Besitzer-Feld noch leer ist).
-      // Passiert nur in dem schmalen Fall, dass BEIDE Standards gleichzeitig
-      // gesetzt sind - sonst ganz normal nur ein Ladevorgang.
-      await loadHorses();
+      // Erneutes Rendern noetig, damit die jetzt korrigierte Sortierung
+      // auch wirklich greift (applyDefaultOwnerFilter ist ungefaehrlich
+      // erneut aufrufbar - setzt nur, wenn das Besitzer-Feld noch leer
+      // ist). allHorsesCache ist zu diesem Zeitpunkt schon geladen (Gruppe
+      // A in init()), ein echter Server-Abruf ist hier nicht mehr nötig.
+      renderFilteredTable();
       return;
     }
   }
@@ -270,7 +277,7 @@ async function applyInitialFilterState() {
     // Ungültiger/fehlender localStorage-Wert - beim Programmstandard bleiben.
   }
   applyDefaultOwnerFilter();
-  await loadHorses();
+  renderFilteredTable();
 }
 
 // Lädt die in einstellungen.html gewählten persönlichen Einstellungen für
@@ -306,12 +313,19 @@ async function loadUserSettings(session) {
 // Vollabfragen des gesamten (>1200 Pferde umfassenden) Bestands bei jedem
 // Aufruf der Übersicht - spürbar langsam, weil jede davon eigene, über das
 // serverseitige 1000-Zeilen-Limit paginierte Anfragen brauchte.
-// HORSE_LIST_COLUMNS deckt als bewusst breite Spaltenliste (dieselbe wie
-// buildQuery) alle drei Verwendungszwecke gleichzeitig ab, ein einziger
-// fetchAllRows()-Durchlauf genügt jetzt für alle drei.
+// HORSE_LIST_COLUMNS deckt als bewusst breite Spaltenliste alle drei
+// Verwendungszwecke gleichzeitig ab (und inzwischen auch loadHorses()/
+// renderFilteredTable() selbst, siehe dort - EIN fetchAllRows()-Durchlauf
+// pro tatsächlicher Datenänderung genügt jetzt für den kompletten
+// Seitenaufruf statt vormals mehrerer unabhängiger Vollabfragen).
+// Gibt den Fehler zurück (statt ihn nur stillschweigend zu verschlucken),
+// damit loadHorses() bei einem fehlgeschlagenen Abruf weiterhin die
+// gewohnte Fehlermeldung in der Tabelle anzeigen kann (siehe dort) - diese
+// Funktion bleibt trotzdem die EINZIGE Stelle, die allHorsesCache setzt.
 async function loadAllHorsesCache() {
   const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(HORSE_LIST_COLUMNS));
   allHorsesCache = !error && data ? data : [];
+  return { error };
 }
 
 // Baut den Farbgenetik-Eltern-Hinweis-Index aus dem bereits geladenen
@@ -894,7 +908,8 @@ function populateFilterOptions() {
   // Kürzel wie "APH" werden zusätzlich auf den vollen Namen normalisiert
   // (siehe normalizeBreed), falls noch nicht normalisierte Altdaten
   // vorkommen. "Rasselos" gehört fest dazu, auch wenn keine Zeile den
-  // Wert wörtlich trägt (siehe buildQuery: deckt zusätzlich breed=null ab).
+  // Wert wörtlich trägt (siehe applyClientFilters: deckt zusätzlich
+  // breed=null ab).
   const breeds = new Set(data.map((d) => normalizeBreed(d.breed)).filter(Boolean));
   breeds.add('American Paint Horse');
   breeds.add('Rasselos');
@@ -962,41 +977,6 @@ function fillSelect(selector, values) {
     opt.textContent = v;
     sel.appendChild(opt);
   }
-}
-
-function buildQuery() {
-  // HORSE_LIST_COLUMNS statt select('*') - siehe Kommentar dort (Egress).
-  let q = supabaseClient.from('horses').select(HORSE_LIST_COLUMNS);
-
-  const name = document.querySelector('#f-name').value.trim();
-  const owner = document.querySelector('#f-owner').value;
-  const gender = document.querySelector('#f-gender').value;
-  const breed = document.querySelector('#f-breed').value;
-  const zzl = document.querySelector('#f-zzl').value;
-
-  if (name) q = q.ilike('name', `%${name}%`);
-  if (owner) q = q.eq('owner', owner);
-  if (gender) q = q.eq('gender', gender);
-  // "Rasselos" deckt zusätzlich Pferde ohne jeglichen Rasse-Eintrag mit ab
-  // (null) - beides bedeutet praktisch dasselbe ("keine Rasse bekannt").
-  // "__unrestricted__" ("Alle (auch außerhalb meiner Auswahl)") und die
-  // Standardauswahl "" (Alle) bekommen serverseitig bewusst KEINE
-  // Rasse-Einschränkung - die bevorzugten Rassen aus den Einstellungen
-  // werden stattdessen nur bei "" clientseitig angewendet (siehe
-  // applyClientFilters), da sie keine eigene SQL-Bedingung sind.
-  if (breed === 'Rasselos') q = q.or('breed.eq.Rasselos,breed.is.null');
-  else if (breed && breed !== '__unrestricted__') q = q.eq('breed', breed);
-  // "Nein" bedeutet hier "(noch) keine Zuchtzulassung" - das schließt
-  // sowohl explizit "Nein" (false) als auch noch nicht gesetzt (null,
-  // zeigt sich in der Tabelle als "-") mit ein, da beides in der Praxis
-  // "noch keine ZZL" heißt. "Ja" bleibt dagegen strikt auf true begrenzt.
-  if (zzl === 'true') q = q.eq('breeding_allowed', true);
-  else if (zzl === 'false') q = q.or('breeding_allowed.eq.false,breeding_allowed.is.null');
-
-  // Die eigentliche Sortierung passiert clientseitig in applySort(), da
-  // GP/Ext/Ext%/Int/HLP-SLP berechnete Werte ohne eigene DB-Spalte sind
-  // (siehe computeDerived) und ".order()" damit nicht arbeiten kann.
-  return q.order('name', { ascending: true });
 }
 
 function colorCodeOf(row) {
@@ -1310,6 +1290,16 @@ function compareValue(value, op, targetStr) {
 }
 
 function applyClientFilters(rows) {
+  // Name/Besitzer/Geschlecht/Rasse(exakt)/ZZL liefen bisher als
+  // Server-Filter in buildQuery() (siehe dortige frühere Fassung) - jetzt
+  // Teil der clientseitigen Filterung, da loadHorses() nur noch EINMAL
+  // den kompletten, ungefilterten Bestand lädt (allHorsesCache) statt bei
+  // jeder Filteränderung neu vom Server zu fragen (Egress). Semantik 1:1
+  // wie zuvor per SQL (ilike/eq/or-is-null), nur clientseitig nachgebaut.
+  const name = document.querySelector('#f-name').value.trim().toLowerCase();
+  const owner = document.querySelector('#f-owner').value;
+  const gender = document.querySelector('#f-gender').value;
+  const zzl = document.querySelector('#f-zzl').value;
   const breed = document.querySelector('#f-breed').value;
   const genetikState = getCheckDropdownTristate('f-genetik-drop');
   const ekhState = getCheckDropdownTristate('f-ekh-drop');
@@ -1334,6 +1324,24 @@ function applyClientFilters(rows) {
   const ageMax = ageMaxStr === '' ? null : Number(ageMaxStr);
 
   return rows.filter((row) => {
+    // Günstige Gleichheits-/Substring-Prüfungen zuerst, vor dem teureren
+    // computeDerived() weiter unten (spart die Berechnung für Zeilen, die
+    // ohnehin schon hier rausfallen).
+    if (name && !(row.name || '').toLowerCase().includes(name)) return false;
+    if (owner && row.owner !== owner) return false;
+    if (gender && row.gender !== gender) return false;
+    if (zzl === 'true' && row.breeding_allowed !== true) return false;
+    if (zzl === 'false' && row.breeding_allowed !== false && row.breeding_allowed != null) return false;
+    // "Rasselos" deckt zusätzlich Pferde ohne jeglichen Rasse-Eintrag mit ab
+    // (null) - beides bedeutet praktisch dasselbe ("keine Rasse bekannt").
+    // "__unrestricted__" ("Alle (auch außerhalb meiner Auswahl)") und die
+    // Standardauswahl "" (Alle) bekommen hier bewusst KEINE harte
+    // Rasse-Einschränkung - die bevorzugten Rassen aus den Einstellungen
+    // wirken stattdessen nur bei "" weiter unten als eigener, weicherer
+    // Filter.
+    if (breed === 'Rasselos') { if (row.breed !== 'Rasselos' && row.breed != null) return false; }
+    else if (breed && breed !== '__unrestricted__') { if (row.breed !== breed) return false; }
+
     const d = computeDerived(row);
 
     if (favoritesOnly && !favoriteHorseIds.has(row.id)) return false;
@@ -1427,15 +1435,22 @@ function applySort(rows) {
   });
 }
 
-// Rendert die Tabelle NUR aus lastFetchedRows (kein Netzwerk-Zugriff) -
-// für alles, was sich rein clientseitig auswirkt: Sortierung, Ø-Vergleich
+// Rendert die Tabelle NUR aus allHorsesCache (kein Netzwerk-Zugriff) - für
+// ALLES, was sich rein clientseitig auswirkt: Filteränderungen (Name/
+// Besitzer/Geschlecht/Rasse/ZZL/Genetik/EKH/Schlagwort/Werte/Alter/
+// Favoriten/Abzeichen - siehe applyClientFilters), Sortierung, Ø-Vergleich
 // (compareBaseline/-Toleranz), und der abschließende Render-Schritt von
-// loadHorses() selbst (siehe dortiger Aufruf).
+// loadHorses() selbst (siehe dortiger Aufruf). Bugfix (Egress, 2026-09-25):
+// allHorsesCache ist seitdem die EINZIGE Quelle für den kompletten Bestand
+// - vorher luden loadAllHorsesCache() (Abzeichen/Dashboard-Kacheln) UND
+// loadHorses() (buildQuery(), eigene Server-Filter) bei praktisch jedem
+// Seitenaufruf/jeder Interaktion unabhängig voneinander denselben breiten
+// Bestand (HORSE_LIST_COLUMNS) komplett neu vom Server.
 function renderFilteredTable() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
 
-  const filtered = applySort(applyClientFilters(lastFetchedRows));
+  const filtered = applySort(applyClientFilters(allHorsesCache));
   renderDashboardTiles(filtered);
 
   if (!filtered.length) {
@@ -1457,11 +1472,11 @@ function renderFilteredTable() {
   document.querySelectorAll('#select-all, #select-all-mobile').forEach((box) => { box.checked = false; });
 }
 
-// Echter Server-Abruf - nur noch nötig, wenn sich eine tatsächliche
-// Server-Filterbedingung (buildQuery: Name/Besitzer/Geschlecht/Rasse/ZZL)
-// oder der Datenbestand selbst geändert hat (Speichern/Löschen/Import).
-// Sortierung und Ø-Vergleich rufen stattdessen direkt renderFilteredTable()
-// auf (siehe dortiger Kommentar).
+// Echter Server-Abruf (lädt allHorsesCache komplett neu) - nur noch nötig,
+// wenn sich der Datenbestand selbst geändert hat (Speichern/Löschen/
+// Bulk-Update). Reine Filter-/Sortier-/Ø-Vergleich-Änderungen rufen
+// stattdessen direkt renderFilteredTable() auf (kein Netzwerk-Zugriff,
+// siehe dortiger Kommentar).
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
@@ -1469,19 +1484,13 @@ async function loadHorses() {
   selectedIds = new Set();
   updateBulkBar();
 
-  // fetchAllRows statt eines einzelnen .select() - der Gesamtbestand kann
-  // über dem serverseitigen Standardlimit (1000 Zeilen je Anfrage) liegen,
-  // sonst fehlten bei breiten/leeren Filtern stillschweigend Pferde in der
-  // Tabelle (siehe Nutzerfeedback bei der Pferd-Navigation, "count: 1082").
-  const { data, error } = await fetchAllRows(buildQuery());
-
+  const { error } = await loadAllHorsesCache();
   if (error) {
     tbody.innerHTML = `<tr><td colspan="21" class="error">Fehler beim Laden: ${escapeHtml(error.message)}</td></tr>`;
     countEl.textContent = '';
     return;
   }
 
-  lastFetchedRows = data;
   renderFilteredTable();
 }
 
@@ -1676,7 +1685,7 @@ function wireStandaloneTristate(id) {
 function wireFilterForm() {
   document.querySelector('#filter-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    loadHorses();
+    renderFilteredTable();
   });
   document.querySelector('#reset-filters').addEventListener('click', () => {
     document.querySelector('#filter-form').reset();
@@ -1689,7 +1698,7 @@ function wireFilterForm() {
     document.querySelector('#f-stallion-outclassed').dataset.state = 'neutral';
     document.querySelector('#f-stallion-crown').dataset.state = 'neutral';
     updateFilterHintBadge();
-    loadHorses();
+    renderFilteredTable();
   });
   document.querySelector('#only-my-horses-btn').addEventListener('click', onOnlyMyHorses);
   // "ⓘ"-Knöpfe (Nutzerwunsch): Erklärung bleibt per title-Attribut auch
@@ -1798,7 +1807,7 @@ function setOwnerFilterToSelf() {
 
 function onOnlyMyHorses() {
   setOwnerFilterToSelf();
-  loadHorses();
+  renderFilteredTable();
 }
 
 // Setzt beim Start der Übersicht den Besitzer-Filter standardmäßig auf
@@ -2052,13 +2061,12 @@ async function applyFilterState(state) {
   updateFilterHintBadge();
   updateCompareHintBadge();
 
-  // Bisher "loadHorses();" ohne await - alle 4 Aufrufer von
-  // applyFilterState() awaiten es aber ohnehin bereits, hier also
-  // ungefaehrlich nachgezogen. Noetig, damit restoreListState() (siehe
-  // unten) die Scrollposition erst NACH dem tatsaechlichen Tabellen-
-  // Rendering setzen kann, nicht schon waehrend des noch laufenden
-  // Ladevorgangs.
-  await loadHorses();
+  // Reines Rendern aus allHorsesCache (kein Server-Abruf, siehe
+  // renderFilteredTable) - awaited, damit restoreListState() (siehe unten)
+  // die Scrollposition erst NACH dem tatsaechlichen Tabellen-Rendering
+  // setzen kann, nicht schon waehrend computeCompareBaseline() oben noch
+  // läuft.
+  renderFilteredTable();
 }
 
 async function loadFilterPresets() {
@@ -2375,12 +2383,11 @@ function matchesCustomTileFilters(h, filters) {
 }
 
 // Prüft eine ANGEPINNTE Filtervorlage (source:'preset') gegen ein Pferd -
-// eigenständig statt Wiederverwendung von applyClientFilters, da dort
-// Name/Besitzer/Geschlecht/Rasse/ZZL bewusst NICHT geprüft werden (die
-// laufen normalerweise serverseitig in buildQuery gegen die aktuellen
-// Formularfelder, siehe dort) - hier gibt es aber kein Formular, nur die
-// gespeicherten Vorlagen-Kriterien gegen den kompletten, ungefilterten
-// Bestand (allHorsesCache).
+// eigenständig statt Wiederverwendung von applyClientFilters, da diese
+// gegen die AKTUELLEN Formularfelder (#f-name/#f-owner/...) prüft, eine
+// angepinnte Vorlage aber unabhängig vom gerade in der Tabelle aktiven
+// Filter ihre eigenen, gespeicherten Kriterien (state) gegen den
+// kompletten, ungefilterten Bestand (allHorsesCache) auswerten muss.
 function matchesPresetFilters(h, state) {
   const s = state || {};
   if (s.name && !(h.name || '').toLowerCase().includes(s.name.toLowerCase())) return false;
