@@ -27,7 +27,7 @@ function getParentNames(horse) {
 // select('*'), um raw_text/image_url etc. bei potenziell vielen Zeilen nicht
 // unnoetig mitzuladen). Paginiert per .range(), falls die Tabelle die
 // PostgREST-Standardgrenze (1000 Zeilen) ueberschreitet.
-async function fetchAllHorsesLight() {
+async function fetchAllHorsesFromServer() {
   const all = [];
   let from = 0;
   for (;;) {
@@ -42,6 +42,47 @@ async function fetchAllHorsesLight() {
     from += PAGE_SIZE;
   }
   return all;
+}
+
+// Egress-Caching (Bugreport "Supabase-Egress über dem Free-Plan-
+// Kontingent"): anders als ein Browser-Tab läuft der Bot dauerhaft als
+// EIN Prozess, der von mehreren Discord-Servern gleichzeitig genutzt
+// werden kann - fetchAllHorsesLight() wurde bisher bei JEDEM Aufruf neu
+// vom Server geladen, u.a. bei JEDEM Tastendruck in zwei verschiedenen
+// Autocomplete-Feldern (siehe interactions/autocomplete.js) - der teuerste
+// Pfad im ganzen Bot. Hält das Ergebnis jetzt kurz im Prozess-Speicher
+// (CACHE_TTL_MS): mehrere Aufrufe innerhalb dieses Fensters (mehrere
+// Tastendrücke, mehrere Nutzer kurz hintereinander) teilen sich EINEN
+// tatsächlichen Abruf - die Promise selbst wird gecacht (nicht erst das
+// Ergebnis), damit auch GLEICHZEITIGE Aufrufe (z.B. mehrere Discord-Server
+// zur selben Sekunde) nur einen einzigen Request auslösen.
+// invalidateHorsesCache() sorgt dafür, dass die beiden schreibenden Befehle
+// (/mdrdb-verkaufen, /mdrdb-besitzer) sofort wieder frische Daten sehen,
+// statt bis zum Ablauf der TTL zu warten - Änderungen über die
+// Weboberfläche/mdr-planer werden dagegen erst nach spätestens
+// CACHE_TTL_MS sichtbar (bei einer Zucht-Datenbank ohne
+// Sekundenanforderungen unproblematisch, siehe Nutzerwunsch "ohne die
+// Nutzung einzuschränken oder zu beeinflussen").
+const CACHE_TTL_MS = 60 * 1000;
+let horsesCachePromise = null;
+let horsesCacheTime = 0;
+
+async function fetchAllHorsesLight() {
+  const now = Date.now();
+  if (horsesCachePromise && now - horsesCacheTime < CACHE_TTL_MS) return horsesCachePromise;
+  horsesCacheTime = now;
+  horsesCachePromise = fetchAllHorsesFromServer().catch((err) => {
+    // Ein fehlgeschlagener Abruf soll nicht für die volle TTL "gecacht"
+    // bleiben - der nächste Aufruf soll es sofort erneut versuchen statt
+    // bis zu 60 Sekunden lang denselben Fehler zurückzugeben.
+    horsesCachePromise = null;
+    throw err;
+  });
+  return horsesCachePromise;
+}
+
+function invalidateHorsesCache() {
+  horsesCachePromise = null;
 }
 
 // weiblich vor maennlich vor unbekannt, innerhalb dessen alphabetisch nach
@@ -89,6 +130,7 @@ function findOffspring(horse, allHorses) {
 module.exports = {
   getParentNames,
   fetchAllHorsesLight,
+  invalidateHorsesCache,
   findSiblingsByFather,
   findSiblingsByMother,
   findOffspring,

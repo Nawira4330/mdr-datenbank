@@ -4,6 +4,7 @@ const { fetchHorseByName, fetchHorseById } = require('./horses');
 const {
   getParentNames,
   fetchAllHorsesLight,
+  invalidateHorsesCache,
   findSiblingsByFather,
   findSiblingsByMother,
   findOffspring,
@@ -338,6 +339,11 @@ async function handleVerkaufenCommand(interaction) {
     await interaction.reply({ content: `Fehler beim Speichern: ${error.message}`, ephemeral: true });
     return;
   }
+  // Sorgt dafür, dass der nächste Autocomplete-/Geschwister-/Tag-Abruf
+  // dieses Pferd sofort mit dem neuen Schlagwort sieht, statt bis zum
+  // Ablauf der Egress-Cache-TTL zu warten (siehe invalidateHorsesCache in
+  // pedigree.js).
+  invalidateHorsesCache();
 
   await interaction.reply({
     content: `„${horse.name}" wurde mit dem Schlagwort **Verkauf: an ${kaeufer}** markiert. Der Besitzer wechselt erst mit \`/mdrdb-besitzer\`, sobald der Verkauf abgeschlossen ist.`,
@@ -364,6 +370,7 @@ async function handleBesitzerCommand(interaction) {
     await interaction.reply({ content: `Fehler beim Speichern: ${error.message}`, ephemeral: true });
     return;
   }
+  invalidateHorsesCache();
 
   const tagHinweis = hadVerkaufTag ? ' (Schlagwort "Verkauf" wurde entfernt.)' : '';
   await interaction.reply({
