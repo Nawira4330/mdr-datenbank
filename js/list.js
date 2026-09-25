@@ -14,6 +14,17 @@ const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composit
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
 let lastRenderedRows = [];
+// Rohdaten des letzten tatsächlichen Server-Abrufs (buildQuery-Ergebnis,
+// VOR applyClientFilters/applySort) - siehe renderFilteredTable/loadHorses:
+// Sortierung UND Ø-Vergleich laufen komplett clientseitig auf bereits
+// geladenen Daten (siehe computeDerived/applySort) und brauchten trotzdem
+// bisher jedes Mal einen kompletten Neu-Abruf des gesamten (gefilterten)
+// Bestands samt aller breiten JSON-Spalten (HORSE_LIST_COLUMNS) - bei
+// >1200 Pferden ein spürbarer, unnötiger Egress-Treiber bei jedem
+// Sortierklick/Ø-Vergleich-Toggle. Jetzt: nur echte Filteränderungen
+// (loadHorses) fragen neu beim Server an, Sortierung/Ø-Vergleich rendern
+// nur noch aus diesem Cache neu (renderFilteredTable, kein Netzwerk).
+let lastFetchedRows = [];
 let pendingDeleteIds = [];
 // Id der in den Einstellungen gewählten Standard-Filtervorlage (siehe
 // migration_028_default_filter_preset.sql) - null = keine, Übersicht
@@ -1003,14 +1014,14 @@ function wireCompareAvg() {
     if (!toggle.checked) return;
     compareBaseline = await computeCompareBaseline();
     renderCompareAvgValues();
-    await loadHorses();
+    renderFilteredTable();
   };
   toggle.addEventListener('change', async () => {
     panel.hidden = !toggle.checked;
     compareBaseline = toggle.checked ? await computeCompareBaseline() : null;
     renderCompareAvgValues();
     updateCompareHintBadge();
-    await loadHorses();
+    renderFilteredTable();
   });
   ['#cmp-breed', '#cmp-zzl', '#cmp-owner', '#cmp-gender'].forEach((sel) => {
     document.querySelector(sel).addEventListener('change', async () => {
@@ -1022,7 +1033,7 @@ function wireCompareAvg() {
   toleranceToggle.addEventListener('change', async () => {
     compareToleranceEnabled = toleranceToggle.checked;
     renderCompareAvgValues();
-    await loadHorses();
+    renderFilteredTable();
   });
 }
 
@@ -1400,6 +1411,41 @@ function applySort(rows) {
   });
 }
 
+// Rendert die Tabelle NUR aus lastFetchedRows (kein Netzwerk-Zugriff) -
+// für alles, was sich rein clientseitig auswirkt: Sortierung, Ø-Vergleich
+// (compareBaseline/-Toleranz), und der abschließende Render-Schritt von
+// loadHorses() selbst (siehe dortiger Aufruf).
+function renderFilteredTable() {
+  const tbody = document.querySelector('#horse-table tbody');
+  const countEl = document.querySelector('#result-count');
+
+  const filtered = applySort(applyClientFilters(lastFetchedRows));
+  renderDashboardTiles(filtered);
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="21">Keine Pferde gefunden.</td></tr>';
+    countEl.textContent = '0 Pferde';
+    lastRenderedRows = [];
+    return;
+  }
+
+  countEl.textContent = `${filtered.length} Pferd${filtered.length === 1 ? '' : 'e'}`;
+  lastRenderedRows = filtered;
+  tbody.innerHTML = filtered.map(rowHtml).join('');
+  tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+    btn.addEventListener('click', () => onDelete(btn.dataset.delete));
+  });
+  tbody.querySelectorAll('[data-select]').forEach((cb) => {
+    cb.addEventListener('change', () => onRowSelect(cb.dataset.select, cb.checked));
+  });
+  document.querySelectorAll('#select-all, #select-all-mobile').forEach((box) => { box.checked = false; });
+}
+
+// Echter Server-Abruf - nur noch nötig, wenn sich eine tatsächliche
+// Server-Filterbedingung (buildQuery: Name/Besitzer/Geschlecht/Rasse/ZZL)
+// oder der Datenbestand selbst geändert hat (Speichern/Löschen/Import).
+// Sortierung und Ø-Vergleich rufen stattdessen direkt renderFilteredTable()
+// auf (siehe dortiger Kommentar).
 async function loadHorses() {
   const tbody = document.querySelector('#horse-table tbody');
   const countEl = document.querySelector('#result-count');
@@ -1419,25 +1465,8 @@ async function loadHorses() {
     return;
   }
 
-  const filtered = applySort(applyClientFilters(data));
-  renderDashboardTiles(filtered);
-
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="21">Keine Pferde gefunden.</td></tr>';
-    countEl.textContent = '0 Pferde';
-    return;
-  }
-
-  countEl.textContent = `${filtered.length} Pferd${filtered.length === 1 ? '' : 'e'}`;
-  lastRenderedRows = filtered;
-  tbody.innerHTML = filtered.map(rowHtml).join('');
-  tbody.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', () => onDelete(btn.dataset.delete));
-  });
-  tbody.querySelectorAll('[data-select]').forEach((cb) => {
-    cb.addEventListener('change', () => onRowSelect(cb.dataset.select, cb.checked));
-  });
-  document.querySelectorAll('#select-all, #select-all-mobile').forEach((box) => { box.checked = false; });
+  lastFetchedRows = data;
+  renderFilteredTable();
 }
 
 // "data-label" wird nur für die mobile Kartenansicht gebraucht (siehe
@@ -1785,7 +1814,7 @@ function wireSortableHeaders() {
       }
       syncMobileSortControls();
       saveLastSort();
-      loadHorses();
+      renderFilteredTable();
     });
   });
 
@@ -1797,7 +1826,7 @@ function wireSortableHeaders() {
     sel.addEventListener('change', () => {
       currentSort = { field: fieldSel.value, dir: dirSel.value };
       saveLastSort();
-      loadHorses();
+      renderFilteredTable();
     });
   });
   syncMobileSortControls();
@@ -2093,7 +2122,7 @@ function wireSortPresets() {
     // bleibt so auch als geräte-lokaler Fallback erhalten, falls später
     // keine Standard-Filtervorlage/Sortier-Vorlage mehr aktiv gewählt ist.
     saveLastSort();
-    loadHorses();
+    renderFilteredTable();
   });
   document.querySelector('#save-sort-preset-btn').addEventListener('click', saveSortPreset);
 }
