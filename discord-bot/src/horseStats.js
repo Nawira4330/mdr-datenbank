@@ -2,7 +2,7 @@
 // scoreTerm/scoreExteriorTerm/scoreTemperamentTerm, averageScore) sowie aus
 // ../../js/list.js (computeDerived) - berechnet GP/Ext/Ext%/Int/Farbgenetik
 // exakt wie in der Weboberflaeche (siehe js/list.js:157 computeDerived).
-const { presentGenesSummary } = require('./mdrGenetics');
+const { presentGenesSummary, computeParentGeneticHints } = require('./mdrGenetics');
 
 const EXTERIOR_TERM_SCORES = [
   [/viel zu (klein|groß|tief|hoch|flach|steil|schmal|breit|kurz|lang|weich|hart)/i, 5],
@@ -134,13 +134,18 @@ function breedCompositionDisplay(horse) {
   return horse.breed_composition || DASH;
 }
 
-// Nutzerwunsch: Farbe/Genetik werden nur aus der Datenbank übernommen, nicht
-// neu berechnet/geraten (siehe mdrGenetics.js) - presentGenesSummary liefert
-// deshalb nur noch getestete (horse.colors) und manuell bestätigte
-// (horse.color_gene_overrides) Loci, ohne Ableitung aus Fellfarbe/Name oder
-// Eltern-Cross-Referenz.
-function computeDisplayFields(horse) {
-  const genes = presentGenesSummary(horse.colors, horse.color_gene_overrides);
+// "parents" (optional, Default leer): bereits geladene Vater-/Mutter-
+// Datensaetze (siehe embeds.js buildHorseEmbed) - erlauben eine praezisere
+// Farbgenetik-Ableitung bei mehrdeutigen Cream-Phaenotypen (Cremello/
+// Perlino/Smoky Cream/...), siehe computeParentGeneticHints in mdrGenetics.js
+// (Bugreport "4Leafs Celestial Benjiro": ohne Eltern-Bezug zeigte der Bot
+// faelschlich "doppelt Cr" statt des tatsaechlichen Cr+pl, weil der Vater
+// reinerbig Pearl ist). Ohne Eltern (leeres Array, z.B. in formatRelativeLine
+// fuer Geschwister/Nachkommen) faellt es auf den bisherigen Regelfall CrCr
+// zurueck - unveraendertes Verhalten fuer alle anderen Aufrufer.
+function computeDisplayFields(horse, parents = []) {
+  const { hints, parentMightHavePearl } = computeParentGeneticHints(parents, horse.coat_color, horse.notes, horse.name);
+  const genes = presentGenesSummary(horse.colors, horse.coat_color, horse.notes, horse.name, hints, horse.color_gene_overrides, parentMightHavePearl);
   const extPercent = horse.exterior_genetics?.overall?.percent;
 
   return {
