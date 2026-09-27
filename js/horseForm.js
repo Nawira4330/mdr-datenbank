@@ -145,7 +145,20 @@ function setImageParseStatus(message) {
 const IMAGE_FALLBACK_HINT =
   'Bitte Bild manuell ergänzen: im Spiel Rechtsklick auf das Pferdebild → "Bild kopieren", dann direkt hier ins Bild-URL-Feld einfügen (Strg+V).';
 
-document.getElementById('raw-text')?.addEventListener('paste', (e) => {
+// Bugreport: der Discord-Bot zeigt "häufig" Bilder gar nicht an, obwohl sie
+// laut Datenbank vorhanden sind - betroffen sind Pferde, deren image_url
+// noch direkt auf die Spiel-Domain zeigt statt auf den eigenen Speicher
+// (siehe js/imageBackfill.js, dort ausführlich begründet: Discords Server
+// kann externe Spiel-Bilder wegen Hotlink-Schutz/instabiler URLs oft nicht
+// zuverlässig laden). Der Backfill in verwaltung.html behebt das bisher nur
+// RÜCKWIRKEND für schon gespeicherte Pferde - dieser Automatik-Erkennung
+// hier (kompletter Seiten-Paste) fehlte dieselbe Migration bislang, wodurch
+// bei JEDER Neuanlage/Aktualisierung wieder eine externe URL gespeichert
+// wurde. Lädt das erkannte Bild deshalb jetzt zusätzlich versuchsweise in
+// den eigenen Speicher hoch (wie beim direkten Bild-Paste oben) - schlägt
+// das fehl (z.B. CORS, siehe imageBackfill.js), bleibt es beim bisherigen
+// Verhalten (externe URL), also nie schlechter als vorher.
+document.getElementById('raw-text')?.addEventListener('paste', async (e) => {
   const html = e.clipboardData?.getData('text/html');
   if (!html) {
     setImageParseStatus(`⚠️ Kein Bild automatisch erkannt (die Zwischenablage enthielt nur reinen Text, keine Formatierung). ${IMAGE_FALLBACK_HINT}`);
@@ -166,7 +179,7 @@ document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const resolved = new URL(rawSrc, 'https://www.morning-dust-ranch.de/').href;
   document.getElementById('image_url').value = resolved;
   updateImagePreview();
-  setImageParseStatus('✅ Bild automatisch erkannt.');
+  setImageParseStatus('✅ Bild automatisch erkannt - wird in eigenen Speicher hochgeladen…');
 
   // Der Dateiname selbst (letzter Pfadabschnitt, z.B. "864841_002.png")
   // beginnt mit der Spiel-ID - alles danach (Bild-Variante, beim lokalen
@@ -175,6 +188,33 @@ document.getElementById('raw-text')?.addEventListener('paste', (e) => {
   const filename = rawSrc.split(/[/\\]/).pop() || '';
   const idMatch = filename.match(/^(\d+)/);
   if (idMatch) document.getElementById('external_id').value = idMatch[1];
+
+  try {
+    const resp = await fetch(resolved);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    const file = new File([blob], 'bestand', { type: blob.type });
+    const compressed = await compressImageFile(file);
+    const ext = IMAGE_EXTENSION_BY_MIME_TYPE[compressed.type] || 'jpg';
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    const { error } = await supabaseClient.storage.from('horse-images').upload(path, compressed, {
+      contentType: compressed.type,
+      cacheControl: '31536000',
+    });
+    if (error) throw error;
+    // Nur uebernehmen, falls das Feld zwischenzeitlich nicht manuell
+    // geaendert/geleert wurde (z.B. erneutes Auslesen mit anderem Bild).
+    if (document.getElementById('image_url').value === resolved) {
+      document.getElementById('image_url').value = supabaseClient.storage.from('horse-images').getPublicUrl(path).data.publicUrl;
+      updateImagePreview();
+    }
+    setImageParseStatus('✅ Bild automatisch erkannt und in eigenen Speicher hochgeladen.');
+  } catch {
+    // Haeufigster Fall: CORS (der Spiel-Server erlaubt keine browserseitigen
+    // Fremdabrufe, siehe js/imageBackfill.js) - kein harter Fehler, die
+    // externe URL bleibt wie bisher im Feld stehen.
+    setImageParseStatus('✅ Bild automatisch erkannt (externer Link - automatischer Upload in eigenen Speicher fehlgeschlagen, z.B. wegen CORS; kann später über Verwaltung → „Bestandsbilder komprimieren & migrieren" nachgeholt werden).');
+  }
 });
 
 // Automatisches Auslesen direkt beim Einfügen (Strg+V) in #raw-text, statt
