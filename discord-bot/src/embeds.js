@@ -81,7 +81,11 @@ function elternValue(father, fatherName, mother, motherName) {
 
 function buildHorseEmbed(horse, eltern = {}) {
   const { father, fatherName, mother, motherName } = eltern;
-  const d = computeDisplayFields(horse);
+  // father/mother sind hier schon vollstaendig geladen (select('*'), siehe
+  // index.js) - fuer eine praezisere Farbgenetik-Ableitung (siehe
+  // horseStats.js computeDisplayFields) einfach mitgegeben, keine
+  // zusaetzliche Datenbankabfrage noetig.
+  const d = computeDisplayFields(horse, [father, mother].filter(Boolean));
   const link = mdrGameLink(horse.external_id);
 
   const embed = new EmbedBuilder()
