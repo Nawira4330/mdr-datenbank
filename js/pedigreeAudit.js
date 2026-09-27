@@ -11,11 +11,12 @@
 // deshalb nicht möglich. Stattdessen eine Heuristik, die ohne Rohtext
 // auskommt: eine echte Pferde-Vorfahrin heißt normalerweise nicht
 // wortwörtlich genauso wie eine Rasse. Die Menge der "echten" Rassen wird
-// dynamisch aus allen im Bestand tatsächlich vorkommenden Rasse-Werten
-// gebildet (sowohl horses.breed als auch alle Vorfahren-Rasse-Felder) -
-// kein hartcodierter Rasse-Katalog nötig. Taucht der NAME eines Vorfahren
-// darin identisch wieder auf, ist das ein starkes Signal für genau diese
-// Vertauschung.
+// dynamisch aus dem Top-Level-Rasse-Feld ALLER Pferde gebildet (horses.breed,
+// NICHT zusätzlich aus Vorfahren-Rasse-Feldern - siehe Begründung/Bugfix bei
+// knownBreeds unten) - kein hartcodierter Rasse-Katalog nötig. Taucht der
+// NAME eines Vorfahren darin identisch wieder auf, ist das ein starkes
+// Signal für genau diese Vertauschung. Ausnahme: "Unbekannt" (regulärer
+// Platzhalter für einen nicht erfassten Vorfahren) wird nie geflaggt.
 //
 // Macht KEINE Änderungen an der Datenbank - reine Liste zum manuellen
 // Durchsehen. Der einzige Fix ist ein erneutes Einfügen+Speichern des
@@ -50,13 +51,28 @@ async function runPedigreeAudit() {
   // zwingend als eigener Datensatz - siehe linkedAncestorName weiter
   // unten, das ohne Treffer auf den reinen Namen zurückfällt.
 
+  // NUR aus dem eigenen (Top-Level-)Rasse-Feld echter Pferde gebildet, NICHT
+  // zusaetzlich aus Vorfahren-Rasse-Feldern (Bugfix): genau dieses Feld ist
+  // bei Vorfahren das, was der gesuchte Bug verschieben wuerde - eine
+  // bereits verschobene Vorfahren-Rasse (z.B. "Sir Davis by Salino" landet
+  // im breed-Feld eines ANDEREN Vorfahren) wuerde sonst selbst in
+  // knownBreeds aufgenommen und in der Folge JEDEN echten, korrekten
+  // Vorfahren mit genau diesem Namen anderswo faelschlich mit-verdaechtigen
+  // (Kaskade). "horses.breed" durchlaeuft dagegen nie die Vorfahren-
+  // Parsing-Logik und ist deshalb als Referenz unverdaechtig.
   const knownBreeds = new Set();
   for (const h of horses) {
     if (h.breed) knownBreeds.add(h.breed.trim().toLowerCase());
-    for (const a of pedigreeAuditAncestorsOf(h.pedigree)) {
-      if (a?.breed) knownBreeds.add(a.breed.trim().toLowerCase());
-    }
   }
+
+  // "Unbekannt" ist im Spiel/Parser die reguläre Platzhalter-Bezeichnung für
+  // einen nicht erfassten Vorfahren (siehe parser.js parseHorseText) - dabei
+  // wird laut Kommentar dort teils sogar "breed: mainBreed || 'Unbekannt'"
+  // gesetzt, wenn auch die Rasse des Pferdes selbst unbekannt war. Ein
+  // Vorfahre namens "Unbekannt" ist also grundsätzlich normal und NIE ein
+  // Hinweis auf den Name/Rasse-Vertauschungs-Bug, unabhängig davon, ob
+  // "unbekannt" zufällig in knownBreeds landet.
+  const ANCESTOR_PLACEHOLDER_NAMES = new Set(['unbekannt']);
 
   function logLine(html) {
     const li = document.createElement('li');
@@ -79,7 +95,11 @@ async function runPedigreeAudit() {
   let flaggedCount = 0;
   for (const horse of horses) {
     const ancestors = pedigreeAuditAncestorsOf(horse.pedigree);
-    const suspicious = ancestors.filter((a) => a?.name && knownBreeds.has(a.name.trim().toLowerCase()));
+    const suspicious = ancestors.filter((a) => {
+      if (!a?.name) return false;
+      const name = a.name.trim().toLowerCase();
+      return !ANCESTOR_PLACEHOLDER_NAMES.has(name) && knownBreeds.has(name);
+    });
     if (!suspicious.length) continue;
     flaggedCount++;
     const details = suspicious
