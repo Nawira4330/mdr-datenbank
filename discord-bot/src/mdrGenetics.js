@@ -140,12 +140,17 @@ const PHENOTYPE_GENE_HINTS = [
   { pattern: /\brc\b/i, label: 'Rabicano (Kuerzel)', hints: [{ locus: 'Rabicano', allele: 'rc' }] },
 ];
 
-// "parentMightHavePearl" (siehe parentsMightHavePearl in ../../js/horseForm.js)
-// stuft bei als "ambiguousCream" markierten Eintraegen (Cremello/Perlino/
-// Smoky Cream/...) das abgeleitete "CrCr" auf das vorsichtigere "Cr"
-// herunter, falls ein Elternteil nachweislich pl traegt. Der Bot macht
-// aktuell keine Eltern-Cross-Referenz, uebergibt also nie true - bleibt
-// hier trotzdem als Parameter, um mit parser.js synchron zu bleiben.
+// "parentMightHavePearl" (siehe parentsMightHavePearl weiter unten, 1:1 aus
+// ../../js/parser.js) stuft bei als "ambiguousCream" markierten Eintraegen
+// (Cremello/Perlino/Smoky Cream/...) das abgeleitete "CrCr" auf das
+// vorsichtigere "Cr" herunter, falls ein Elternteil nachweislich pl traegt -
+// sonst zeigt der Bot faelschlich "doppelt Cr" fuer ein Pferd, das in
+// Wirklichkeit Cr+pl ist (Bugreport "4Leafs Celestial Benjiro": Vater
+// reinerbig Pearl, Fohlen dadurch zwingend Cr+pl statt CrCr). Der Bot hat
+// dafuer KEINE eigene Zusatzabfrage noetig - /mdrdb pferd laedt Vater/Mutter
+// (per select('*'), siehe horses.js/index.js) ohnehin schon fuer das
+// "Eltern"-Feld, computeParentGeneticHints() wertet dieselben Datensaetze
+// nur zusaetzlich aus.
 function inferGeneticHintsFromPhenotype(text, parentMightHavePearl) {
   if (!text) return [];
   let working = text;
@@ -173,6 +178,37 @@ function extractPresentAlleles(rawValue) {
   return tokens.filter((t) => t === 'pl' || /[A-Z]/.test(t)).join('');
 }
 
+// Manuelle Gen-Bestaetigung je Locus (color_gene_overrides) - 1:1 aus
+// ../../js/parser.js (LOCUS_PRIMARY_ALLELE/LOCUS_MULTI_ALLELES/
+// localeOfOverrideKey), siehe dort fuer Details zum Klick-Zyklus in der
+// Weboberflaeche. Wird hier nur GELESEN (nie vom Bot gesetzt).
+const LOCUS_PRIMARY_ALLELE = {
+  Extension: 'E', Dun: 'D', Champagne: 'Ch', Grey: 'G', Silver: 'Z',
+  Overo: 'O', Splashed: 'SPL', Appaloosa: 'Lp', PATN1: 'P1',
+  Flaxen: 'fl',
+};
+const LOCUS_MULTI_ALLELES = {
+  KIT: ['To', 'Sb', 'Rn'],
+  Agouti: ['A1', 'At', 'Ap'],
+  Cream: ['Cr', 'pl'],
+};
+function localeOfOverrideKey(key) {
+  return key.split(':')[0];
+}
+
+// Isst ein Allel-Anzeigewert reinerbig/doppelt (z.B. "DD", "plpl")? 1:1 aus
+// ../../js/parser.js - wird fuer parentHomozygousLoci gebraucht (garantierte
+// Vererbung eines reinerbigen Elternteils).
+function isDoubledAllele(alleleStr) {
+  if (!alleleStr) return false;
+  const half = alleleStr.length / 2;
+  if (!Number.isInteger(half) || half < 1) return false;
+  return alleleStr.slice(0, half) === alleleStr.slice(half);
+}
+function halveDoubledAllele(alleleStr) {
+  return alleleStr.slice(0, alleleStr.length / 2);
+}
+
 // Anzeige-Reihenfolge (Grundfarbe/Aufhellungen/Sonderfarben/Scheckungen/
 // Flaxen) - 1:1 aus ../../js/parser.js portiert, siehe dort für Details.
 const GENE_DISPLAY_ORDER = [
@@ -191,13 +227,19 @@ function sortGenesForDisplay(genes) {
   });
 }
 
-// Liefert {locus, alleles, source}[] - "getestet" (aus colorRows) und
-// "abgeleitet"/"elternteil" (aus Fellfarbe/Notiz/Name bzw. Eltern-Hinweisen,
-// hier ohne parentHints, da der Bot keine Eltern-Cross-Referenz macht).
-function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints, parentMightHavePearl) {
+// Liefert {locus, alleles, source}[] - "getestet" (aus colorRows), "manuell"
+// (aus color_gene_overrides) und "abgeleitet"/"elternteil" (aus Fellfarbe/
+// Notiz/Name bzw. Eltern-Hinweisen). 1:1 aus ../../js/parser.js (Reihenfolge
+// der Parameter bewusst identisch gehalten, um beide Dateien synchron
+// vergleichen zu koennen) - anders als der Pferdename wird hier NICHT nach
+// Farbwoertern durchsucht (siehe parser.js-Kommentar zum Bugreport "Sir
+// Classic"/"Pearl Mirrow"), horseName bleibt aber als Parameter fuer
+// bestehende Aufrufer erhalten.
+function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentHints, overrides, parentMightHavePearl) {
   const rows = colorRows || [];
   const confirmed = [];
   const testedLoci = new Set();
+  const ov = overrides || {};
 
   for (const r of rows) {
     if (isUntestedLocusValue(r.value)) continue;
@@ -206,23 +248,136 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     if (alleles) confirmed.push({ locus: r.label, alleles, source: 'getestet' });
   }
 
+  const overriddenKeys = new Set(Object.keys(ov).filter((k) => ov[k] && !testedLoci.has(localeOfOverrideKey(k))));
+  const manual = [];
+  for (const key of overriddenKeys) {
+    const state = ov[key];
+    const locus = localeOfOverrideKey(key);
+    const primary = key.includes(':') ? key.split(':')[1] : LOCUS_PRIMARY_ALLELE[key];
+    if (!primary || state === 'absent') continue;
+    const alleleCode = state === 'hom' ? primary + primary : primary;
+    manual.push({ locus, alleles: alleleCode, source: 'manuell' });
+  }
+
   const hints = [
     ...inferGeneticHintsFromPhenotype(coatColorName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
     ...inferGeneticHintsFromPhenotype(notes, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
-    ...inferGeneticHintsFromPhenotype(horseName, parentMightHavePearl).map((h) => ({ ...h, source: 'abgeleitet' })),
     ...(parentHints || []).map((h) => ({ locus: h.locus, allele: h.alleles, source: 'elternteil' })),
   ];
   const seen = new Set();
   const inferred = [];
   for (const h of hints) {
     if (testedLoci.has(h.locus)) continue;
+    const multiAlleles = LOCUS_MULTI_ALLELES[h.locus];
+    const primaryAllele = multiAlleles ? multiAlleles.find((a) => h.allele.startsWith(a)) : null;
+    const hKey = multiAlleles ? `${h.locus}:${primaryAllele || h.allele}` : h.locus;
+    if (overriddenKeys.has(hKey)) continue;
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
     seen.add(key);
     inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
   }
 
-  return sortGenesForDisplay([...confirmed, ...inferred]);
+  return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
 }
 
-module.exports = { presentGenesSummary };
+// Reinerbig vorhandene Loci eines Elternteils (getestet ODER abgeleitet,
+// z.B. aus "Cremello" im Namen) - ein reinerbiger Elternteil vererbt sein
+// Allel garantiert. 1:1 aus ../../js/parser.js (parentHomozygousLoci).
+function parentHomozygousLoci(parent) {
+  const genes = presentGenesSummary(parent.colors, parent.coat_color, parent.notes, parent.name, null, parent.color_gene_overrides);
+  const map = {};
+  for (const g of genes) {
+    if (isDoubledAllele(g.alleles)) map[g.locus] = halveDoubledAllele(g.alleles);
+  }
+  return map;
+}
+
+// 1:1 aus ../../js/parser.js (parentColorHints) - garantiert vererbte Loci
+// beider Eltern zusammenfassen (reinerbig bei BEIDEN Eltern -> selbst
+// reinerbig garantiert, sonst mindestens mischerbig).
+function parentColorHints(parents) {
+  const perParent = parents.map(parentHomozygousLoci);
+  const loci = new Set();
+  perParent.forEach((m) => Object.keys(m).forEach((l) => loci.add(l)));
+
+  const hints = [];
+  for (const locus of loci) {
+    const values = perParent.map((m) => m[locus]).filter(Boolean);
+    const uniqueValues = [...new Set(values)];
+    if (uniqueValues.length === 1 && values.length >= 2) {
+      hints.push({ locus, alleles: uniqueValues[0] + uniqueValues[0] });
+    } else {
+      for (const v of uniqueValues) hints.push({ locus, alleles: v });
+    }
+  }
+  return hints;
+}
+
+// 1:1 aus ../../js/parser.js (pintoPatternsFromColors/PINTO_ALLELE_LOCUS/
+// pintoParentHints) - "Pinto" heisst mindestens 2 der 4 Scheckungs-Muster
+// gleichzeitig; stehen bei den Eltern zusammen genau 2 davon getestet
+// vorhanden, muss ein als "Pinto" bezeichnetes Fohlen genau diese geerbt
+// haben.
+function pintoPatternsFromColors(colorRows) {
+  const found = new Set();
+  for (const r of colorRows || []) {
+    if (isUntestedLocusValue(r.value)) continue;
+    const present = extractPresentAlleles(r.value);
+    if (!present) continue;
+    if (r.label === 'Splashed') found.add('SPL');
+    else if (r.label === 'Overo') found.add('O');
+    else if (r.label === 'KIT') {
+      if (present.includes('TO')) found.add('TO');
+      if (present.includes('SB')) found.add('SB');
+    }
+  }
+  return found;
+}
+const PINTO_ALLELE_LOCUS = { SPL: 'Splashed', O: 'Overo', TO: 'KIT', SB: 'KIT' };
+function pintoParentHints(parents, coatColorName, notes, horseName) {
+  const isPinto = /\bpinto\b/i.test(`${coatColorName || ''} ${notes || ''}`);
+  if (!isPinto) return [];
+
+  const combined = new Set();
+  for (const parent of parents) {
+    for (const p of pintoPatternsFromColors(parent.colors)) combined.add(p);
+  }
+  if (combined.size !== 2) return [];
+
+  return [...combined].map((allele) => ({ locus: PINTO_ALLELE_LOCUS[allele], alleles: allele }));
+}
+
+// 1:1 aus ../../js/parser.js (parentsMightHavePearl) - ob mindestens ein
+// Elternteil nachweislich (getestet oder abgeleitet) ein pl-Allel zeigt.
+// Genau das entscheidet, ob ein "ambiguousCream"-Phaenotyp (Cremello/
+// Perlino/Smoky Cream/...) beim Fohlen tatsaechlich Cr+pl statt CrCr sein
+// koennte (siehe inferGeneticHintsFromPhenotype).
+function parentsMightHavePearl(parents) {
+  return parents.some((p) => {
+    const entry = (p.colors || []).find((c) => c.label === 'Cream');
+    if (entry && !isUntestedLocusValue(entry.value) && /pl/i.test(entry.value)) return true;
+    const genes = presentGenesSummary(p.colors, p.coat_color, p.notes, p.name, null, p.color_gene_overrides);
+    return genes.some((g) => g.locus === 'Cream' && /pl/i.test(g.alleles));
+  });
+}
+
+// Bequemlichkeits-Wrapper fuer den Bot: anders als fetchParentColorHints in
+// ../../js/horseForm.js macht dieser KEINE eigene DB-Abfrage - /mdrdb pferd
+// hat Vater/Mutter (per select('*'), siehe horses.js/index.js) zu diesem
+// Zeitpunkt bereits geladen (fuers "Eltern"-Feld), diese Datensaetze werden
+// hier nur zusaetzlich wiederverwendet. "parents" ist ein Array bereits
+// geladener Pferde-Zeilen (leere Eintraege/nicht in der DB gefundene Eltern
+// vorher herausfiltern).
+function computeParentGeneticHints(parents, coatColorName, notes, horseName) {
+  if (!parents.length) return { hints: [], parentMightHavePearl: false };
+  return {
+    hints: [
+      ...parentColorHints(parents),
+      ...pintoParentHints(parents, coatColorName, notes, horseName),
+    ],
+    parentMightHavePearl: parentsMightHavePearl(parents),
+  };
+}
+
+module.exports = { presentGenesSummary, computeParentGeneticHints };
