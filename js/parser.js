@@ -874,6 +874,20 @@ function hasPedigreeData(pedigree) {
   return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
 }
 
+// Globaler Admin-Schalter (Einstellungen, nur im Admin-Profil sichtbar, siehe
+// migration_045_app_settings.sql): ob der beim Speichern eingefügte
+// Spieltext (horses.raw_text) mitgespeichert wird. Standard AN - auch wenn die
+// Migration noch nicht ausgeführt wurde oder die Abfrage scheitert.
+async function isRawTextStorageEnabled() {
+  const { data, error } = await supabaseClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'store_raw_text')
+    .maybeSingle();
+  if (error || !data) return true;
+  return data.value !== false;
+}
+
 // Stammbaum-Prüfung "vertauschter Name/Rasse" (siehe js/pedigreeAudit.js in
 // der Verwaltung und den Hinweis für Besitzer*innen in js/list.js): findet
 // Pferde, deren gespeicherter Stammbaum vermutlich von einem älteren, bereits

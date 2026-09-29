@@ -16,6 +16,7 @@ async function init() {
   if (!session) return;
   await renderSharedNav(session);
   currentUserId = session.user.id;
+  if (isAdminSession(session)) await setupAdminSettings();
 
   await populateBreedCheckboxes();
   populateCustomTileBreedSelect();
@@ -448,4 +449,29 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
+}
+
+
+// Nur für Admin-Konten (siehe ADMIN_EMAILS in auth.js; serverseitig zusätzlich
+// per RLS in migration_045_app_settings.sql abgesichert): globaler Schalter,
+// ob der eingefügte Spieltext beim Speichern eines Pferds mitgespeichert wird.
+// Wird sofort beim Umschalten gespeichert (kein "Speichern"-Knopf nötig).
+async function setupAdminSettings() {
+  const fieldset = document.getElementById('admin-settings-fieldset');
+  const checkbox = document.getElementById('store-raw-text-checkbox');
+  const statusEl = document.getElementById('store-raw-text-status');
+  fieldset.hidden = false;
+  checkbox.checked = await isRawTextStorageEnabled();
+  checkbox.addEventListener('change', async () => {
+    statusEl.textContent = 'Speichert…';
+    const { error } = await supabaseClient
+      .from('app_settings')
+      .upsert({ key: 'store_raw_text', value: checkbox.checked, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) {
+      checkbox.checked = !checkbox.checked;
+      statusEl.textContent = 'Fehler beim Speichern: ' + error.message + ' (falls die Tabelle fehlt: migration_045_app_settings.sql im Supabase-Dashboard ausführen)';
+      return;
+    }
+    statusEl.textContent = checkbox.checked ? '✓ Gespeichert: Spieltext wird künftig mitgespeichert' : '✓ Gespeichert: Spieltext wird künftig nicht mehr mitgespeichert';
+  });
 }

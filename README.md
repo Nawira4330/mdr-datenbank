@@ -127,6 +127,8 @@ Disziplin-/Eigenschaftswerte und Turnierpotenzial zuverlässig. Eine Ausnahme is
 (keine Einrückung), wird er nur als unsortierte Liste aller im Text gefundenen Vorfahren
 gespeichert, nicht als Baum mit Vater/Mutter-Zuordnung.
 
-Der komplette eingefügte Text wird immer zusätzlich als Rohtext gespeichert – falls das
+Der komplette eingefügte Text wird zusätzlich als Rohtext gespeichert (`horses.raw_text`) – falls das
 Spiel sein Seitenlayout mal ändert und der Parser etwas falsch erkennt, geht nichts
-verloren und `js/parser.js` kann entsprechend angepasst werden.
+verloren und `js/parser.js` kann entsprechend angepasst werden. Ein Admin kann das global
+in den Einstellungen (Abschnitt „Admin: Eingefügten Spieltext speichern“) an- und abschalten
+(Tabelle `app_settings`, siehe `supabase/migration_045_app_settings.sql`).
