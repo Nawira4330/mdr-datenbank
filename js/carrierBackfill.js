@@ -208,7 +208,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   startBtn.addEventListener('click', runAndToggle);
-  // Läuft automatisch beim Öffnen der Seite (siehe Nutzerwunsch) - der
-  // Button bleibt für ein manuelles erneutes Prüfen erhalten.
-  runAndToggle();
+  // Nutzerwunsch: läuft NICHT mehr automatisch beim Öffnen der Seite,
+  // sondern nur per Klick auf "Erneut prüfen" (der Lauf schreibt in die
+  // Datenbank und lädt den kompletten Bestand).
+  document.getElementById('carrier-backfill-status').textContent = 'Noch nicht geprüft - auf „Erneut prüfen“ klicken.';
 });

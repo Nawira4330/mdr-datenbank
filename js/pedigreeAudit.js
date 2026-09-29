@@ -9,8 +9,8 @@
 // Zeigt die betroffenen Pferde als sortierbare Tabelle (Name, Rasse,
 // Besitzer, Link zum Spiel). Macht KEINE Änderungen an der Datenbank. Der
 // einzige Fix ist ein erneutes Einfügen+Speichern des aktuellen
-// Spieltextes für das jeweilige Pferd. Läuft automatisch beim Öffnen
-// dieser Seite.
+// Spieltextes für das jeweilige Pferd. Läuft nur auf Klick auf "Erneut
+// prüfen", nicht automatisch beim Öffnen der Seite.
 
 // Sortierzustand der Ergebnistabelle - bleibt über "Erneut prüfen" hinweg
 // erhalten.
@@ -121,5 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   startBtn.addEventListener('click', runAndToggle);
-  runAndToggle();
+  // Nutzerwunsch: nicht automatisch beim Öffnen prüfen, nur per Klick.
+  document.getElementById('pedigree-audit-status').textContent = 'Noch nicht geprüft - auf „Erneut prüfen“ klicken.';
 });
