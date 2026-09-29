@@ -16,6 +16,7 @@ const {
   missingDataLabels,
   cycleTristateItem,
   RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
+  findPedigreeSuspects,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -219,5 +220,43 @@ describe('isVisiblyHomozygousForTrait (Flaxen/Pearl, gemeinsame Grundlage für T
     const horse = { name: 'Irgendein Name', coat_color: 'Bay', notes: null, colors: [], color_gene_overrides: null };
     assert.equal(isVisiblyHomozygousForTrait(horse, FLAXEN, false), false);
     assert.equal(isVisiblyHomozygousForTrait(horse, PEARL, false), false);
+  });
+});
+
+
+describe('Stammbaum-Prüfung vertauschter Name/Rasse (findPedigreeSuspects)', () => {
+  const aph = [1, 2, 3].map((i) => ({ name: `APH ${i}`, breed: 'American Paint Horse', pedigree: null }));
+
+  test('echter Vertauschungsfall (Vorfahren-Name = Rasse) wird erkannt, inkl. "RASSELOS" ohne Pferd mit diesem Rasse-Feld', () => {
+    const broken = { name: 'Kaputt', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'RASSELOS', breed: 'Irgendein Name' }, { name: 'American Paint Horse', breed: 'X' }] } };
+    const { suspects } = findPedigreeSuspects([broken, ...aph]);
+    assert.equal(suspects.length, 1);
+    assert.deepEqual(suspects[0].names, ['RASSELOS', 'American Paint Horse']);
+  });
+
+  test('"Unbekannt" und normale Vorfahren-Namen werden nie geflaggt, auch wenn "unbekannt" als breed vorkommt', () => {
+    const withUnknownBreed = { name: 'Ohne Rasse', breed: 'Unbekannt', pedigree: null };
+    const ok = { name: 'Gut', breed: 'American Paint Horse', pedigree: { ancestors: [{ name: 'Unbekannt', breed: 'American Paint Horse' }, { name: 'SPZ* Ikarus', breed: 'American Paint Horse' }] } };
+    assert.equal(findPedigreeSuspects([withUnknownBreed, ok, ...aph]).suspects.length, 0);
+  });
+
+  test('Vorfahren-Rasse-Felder speisen die Rassenliste NICHT (keine Selbst-Vergiftung)', () => {
+    const poisoner = { name: 'Poison', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Sir Davis by Salino', breed: 'Sir Davis by Salino' }] } };
+    const innocent = { name: 'Unschuldig', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Sir Davis by Salino', breed: 'Andalusier' }] } };
+    assert.equal(findPedigreeSuspects([poisoner, innocent, ...aph]).suspects.length, 0);
+  });
+
+  test('Ohne Mindestanzahl: ein Pferd mit Pferdenamen im breed-Feld verdächtigt Vorfahren gleichen Namens - Diagnose zeigt Auslöser und seltenen Rasse-Wert', () => {
+    const poison = { name: 'Vergiftet', breed: 'Isa', pedigree: null };
+    const victims = [1, 2].map((i) => ({ name: `Opfer ${i}`, breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Isa', breed: 'Andalusier' }] } }));
+    const { suspects, triggerCounts, rareBreedValues } = findPedigreeSuspects([poison, ...victims, ...aph]);
+    assert.equal(suspects.length, 2);
+    assert.equal(triggerCounts.get('Isa'), 2);
+    assert.ok(rareBreedValues.includes('isa (1)'));
+  });
+
+  test('Legacy-Array-Stammbaum: erster Eintrag ist das Pferd selbst und wird übersprungen', () => {
+    const legacy = { name: 'Alt', breed: 'Andalusier', pedigree: [{ name: 'American Paint Horse', breed: 'x' }, { name: 'Normal', breed: 'Andalusier' }] };
+    assert.equal(findPedigreeSuspects([legacy, ...aph]).suspects.length, 0);
   });
 });

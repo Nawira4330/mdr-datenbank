@@ -181,6 +181,7 @@ async function init() {
   document.body.classList.toggle('hide-best-child', !bestChildBadgesEnabled);
   loadGeneIndex();
   if (bestChildBadgesEnabled) loadBestChildBadges();
+  showPedigreeErrorNotice(session);
   populateFilterOptions();
 
   // Gruppe C: muss zuletzt laufen, braucht defaultFilterPresetId/
@@ -594,6 +595,37 @@ async function showMissingDataNotice(session) {
     .join('');
   const notice = document.querySelector('#missing-data-notice');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Es fehlen noch Daten bei ${incomplete.length} Pferd${incomplete.length === 1 ? '' : 'en'}</summary><p>Es fehlen noch folgende Daten:</p><ul>${list}</ul>`;
+  notice.hidden = false;
+}
+
+// Hinweis für Besitzer*innen: bei welchen EIGENEN Pferden ist der gespeicherte
+// Stammbaum vermutlich fehlerhaft (Name und Rasse eines Vorfahren vertauscht,
+// Fehler aus einem älteren Einlese-Stand, siehe findPedigreeSuspects in
+// parser.js - dieselbe Prüfung wie in der Verwaltung). Da der Rohtext nicht
+// aufbewahrt wird, hilft nur, die Spielseite des Pferdes erneut zu
+// kopieren und einzufügen. Läuft rein auf dem bereits geladenen
+// kompletten Bestand (allHorsesCache), kein zusätzlicher Abruf. Die
+// Heuristik braucht den GANZEN Bestand (Rasse-Werte aller Pferde), zeigt
+// hier aber nur die eigenen Pferde.
+function showPedigreeErrorNotice(session) {
+  const identity = session.user.email.split('@')[0].toLowerCase();
+  const { suspects } = findPedigreeSuspects(allHorsesCache || []);
+  const own = suspects
+    .map((s) => s.horse)
+    .filter((h) => (h.owner || '').toLowerCase() === identity)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
+  if (!own.length) return;
+
+  const list = own.map((h) => {
+    const gameLink = h.external_id
+      ? ` <a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗 Spiel</a>`
+      : '';
+    return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name || '(ohne Name)')}${gameLink}</li>`;
+  }).join('');
+  const notice = document.querySelector('#pedigree-error-notice');
+  notice.innerHTML = `<summary><strong>Hinweis:</strong> Bei ${own.length} Pferd${own.length === 1 ? '' : 'en'} ist der Stammbaum vermutlich fehlerhaft</summary>
+    <p>Bei den folgenden Pferden sind im gespeicherten Stammbaum vermutlich Name und Rasse eines Vorfahren vertauscht (Fehler aus einem älteren Einlese-Stand). Bitte die Seite des Pferdes im Spiel <strong>nochmal neu kopieren</strong> und im Bearbeiten-Formular unter „Automatisch auslesen“ <strong>einfügen und speichern</strong>:</p>
+    <ul>${list}</ul>`;
   notice.hidden = false;
 }
 
