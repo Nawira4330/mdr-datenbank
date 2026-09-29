@@ -123,10 +123,7 @@ async function runPedigreeAudit() {
     if (!suspicious.length) continue;
     flaggedCount++;
     for (const a of new Set(suspicious.map((x) => x.name.trim()))) triggerCounts.set(a, (triggerCounts.get(a) || 0) + 1);
-    const details = suspicious
-      .map((a) => `„${linkedAncestorName(a)}" (Rasse-Feld zeigt stattdessen: „${escapeHtml(a.breed || '–')}")`)
-      .join(', ');
-    logLine(`⚠️ ${linkedName(horse)}: ${suspicious.length} Vorfahre(n), deren Name einer Rasse entspricht - ${details}`);
+    logLine(linkedName(horse));
   }
 
   statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${flaggedCount} mit vermutlich vertauschtem Name/Rasse im Stammbaum.`;
@@ -137,13 +134,17 @@ async function runPedigreeAudit() {
   // normaler Pferdename mit sehr hoher Zahl auf, ist er vermutlich als
   // Rasse-Wert eines einzelnen Pferds in der Datenbank gelandet (siehe
   // MIN_HORSES_PER_BREED oben) statt ein echter Vertauschungsfall zu sein.
+  const diagnostics = [];
   if (triggerCounts.size) {
     const top = [...triggerCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
       .map(([name, n]) => `${escapeHtml(name)} (${n})`).join(', ');
-    logLine(`ℹ️ Häufigste auslösende Vorfahren-Namen (Anzahl betroffener Pferde): ${top}`);
+    diagnostics.push(`Häufigste auslösende Vorfahren-Namen (Anzahl betroffener Pferde): ${top}`);
   }
   if (rareBreedValues.length) {
-    logLine(`ℹ️ Selten vorkommende Rasse-Werte (unter ${MIN_HORSES_PER_BREED} Pferden, nicht als Rasse gewertet - ggf. selbst fehlerhaft, bitte prüfen): ${rareBreedValues.map(escapeHtml).join(', ')}`);
+    diagnostics.push(`Selten vorkommende Rasse-Werte (unter ${MIN_HORSES_PER_BREED} Pferden, nicht als Rasse gewertet - ggf. selbst fehlerhaft): ${rareBreedValues.map(escapeHtml).join(', ')}`);
+  }
+  if (diagnostics.length) {
+    logLine(`<details><summary class="small muted">Diagnose</summary>${diagnostics.map((d) => `<p class="small muted">${d}</p>`).join('')}</details>`);
   }
 }
 
