@@ -563,10 +563,11 @@ async function runSaveFlow() {
   for (const k of JSONB_KEYS) {
     if (extraData[k] !== undefined) payload[k] = extraData[k];
   }
-  // Der reinkopierte Rohtext wird nur zum Auslesen gebraucht - nach dem
-  // Speichern soll ausschließlich das daraus extrahierte Ergebnis in der
-  // Datenbank stehen, nicht der Rohtext selbst.
-  payload.raw_text = null;
+  // Nutzerwunsch: der eingefügte Spieltext bleibt gespeichert (erscheint beim
+  // erneuten Bearbeiten wieder im Textfeld) statt beim Speichern gelöscht zu
+  // werden. Leeres Feld = null (ein bereits gespeicherter Text bleibt beim
+  // Ergänzen eines bestehenden Pferds erhalten, siehe mergeFieldValue).
+  payload.raw_text = document.getElementById('raw-text').value.trim() ? document.getElementById('raw-text').value : null;
 
   // Muss VOR der Vollständigkeits-Prüfung laufen (siehe unten): ist das
   // hier eigentlich nur ein Nachtrag zu einem bereits bestehenden Pferd

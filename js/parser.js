@@ -879,7 +879,8 @@ function hasPedigreeData(pedigree) {
 // Pferde, deren gespeicherter Stammbaum vermutlich von einem älteren, bereits
 // behobenen Parser-Bug betroffen ist (Name und Rasse eines Vorfahren um eine
 // Zeile verschoben - z.B. "RASSELOS" als Vorfahren-Name statt als dessen
-// Rasse). Der Rohtext wird nach dem Speichern nicht aufbewahrt, deshalb eine
+// Rasse). Bei älteren Pferden wurde der Rohtext nach dem Speichern nicht
+// aufbewahrt (erst seit Kurzem wird er wieder mitgespeichert), deshalb eine
 // Heuristik: eine echte Vorfahrin heißt normalerweise nicht wortwörtlich
 // wie eine Rasse. Als Rasse zählt jeder Wert im Top-Level-Rasse-Feld
 // (horses.breed) irgendeines Pferds - NICHT die Vorfahren-Rasse-Felder (genau
