@@ -874,6 +874,65 @@ function hasPedigreeData(pedigree) {
   return (pedigree.ancestors?.length > 0) || (pedigree.sections && Object.keys(pedigree.sections).length > 0);
 }
 
+// Stammbaum-Prüfung "vertauschter Name/Rasse" (siehe js/pedigreeAudit.js in
+// der Verwaltung und den Hinweis für Besitzer*innen in js/list.js): findet
+// Pferde, deren gespeicherter Stammbaum vermutlich von einem älteren, bereits
+// behobenen Parser-Bug betroffen ist (Name und Rasse eines Vorfahren um eine
+// Zeile verschoben - z.B. "RASSELOS" als Vorfahren-Name statt als dessen
+// Rasse). Der Rohtext wird nach dem Speichern nicht aufbewahrt, deshalb eine
+// Heuristik: eine echte Vorfahrin heißt normalerweise nicht wortwörtlich
+// wie eine Rasse. Als Rasse zählt jeder Wert im Top-Level-Rasse-Feld
+// (horses.breed) irgendeines Pferds - NICHT die Vorfahren-Rasse-Felder (genau
+// die verschiebt der gesuchte Bug, sie würden sich selbst vergiften) - plus
+// immer "Rasselos" (im Spiel eine echte Ausprägung, in der Datenbank meist
+// als leeres Feld). "Unbekannt" ist der reguläre Platzhalter für einen nicht
+// erfassten Vorfahren und wird nie geflaggt. Nachteil ohne Mindestanzahl:
+// steht bei EINEM Pferd fälschlich ein Pferdename im breed-Feld, werden alle
+// Pferde mit einem Vorfahren dieses Namens mit-verdächtigt - die Rückgabe
+// enthält deshalb Diagnosedaten (triggerCounts, rareBreedValues).
+//
+// horses: Zeilen mit mindestens name, breed, pedigree. Rückgabe:
+// { suspects: [{ horse, names: [verdächtige Vorfahren-Namen] }],
+//   triggerCounts: Map<Name, Anzahl betroffener Pferde>,
+//   rareBreedValues: ["wert (anzahl)", ...] (< PEDIGREE_AUDIT_RARE_BREED_LIMIT Pferde) }
+const PEDIGREE_AUDIT_PLACEHOLDER_NAMES = new Set(['unbekannt']);
+const PEDIGREE_AUDIT_RARE_BREED_LIMIT = 3;
+
+function pedigreeAuditAncestorsOf(pedigree) {
+  if (!pedigree) return [];
+  return Array.isArray(pedigree) ? pedigree.slice(1) : (pedigree.ancestors || []);
+}
+
+function findPedigreeSuspects(horses) {
+  const breedCounts = new Map();
+  for (const h of horses) {
+    if (!h.breed) continue;
+    const key = h.breed.trim().toLowerCase();
+    breedCounts.set(key, (breedCounts.get(key) || 0) + 1);
+  }
+  const knownBreeds = new Set(['rasselos', ...breedCounts.keys()]);
+  const rareBreedValues = [];
+  for (const [key, count] of breedCounts) {
+    if (count < PEDIGREE_AUDIT_RARE_BREED_LIMIT) rareBreedValues.push(`${key} (${count})`);
+  }
+
+  const suspects = [];
+  const triggerCounts = new Map();
+  for (const horse of horses) {
+    const names = pedigreeAuditAncestorsOf(horse.pedigree)
+      .filter((a) => {
+        if (!a?.name) return false;
+        const name = a.name.trim().toLowerCase();
+        return !PEDIGREE_AUDIT_PLACEHOLDER_NAMES.has(name) && knownBreeds.has(name);
+      })
+      .map((a) => a.name.trim());
+    if (!names.length) continue;
+    suspects.push({ horse, names });
+    for (const n of new Set(names)) triggerCounts.set(n, (triggerCounts.get(n) || 0) + 1);
+  }
+  return { suspects, triggerCounts, rareBreedValues };
+}
+
 // Anzahl der Vorfahren (ohne das Pferd selbst) - dient in horseForm.js
 // (mergeFieldValue) als Vergleichsgrundlage, um beim erneuten Einfügen
 // eines kürzeren Texts (z.B. Stammbaum im Spiel nicht aufgeklappt) einen
@@ -1679,7 +1738,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isDoubledAllele, halveDoubledAllele, pintoPatternsFromColors,
     presentGenesSummary, parentHomozygousLoci, parentColorHints,
     pintoParentHints, parentsMightHavePearl, missingDataLabels,
-    TRISTATE_CYCLE, cycleTristateItem,
+    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects,
     RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
   };
 }
