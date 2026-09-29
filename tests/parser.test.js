@@ -16,7 +16,7 @@ const {
   missingDataLabels,
   cycleTristateItem,
   RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
-  findPedigreeSuspects,
+  findPedigreeSuspects, parseHorseText,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -271,3 +271,131 @@ describe('Stammbaum-Prüfung vertauschter Name/Rasse (findPedigreeSuspects)', ()
     assert.equal(findPedigreeSuspects([{ name: 'X', breed: 'Rasselos', pedigree: { ancestors: [{ name: 'Rasselos', breed: 'y' }] } }, ...aph]).badBreedHorses.length, 0);
   });
 });
+
+describe('Echter kopierter Spieltext (Ice: "*Iced* Ramiro -)B(-", Desktop-Kopie mit Stammbaum)', () => {
+  const RAMIRO_TEXT = `*Iced* Ramiro -)B(-
+6 Jahre, 9 Monate
+ Hengst
+ Rasselos
+ 87.50% Reinrassig
+Zum Pferd
+Geburtstag: 10.03.2026
+Fellfarbe: Sooty Pearl Bay Tobiano
+Stockmaß: 160 cm
+Erbkrankheit: Frei von Erbkrankheiten
+
+Besitzer: Ice
+Reitbeteiligung: Ice
+Wert: 7945 DD
+
+Turnierpotenzial
+Begabung: Klassische Dressur	Disziplinen: 98
+Gesamtpotenzial: 341	Grundlagen: 243
+Erfahrung
+86 %
+Alle Disziplinen anzeigen?
+Zucht
+Nachkommen
+Turniere
+Erfolge
+Papiere
+Rasse: Rasselos
+Reinrassigkeit: 87.50 % Rasseanteile anzeigen?
+Züchter: Ice
+
+Zuchtzulassung Ja
+HLP/SLP: Nein
+
+Nachkommen insgesamt: 0
+Gedeckte Stuten: 0
+Zucht
+ICO: 0.000 %
+Fruchtbarkeit: 83 %
+Deckhengst
+In Zuchtstation?: Nein
+Decktaxe: -
+Heute gedeckte Stuten: 0
+Besitzhistorie
+Stammbaum
+ 
+*Iced* Ramiro -)B(-
+Rasselos
+
+Potential: 341
+ 
+~PRE~ Rayo Pl ~ ZF ~
+Andalusier
+
+Potential: 361
+ 
+*Iced* Urania -)B(-
+Rasselos
+
+Potential: 340
+~PRE~ Rhamos Pl ~ ZF ~
+Andalusier
+
+Potential: 340
+~PRE~ Gana Pl ~ ZF ~
+Andalusier
+
+Potential: 358
+*Iced* Arctic Diamond -B-
+Rasselos
+
+Potential: 309
+Jama´s Uth Duna
+Andalusier
+
+Potential: 355
+~PRE~ Remolino Pl ~ ZF ~
+Andalusier
+~PRE~ Bailadora ~ ZF ~
+Andalusier
+~PRE~ Otario Pl ~ ZF ~
+Andalusier
+~PRE~ Gallega ~ ZF ~
+Andalusier
+Welten's Arctic Night pl 'ph
+American Paint Horse
+Diamante Brillante - 319 ~Sun~
+Andalusier
+Castigo de Loens
+Andalusier
+Jama´s Flora
+Andalusier
+Exterieur
+Körperbau
+Kopf	Zu großer Kopf
+`;
+
+  test('Stammbaum: alle 14 Vorfahren mit korrekt gepaartem Namen/Rasse, kein Versatz', () => {
+    const r = parseHorseText(RAMIRO_TEXT);
+    assert.equal(r.name, '*Iced* Ramiro -)B(-');
+    assert.equal(r.breed, 'Rasselos');
+    const anc = r.pedigree.ancestors;
+    assert.equal(anc.length, 14);
+    assert.deepEqual(anc.slice(0, 6).map((a) => [a.name, a.breed, a.potential]), [
+      ['~PRE~ Rayo Pl ~ ZF ~', 'Andalusier', 361],
+      ['*Iced* Urania -)B(-', 'Rasselos', 340],
+      ['~PRE~ Rhamos Pl ~ ZF ~', 'Andalusier', 340],
+      ['~PRE~ Gana Pl ~ ZF ~', 'Andalusier', 358],
+      ['*Iced* Arctic Diamond -B-', 'Rasselos', 309],
+      ['Jama´s Uth Duna', 'Andalusier', 355],
+    ]);
+    assert.deepEqual(anc.slice(10).map((a) => [a.name, a.breed]), [
+      ["Welten's Arctic Night pl 'ph", 'American Paint Horse'],
+      ['Diamante Brillante - 319 ~Sun~', 'Andalusier'],
+      ['Castigo de Loens', 'Andalusier'],
+      ['Jama´s Flora', 'Andalusier'],
+    ]);
+  });
+
+  test('Stammbaum-Prüfung flaggt dieses korrekt eingelesene Pferd nicht', () => {
+    const r = parseHorseText(RAMIRO_TEXT);
+    const horse = { name: r.name, breed: r.breed, pedigree: r.pedigree };
+    const others = [1, 2, 3].map((i) => ({ name: `Bestand ${i}`, breed: 'Andalusier', pedigree: null }));
+    assert.equal(findPedigreeSuspects([horse, ...others]).suspects.length, 0);
+  });
+});
+
