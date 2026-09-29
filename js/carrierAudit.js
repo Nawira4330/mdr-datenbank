@@ -22,7 +22,7 @@
 //    diesem Fall) - garantierte Vererbung, zuverlässig.
 //
 // Macht KEINE Änderungen an der Datenbank - reine Liste zum manuellen
-// Durchsehen. Läuft automatisch beim Öffnen dieser Seite.
+// Durchsehen. Läuft nur auf Klick auf "Erneut prüfen".
 async function runCarrierAudit() {
   const statusEl = document.getElementById('carrier-audit-status');
   const logList = document.getElementById('carrier-audit-log');
@@ -107,5 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   startBtn.addEventListener('click', runAndToggle);
-  runAndToggle();
+  // Nutzerwunsch: nicht automatisch beim Öffnen prüfen, nur per Klick.
+  document.getElementById('carrier-audit-status').textContent = 'Noch nicht geprüft - auf „Erneut prüfen“ klicken.';
 });
