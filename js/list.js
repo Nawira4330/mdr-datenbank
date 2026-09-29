@@ -601,8 +601,8 @@ async function showMissingDataNotice(session) {
 // Hinweis für Besitzer*innen: bei welchen EIGENEN Pferden ist der gespeicherte
 // Stammbaum vermutlich fehlerhaft (Name und Rasse eines Vorfahren vertauscht,
 // Fehler aus einem älteren Einlese-Stand, siehe findPedigreeSuspects in
-// parser.js - dieselbe Prüfung wie in der Verwaltung). Da der Rohtext nicht
-// aufbewahrt wird, hilft nur, die Spielseite des Pferdes erneut zu
+// parser.js - dieselbe Prüfung wie in der Verwaltung). Da der Rohtext bei diesen (älteren) Pferden
+// nicht aufbewahrt wurde, hilft nur, die Spielseite des Pferdes erneut zu
 // kopieren und einzufügen. Läuft rein auf dem bereits geladenen
 // kompletten Bestand (allHorsesCache), kein zusätzlicher Abruf. Die
 // Heuristik braucht den GANZEN Bestand (Rasse-Werte aller Pferde), zeigt
