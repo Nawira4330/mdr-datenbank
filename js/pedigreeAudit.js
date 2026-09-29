@@ -72,7 +72,7 @@ async function runPedigreeAudit() {
     return;
   }
 
-  const { suspects, triggerCounts, rareBreedValues } = findPedigreeSuspects(horses);
+  const { suspects, triggerCounts, rareBreedValues, badBreedHorses } = findPedigreeSuspects(horses);
   pedigreeAuditRows = suspects.map((s) => s.horse);
   renderPedigreeAuditTable();
 
@@ -84,6 +84,21 @@ async function runPedigreeAudit() {
   // als Rasse-Wert eines einzelnen Pferds in der Datenbank gelandet statt ein
   // echter Vertauschungsfall zu sein.
   const diagnostics = [];
+  if (suspects.length) {
+    const ownerCounts = new Map();
+    for (const { horse } of suspects) {
+      const o = horse.owner || '(ohne Besitzer)';
+      ownerCounts.set(o, (ownerCounts.get(o) || 0) + 1);
+    }
+    const byOwner = [...ownerCounts.entries()].sort((a, b) => b[1] - a[1])
+      .map(([o, n]) => `${escapeHtml(o)} (${n})`).join(', ');
+    diagnostics.push(`Betroffene Pferde je Besitzer: ${byOwner}`);
+  }
+  if (badBreedHorses.length) {
+    const list = badBreedHorses.slice(0, 30)
+      .map((h) => `${escapeHtml(h.name || '(ohne Name)')} [${h.owner ? escapeHtml(h.owner) : '–'}] → Rasse-Feld „${escapeHtml(h.breed)}“`).join('; ');
+    diagnostics.push(`Pferde, deren EIGENES Rasse-Feld wie ein Pferdename aussieht (${badBreedHorses.length}, vermutlich selbst vom Fehler betroffen und Auslöser für viele Treffer - bitte zuerst diese neu einlesen): ${list}${badBreedHorses.length > 30 ? ' …' : ''}`);
+  }
   if (triggerCounts.size) {
     const top = [...triggerCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
       .map(([name, n]) => `${escapeHtml(name)} (${n})`).join(', ');
