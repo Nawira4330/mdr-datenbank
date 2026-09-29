@@ -894,7 +894,8 @@ function hasPedigreeData(pedigree) {
 // horses: Zeilen mit mindestens name, breed, pedigree. Rückgabe:
 // { suspects: [{ horse, names: [verdächtige Vorfahren-Namen] }],
 //   triggerCounts: Map<Name, Anzahl betroffener Pferde>,
-//   rareBreedValues: ["wert (anzahl)", ...] (< PEDIGREE_AUDIT_RARE_BREED_LIMIT Pferde) }
+//   rareBreedValues: ["wert (anzahl)", ...] (< PEDIGREE_AUDIT_RARE_BREED_LIMIT Pferde),
+//   badBreedHorses: Pferde, deren eigenes Rasse-Feld wie ein Pferdename aussieht }
 const PEDIGREE_AUDIT_PLACEHOLDER_NAMES = new Set(['unbekannt']);
 const PEDIGREE_AUDIT_RARE_BREED_LIMIT = 3;
 
@@ -930,7 +931,24 @@ function findPedigreeSuspects(horses) {
     suspects.push({ horse, names });
     for (const n of new Set(names)) triggerCounts.set(n, (triggerCounts.get(n) || 0) + 1);
   }
-  return { suspects, triggerCounts, rareBreedValues };
+  // Diagnose "wer vergiftet die Prüfung": Pferde, deren EIGENES Rasse-Feld
+  // wortwörtlich wie ein Pferde-/Vorfahren-Name aussieht (echte Rassen heißen
+  // nie wie ein Pferd). Solche Pferde sind vermutlich selbst vom Fehler
+  // betroffen (Name/Rasse beim Einlesen verrutscht) und machen den Namen
+  // zur "Rasse" - dadurch werden andere Pferde mit diesem Vorfahren
+  // mitverdächtigt, oft alle einer Zucht.
+  const allNames = new Set();
+  for (const h of horses) {
+    if (h.name) allNames.add(h.name.trim().toLowerCase());
+    for (const a of pedigreeAuditAncestorsOf(h.pedigree)) {
+      if (a?.name) allNames.add(a.name.trim().toLowerCase());
+    }
+  }
+  allNames.delete('rasselos');
+  allNames.delete('unbekannt');
+  const badBreedHorses = horses.filter((h) => h.breed && allNames.has(h.breed.trim().toLowerCase()));
+
+  return { suspects, triggerCounts, rareBreedValues, badBreedHorses };
 }
 
 // Anzahl der Vorfahren (ohne das Pferd selbst) - dient in horseForm.js

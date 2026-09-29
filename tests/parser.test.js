@@ -259,4 +259,15 @@ describe('Stammbaum-Prüfung vertauschter Name/Rasse (findPedigreeSuspects)', ()
     const legacy = { name: 'Alt', breed: 'Andalusier', pedigree: [{ name: 'American Paint Horse', breed: 'x' }, { name: 'Normal', breed: 'Andalusier' }] };
     assert.equal(findPedigreeSuspects([legacy, ...aph]).suspects.length, 0);
   });
+
+  test('badBreedHorses: Pferd, dessen eigenes Rasse-Feld wie ein Pferdename aussieht, wird als Auslöser gemeldet', () => {
+    const poison = { name: 'Vergiftet', owner: 'Ice', breed: '*Iced* Diljá -)B(-', pedigree: null };
+    const parent = { name: '*Iced* Diljá -)B(-', owner: 'Ice', breed: 'Rasselos', pedigree: null };
+    const { badBreedHorses } = findPedigreeSuspects([poison, parent, ...aph]);
+    assert.deepEqual(badBreedHorses.map((h) => h.name), ['Vergiftet']);
+  });
+
+  test('badBreedHorses: echte Rassen ("Rasselos", APH) werden nie gemeldet', () => {
+    assert.equal(findPedigreeSuspects([{ name: 'X', breed: 'Rasselos', pedigree: { ancestors: [{ name: 'Rasselos', breed: 'y' }] } }, ...aph]).badBreedHorses.length, 0);
+  });
 });
