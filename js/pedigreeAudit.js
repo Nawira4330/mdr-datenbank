@@ -12,8 +12,8 @@
 // auskommt: eine echte Pferde-Vorfahrin heißt normalerweise nicht
 // wortwörtlich genauso wie eine Rasse. Die Menge der "echten" Rassen wird
 // dynamisch aus dem Top-Level-Rasse-Feld ALLER Pferde gebildet (horses.breed,
-// NICHT zusätzlich aus Vorfahren-Rasse-Feldern - siehe Begründung/Bugfix bei
-// knownBreeds unten) - kein hartcodierter Rasse-Katalog nötig. Taucht der
+// NICHT zusätzlich aus Vorfahren-Rasse-Feldern, und erst ab mehreren Pferden
+// je Wert - siehe Begründung/Bugfix bei knownBreeds unten) - kein hartcodierter Rasse-Katalog nötig. Taucht der
 // NAME eines Vorfahren darin identisch wieder auf, ist das ein starkes
 // Signal für genau diese Vertauschung. Ausnahme: "Unbekannt" (regulärer
 // Platzhalter für einen nicht erfassten Vorfahren) wird nie geflaggt.
@@ -60,9 +60,28 @@ async function runPedigreeAudit() {
   // Vorfahren mit genau diesem Namen anderswo faelschlich mit-verdaechtigen
   // (Kaskade). "horses.breed" durchlaeuft dagegen nie die Vorfahren-
   // Parsing-Logik und ist deshalb als Referenz unverdaechtig.
-  const knownBreeds = new Set();
+  // Bugreport: die Trefferzahl sprang von einem Tag auf den nächsten von 25
+  // auf 129. Ursache: schon EIN einziges Pferd mit einem falschen Rasse-Feld
+  // (z.B. ein Vorfahren-Name, der durch einen Parser-Versatz im Top-Level-
+  // breed-Feld gelandet ist) machte diesen Namen zur "Rasse" und verdächtigte
+  // damit jeden Vorfahren gleichen Namens im ganzen Bestand (Kaskade, hier
+  // ein häufig vorkommender Vorfahre). Echte Rassen tragen dagegen viele
+  // Pferde - ein Rasse-Wert zählt deshalb erst ab MIN_HORSES_PER_BREED
+  // Pferden als Rasse; seltenere Werte werden ignoriert und unten zur
+  // Kontrolle aufgelistet. "Rasselos" (im Spiel eine echte Ausprägung, in
+  // der Datenbank meist als leeres Feld gespeichert) zählt immer.
+  const MIN_HORSES_PER_BREED = 3;
+  const breedCounts = new Map();
   for (const h of horses) {
-    if (h.breed) knownBreeds.add(h.breed.trim().toLowerCase());
+    if (!h.breed) continue;
+    const key = h.breed.trim().toLowerCase();
+    breedCounts.set(key, (breedCounts.get(key) || 0) + 1);
+  }
+  const knownBreeds = new Set(['rasselos']);
+  const rareBreedValues = [];
+  for (const [key, count] of breedCounts) {
+    if (count >= MIN_HORSES_PER_BREED) knownBreeds.add(key);
+    else rareBreedValues.push(`${key} (${count})`);
   }
 
   // "Unbekannt" ist im Spiel/Parser die reguläre Platzhalter-Bezeichnung für
@@ -93,6 +112,7 @@ async function runPedigreeAudit() {
   }
 
   let flaggedCount = 0;
+  const triggerCounts = new Map();
   for (const horse of horses) {
     const ancestors = pedigreeAuditAncestorsOf(horse.pedigree);
     const suspicious = ancestors.filter((a) => {
@@ -102,6 +122,7 @@ async function runPedigreeAudit() {
     });
     if (!suspicious.length) continue;
     flaggedCount++;
+    for (const a of new Set(suspicious.map((x) => x.name.trim()))) triggerCounts.set(a, (triggerCounts.get(a) || 0) + 1);
     const details = suspicious
       .map((a) => `„${linkedAncestorName(a)}" (Rasse-Feld zeigt stattdessen: „${escapeHtml(a.breed || '–')}")`)
       .join(', ');
@@ -111,6 +132,18 @@ async function runPedigreeAudit() {
   statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${flaggedCount} mit vermutlich vertauschtem Name/Rasse im Stammbaum.`;
   if (!flaggedCount) {
     logLine('Keine betroffenen Pferde gefunden.');
+  }
+  // Diagnose: welche Namen lösen die meisten Treffer aus? Taucht dort ein
+  // normaler Pferdename mit sehr hoher Zahl auf, ist er vermutlich als
+  // Rasse-Wert eines einzelnen Pferds in der Datenbank gelandet (siehe
+  // MIN_HORSES_PER_BREED oben) statt ein echter Vertauschungsfall zu sein.
+  if (triggerCounts.size) {
+    const top = [...triggerCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([name, n]) => `${escapeHtml(name)} (${n})`).join(', ');
+    logLine(`ℹ️ Häufigste auslösende Vorfahren-Namen (Anzahl betroffener Pferde): ${top}`);
+  }
+  if (rareBreedValues.length) {
+    logLine(`ℹ️ Selten vorkommende Rasse-Werte (unter ${MIN_HORSES_PER_BREED} Pferden, nicht als Rasse gewertet - ggf. selbst fehlerhaft, bitte prüfen): ${rareBreedValues.map(escapeHtml).join(', ')}`);
   }
 }
 
