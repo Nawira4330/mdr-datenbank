@@ -411,7 +411,8 @@ async function onSaveFoal() {
   }
   // Siehe horseForm.js runSaveFlow: der eingefügte Spieltext bleibt
   // gespeichert (Nutzerwunsch).
-  payload.raw_text = document.getElementById('raw-text').value.trim() ? document.getElementById('raw-text').value : null;
+  const rawTextValue = document.getElementById('raw-text').value;
+  payload.raw_text = rawTextValue.trim() && await isRawTextStorageEnabled() ? rawTextValue : null;
 
   let error;
   if (currentPairing.keep_foal) {

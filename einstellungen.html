@@ -268,6 +268,21 @@
       </p>
     </fieldset>
 
+    <fieldset id="admin-settings-fieldset" hidden>
+      <legend>Admin: Eingefügten Spieltext speichern</legend>
+      <label style="display:flex; align-items:flex-start; gap:0.5rem; font-weight:400;">
+        <input type="checkbox" id="store-raw-text-checkbox" style="width: auto; margin-top: 0.25rem;" checked />
+        <span>Der beim Anlegen/Bearbeiten eines Pferds eingefügte Spieltext bleibt gespeichert und erscheint beim erneuten Bearbeiten wieder im Textfeld.</span>
+      </label>
+      <p class="muted small" style="margin-top:0.4rem;">
+        Gilt für <strong>alle</strong> Konten und wird sofort gespeichert. Aus =
+        der Text wird beim Speichern nicht mehr abgelegt (wie früher); bereits
+        gespeicherter Text bleibt bis zum nächsten Speichern des jeweiligen
+        Pferds erhalten. Nur für Admin-Konten sichtbar.
+      </p>
+      <span id="store-raw-text-status" class="muted small"></span>
+    </fieldset>
+
     <fieldset>
       <legend>Menü</legend>
       <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal;">

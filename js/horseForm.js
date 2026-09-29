@@ -567,7 +567,10 @@ async function runSaveFlow() {
   // erneuten Bearbeiten wieder im Textfeld) statt beim Speichern gelöscht zu
   // werden. Leeres Feld = null (ein bereits gespeicherter Text bleibt beim
   // Ergänzen eines bestehenden Pferds erhalten, siehe mergeFieldValue).
-  payload.raw_text = document.getElementById('raw-text').value.trim() ? document.getElementById('raw-text').value : null;
+  // Admin kann das global abschalten (Einstellungen, isRawTextStorageEnabled) -
+  // dann wird wie früher nichts abgelegt (null).
+  const rawTextValue = document.getElementById('raw-text').value;
+  payload.raw_text = rawTextValue.trim() && await isRawTextStorageEnabled() ? rawTextValue : null;
 
   // Muss VOR der Vollständigkeits-Prüfung laufen (siehe unten): ist das
   // hier eigentlich nur ein Nachtrag zu einem bereits bestehenden Pferd
