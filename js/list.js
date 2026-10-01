@@ -611,8 +611,8 @@ function showPedigreeErrorNotice(session) {
   const identity = session.user.email.split('@')[0].toLowerCase();
   const { suspects } = findPedigreeSuspects(allHorsesCache || []);
   const own = suspects
-    .map((s) => s.horse)
-    .filter((h) => (h.owner || '').toLowerCase() === identity)
+    .filter((s) => (s.horse.owner || '').toLowerCase() === identity)
+    .map((s) => ({ ...s.horse, _why: s.details.map((d) => `${d.name} (Rasse-Feld: ${d.breed || '–'})`).join('; ') }))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
   if (!own.length) return;
 
@@ -620,7 +620,7 @@ function showPedigreeErrorNotice(session) {
     const gameLink = h.external_id
       ? ` <a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗 Spiel</a>`
       : '';
-    return `<li><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name || '(ohne Name)')}${gameLink}</li>`;
+    return `<li title="${escapeHtml('Verdächtig: ' + h._why)}"><a class="btn secondary icon-btn" href="horse.html?id=${h.id}" title="Bearbeiten">✏️</a> ${escapeHtml(h.name || '(ohne Name)')}${gameLink}</li>`;
   }).join('');
   const notice = document.querySelector('#pedigree-error-notice');
   notice.innerHTML = `<summary><strong>Hinweis:</strong> Bei ${own.length} Pferd${own.length === 1 ? '' : 'en'} ist der Stammbaum vermutlich fehlerhaft</summary>

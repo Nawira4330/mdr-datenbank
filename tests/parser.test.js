@@ -246,18 +246,25 @@ describe('Stammbaum-Prüfung vertauschter Name/Rasse (findPedigreeSuspects)', ()
     assert.equal(findPedigreeSuspects([poisoner, innocent, ...aph]).suspects.length, 0);
   });
 
-  test('Ohne Mindestanzahl: ein Pferd mit Pferdenamen im breed-Feld verdächtigt Vorfahren gleichen Namens - Diagnose zeigt Auslöser und seltenen Rasse-Wert', () => {
+  test('Pferd mit Pferdenamen im breed-Feld löst bei INTAKTEN Stammbäumen keinen Fehlalarm mehr aus (Sun-Eclipse-Fall), Diagnose nennt es trotzdem', () => {
     const poison = { name: 'Vergiftet', breed: 'Isa', pedigree: null };
-    const victims = [1, 2].map((i) => ({ name: `Opfer ${i}`, breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Isa', breed: 'Andalusier' }] } }));
-    const { suspects, triggerCounts, rareBreedValues } = findPedigreeSuspects([poison, ...victims, ...aph]);
-    assert.equal(suspects.length, 2);
-    assert.equal(triggerCounts.get('Isa'), 2);
+    const intact = [1, 2].map((i) => ({ name: `Intakt ${i}`, breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Isa', breed: 'Andalusier' }] } }));
+    const { suspects, badBreedHorses, rareBreedValues } = findPedigreeSuspects([poison, ...intact, ...aph]);
+    assert.equal(suspects.length, 0);
+    assert.deepEqual(badBreedHorses.map((h) => h.name), ['Vergiftet']);
     assert.ok(rareBreedValues.includes('isa (1)'));
   });
 
-  test('Legacy-Array-Stammbaum: erster Eintrag ist das Pferd selbst und wird übersprungen', () => {
-    const legacy = { name: 'Alt', breed: 'Andalusier', pedigree: [{ name: 'American Paint Horse', breed: 'x' }, { name: 'Normal', breed: 'Andalusier' }] };
-    assert.equal(findPedigreeSuspects([legacy, ...aph]).suspects.length, 0);
+  test('Vertauschter Eintrag (Name = Rasse, Rasse-Feld = verrutschter Name) wird erkannt, details nennen beides', () => {
+    const swapped = { name: 'Kaputt', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Rasselos', breed: '~PRE~ Gana' }, { name: 'Normal', breed: 'Andalusier' }] } };
+    const { suspects } = findPedigreeSuspects([swapped, ...aph]);
+    assert.equal(suspects.length, 1);
+    assert.deepEqual(suspects[0].details, [{ name: 'Rasselos', breed: '~PRE~ Gana' }]);
+  });
+
+  test('Eintrag mit Rasse-Namen UND fehlendem Rasse-Feld bleibt verdächtig', () => {
+    const noBreed = { name: 'X', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Andalusier' }] } };
+    assert.equal(findPedigreeSuspects([noBreed, ...aph]).suspects.length, 1);
   });
 
   test('badBreedHorses: Pferd, dessen eigenes Rasse-Feld wie ein Pferdename aussieht, wird als Auslöser gemeldet', () => {

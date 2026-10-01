@@ -907,7 +907,8 @@ async function isRawTextStorageEnabled() {
 // enthält deshalb Diagnosedaten (triggerCounts, rareBreedValues).
 //
 // horses: Zeilen mit mindestens name, breed, pedigree. Rückgabe:
-// { suspects: [{ horse, names: [verdächtige Vorfahren-Namen] }],
+// { suspects: [{ horse, names: [verdächtige Vorfahren-Namen],
+//               details: [{ name, breed }] (Name + dort stehendes Rasse-Feld) }],
 //   triggerCounts: Map<Name, Anzahl betroffener Pferde>,
 //   rareBreedValues: ["wert (anzahl)", ...] (< PEDIGREE_AUDIT_RARE_BREED_LIMIT Pferde),
 //   badBreedHorses: Pferde, deren eigenes Rasse-Feld wie ein Pferdename aussieht }
@@ -932,18 +933,28 @@ function findPedigreeSuspects(horses) {
     if (count < PEDIGREE_AUDIT_RARE_BREED_LIMIT) rareBreedValues.push(`${key} (${count})`);
   }
 
+  // Ein Vorfahre gilt nur dann als vertauscht, wenn BEIDE Signale zutreffen:
+  // sein NAME ist ein Rasse-Wert UND sein Rasse-Feld ist KEIN Rasse-Wert
+  // (dort steht dann der verrutschte echte Name, z.B. { name: "Rasselos",
+  // breed: "~PRE~ Gana" }). Nur den Namen zu prüfen (so war es zuerst) löste
+  // Fehlalarm bei intakten Stammbäumen aus, sobald irgendein anderes Pferd
+  // einen Pferdenamen im Rasse-Feld hat (Nutzerreport "Sun Eclipse": Stammbaum
+  // in Ordnung, trotzdem markiert): ein intakter Eintrag trägt im Rasse-Feld
+  // eine echte Rasse ({ name: "Isa", breed: "Andalusier" }) und fällt damit
+  // aus der Prüfung.
   const suspects = [];
   const triggerCounts = new Map();
   for (const horse of horses) {
-    const names = pedigreeAuditAncestorsOf(horse.pedigree)
-      .filter((a) => {
-        if (!a?.name) return false;
-        const name = a.name.trim().toLowerCase();
-        return !PEDIGREE_AUDIT_PLACEHOLDER_NAMES.has(name) && knownBreeds.has(name);
-      })
-      .map((a) => a.name.trim());
-    if (!names.length) continue;
-    suspects.push({ horse, names });
+    const hits = pedigreeAuditAncestorsOf(horse.pedigree).filter((a) => {
+      if (!a?.name) return false;
+      const name = a.name.trim().toLowerCase();
+      if (PEDIGREE_AUDIT_PLACEHOLDER_NAMES.has(name) || !knownBreeds.has(name)) return false;
+      const breed = (a.breed || '').trim().toLowerCase();
+      return !knownBreeds.has(breed);
+    });
+    if (!hits.length) continue;
+    const names = hits.map((a) => a.name.trim());
+    suspects.push({ horse, names, details: hits.map((a) => ({ name: a.name.trim(), breed: (a.breed || '').trim() })) });
     for (const n of new Set(names)) triggerCounts.set(n, (triggerCounts.get(n) || 0) + 1);
   }
   // Diagnose "wer vergiftet die Prüfung": Pferde, deren EIGENES Rasse-Feld

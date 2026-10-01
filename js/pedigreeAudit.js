@@ -45,7 +45,7 @@ function renderPedigreeAuditTable() {
     return `<th data-sort="${field}" style="cursor:pointer;">${label}${arrow}</th>`;
   };
   const body = rows.map((h) => `<tr>
-      <td><a href="view.html?id=${encodeURIComponent(h.id)}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
+      <td><a href="view.html?id=${encodeURIComponent(h.id)}" title="${escapeHtml(h._why ? 'Verdächtig: ' + h._why : '')}">${escapeHtml(h.name || '(ohne Name)')}</a></td>
       <td>${escapeHtml(h.breed || 'Rasselos')}</td>
       <td>${h.owner ? escapeHtml(h.owner) : '–'}</td>
       <td>${h.external_id ? `<a href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗 Spiel</a>` : '–'}</td>
@@ -73,7 +73,7 @@ async function runPedigreeAudit() {
   }
 
   const { suspects, triggerCounts, rareBreedValues, badBreedHorses } = findPedigreeSuspects(horses);
-  pedigreeAuditRows = suspects.map((s) => s.horse);
+  pedigreeAuditRows = suspects.map((s) => ({ ...s.horse, _why: s.details.map((d) => `${d.name} (Rasse-Feld: ${d.breed || '–'})`).join('; ') }));
   renderPedigreeAuditTable();
 
   statusEl.textContent = `Fertig: ${horses.length} Pferde geprüft, ${suspects.length} mit vermutlich vertauschtem Name/Rasse im Stammbaum.` +
