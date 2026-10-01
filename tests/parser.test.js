@@ -256,15 +256,20 @@ describe('Stammbaum-Prüfung vertauschter Name/Rasse (findPedigreeSuspects)', ()
   });
 
   test('Vertauschter Eintrag (Name = Rasse, Rasse-Feld = verrutschter Name) wird erkannt, details nennen beides', () => {
-    const swapped = { name: 'Kaputt', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Rasselos', breed: '~PRE~ Gana' }, { name: 'Normal', breed: 'Andalusier' }] } };
+    const swapped = { name: 'Kaputt', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Rasselos', breed: '~PRE~ Gana' }, { name: 'Andalusier', breed: '~PRE~ Rhamos' }, { name: 'Normal', breed: 'Andalusier' }] } };
     const { suspects } = findPedigreeSuspects([swapped, ...aph]);
     assert.equal(suspects.length, 1);
-    assert.deepEqual(suspects[0].details, [{ name: 'Rasselos', breed: '~PRE~ Gana' }]);
+    assert.deepEqual(suspects[0].details, [{ name: 'Rasselos', breed: '~PRE~ Gana' }, { name: 'Andalusier', breed: '~PRE~ Rhamos' }]);
   });
 
-  test('Eintrag mit Rasse-Namen UND fehlendem Rasse-Feld bleibt verdächtig', () => {
-    const noBreed = { name: 'X', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Andalusier' }] } };
+  test('Eintrag mit Rasse-Namen UND fehlendem Rasse-Feld zählt als Treffer (bei mindestens 2 im Stammbaum)', () => {
+    const noBreed = { name: 'X', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Andalusier' }, { name: 'Rasselos' }] } };
     assert.equal(findPedigreeSuspects([noBreed, ...aph]).suspects.length, 1);
+  });
+
+  test('Ein EINZELNER auffälliger Vorfahre (z.B. ein Pferd, das wie eine Rasse heißt) reicht nicht - echtes Verrutschen betrifft mehrere Einträge', () => {
+    const single = { name: 'Sun Eclipse', breed: 'Andalusier', pedigree: { ancestors: [{ name: 'Rasselos', breed: 'Sonstwas' }, { name: 'Normal', breed: 'Andalusier' }] } };
+    assert.equal(findPedigreeSuspects([single, ...aph]).suspects.length, 0);
   });
 
   test('badBreedHorses: Pferd, dessen eigenes Rasse-Feld wie ein Pferdename aussieht, wird als Auslöser gemeldet', () => {
