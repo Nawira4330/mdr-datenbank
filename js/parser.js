@@ -914,6 +914,13 @@ async function isRawTextStorageEnabled() {
 //   badBreedHorses: Pferde, deren eigenes Rasse-Feld wie ein Pferdename aussieht }
 const PEDIGREE_AUDIT_PLACEHOLDER_NAMES = new Set(['unbekannt']);
 const PEDIGREE_AUDIT_RARE_BREED_LIMIT = 3;
+// Ein echtes Verrutschen im Stammbaum betrifft ALLE Einträge ab der
+// verrutschten Stelle (die feste Name/Rasse-Zeilenfolge liegt dann bis zum
+// Ende um eine Zeile daneben) - ein einzelner auffälliger Vorfahre ist
+// deshalb viel eher ein Fehlalarm (z.B. ein Pferd, das tatsächlich wie eine
+// Rasse heißt) als ein Parser-Versatz. Erst ab so vielen auffälligen
+// Einträgen im selben Stammbaum gilt ein Pferd als betroffen.
+const PEDIGREE_AUDIT_MIN_HITS = 2;
 
 function pedigreeAuditAncestorsOf(pedigree) {
   if (!pedigree) return [];
@@ -952,7 +959,7 @@ function findPedigreeSuspects(horses) {
       const breed = (a.breed || '').trim().toLowerCase();
       return !knownBreeds.has(breed);
     });
-    if (!hits.length) continue;
+    if (hits.length < PEDIGREE_AUDIT_MIN_HITS) continue;
     const names = hits.map((a) => a.name.trim());
     suspects.push({ horse, names, details: hits.map((a) => ({ name: a.name.trim(), breed: (a.breed || '').trim() })) });
     for (const n of new Set(names)) triggerCounts.set(n, (triggerCounts.get(n) || 0) + 1);
