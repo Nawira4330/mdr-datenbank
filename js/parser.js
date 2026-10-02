@@ -888,6 +888,20 @@ async function isRawTextStorageEnabled() {
   return data.value !== false;
 }
 
+// Geschlecht robust einer Gruppe zuordnen: 'male' (Hengst/Hengstfohlen/
+// Wallach), 'female' (Stute/Stutfohlen) oder null (unbekannt, z.B. bloßes
+// "Fohlen" oder leer). Groß-/Kleinschreibung, Leerzeichen und Bindestriche
+// ("Hengst-Fohlen") werden ignoriert - die Spielseite wird 1:1 gespeichert
+// (siehe parseHorseText), ein exakter Textvergleich ließ Pferde mit
+// abweichend geschriebenem Geschlecht aus Auswertungen wie "Bestes Kind"
+// fallen (Nutzerreport: einziges Hengstfohlen eines Vaters ohne Stern).
+function genderGroup(gender) {
+  const g = String(gender || '').trim().toLowerCase().replace(/[\s-]+/g, '');
+  if (g === 'hengst' || g === 'hengstfohlen' || g === 'wallach') return 'male';
+  if (g === 'stute' || g === 'stutfohlen') return 'female';
+  return null;
+}
+
 // Stammbaum-Prüfung "vertauschter Name/Rasse" (siehe js/pedigreeAudit.js in
 // der Verwaltung und den Hinweis für Besitzer*innen in js/list.js): findet
 // Pferde, deren gespeicherter Stammbaum vermutlich von einem älteren, bereits
@@ -1808,7 +1822,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isDoubledAllele, halveDoubledAllele, pintoPatternsFromColors,
     presentGenesSummary, parentHomozygousLoci, parentColorHints,
     pintoParentHints, parentsMightHavePearl, missingDataLabels,
-    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects, fetchAllRows,
+    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects, fetchAllRows, genderGroup,
     RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
   };
 }

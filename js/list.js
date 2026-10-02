@@ -460,13 +460,14 @@ function loadBestChildBadges() {
     // Mutter in dieser Reihenfolge (siehe parseHorseText/
     // parentRecordsForRow weiter oben).
     const ancestors = Array.isArray(h.pedigree) ? h.pedigree.slice(1) : (h.pedigree?.ancestors || []);
-    if (h.gender === 'Hengst' || h.gender === 'Hengstfohlen' || h.gender === 'Wallach') {
+    const group = genderGroup(h.gender);
+    if (group === 'male') {
       const fatherName = ancestors[0]?.name;
       if (!fatherName) continue;
       const list = sonsByFather.get(fatherName) || [];
       list.push({ id: h.id, stats: quickPerfStats(h) });
       sonsByFather.set(fatherName, list);
-    } else if (h.gender === 'Stute' || h.gender === 'Stutfohlen') {
+    } else if (group === 'female') {
       const motherName = ancestors[1]?.name;
       if (!motherName) continue;
       const list = daughtersByMother.get(motherName) || [];
