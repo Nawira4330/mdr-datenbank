@@ -16,7 +16,7 @@ const {
   missingDataLabels,
   cycleTristateItem,
   RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
-  findPedigreeSuspects, parseHorseText,
+  findPedigreeSuspects, parseHorseText, fetchAllRows,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -408,6 +408,51 @@ Kopf	Zu großer Kopf
     const horse = { name: r.name, breed: r.breed, pedigree: r.pedigree };
     const others = [1, 2, 3].map((i) => ({ name: `Bestand ${i}`, breed: 'Andalusier', pedigree: null }));
     assert.equal(findPedigreeSuspects([horse, ...others]).suspects.length, 0);
+  });
+});
+
+describe('fetchAllRows: stabile Seitenabrufe (kein Verlust/keine Doppelten bei sich ändernder Tabelle)', () => {
+  // Minimaler Supabase-Query-Builder-Ersatz: .order() setzt eine Sortierung,
+  // .range() liefert die Seite. "onPage" erlaubt, die Tabelle zwischen zwei
+  // Seiten-Abrufen zu verändern (wie ein Update, das eine Zeile physisch ans
+  // Ende verschiebt).
+  function makeBuilder(table, { onPage } = {}) {
+    let sortBy = null;
+    let calls = 0;
+    const b = {
+      order(col) { sortBy = col; return b; },
+      range(from, to) {
+        const rows = [...table];
+        if (sortBy) rows.sort((x, y) => (x[sortBy] < y[sortBy] ? -1 : x[sortBy] > y[sortBy] ? 1 : 0));
+        const page = rows.slice(from, to + 1);
+        if (onPage) onPage(calls++, table);
+        return Promise.resolve({ data: page, error: null });
+      },
+    };
+    return b;
+  }
+
+  test('Zeile wird zwischen Seite 1 und 2 physisch ans Ende verschoben: trotzdem vollständig und ohne Doppelte', async () => {
+    const table = Array.from({ length: 25 }, (_, i) => ({ id: String(i).padStart(3, '0'), name: `P${i}` }));
+    const builder = makeBuilder(table, {
+      onPage: (call, t) => { if (call === 0) { const [moved] = t.splice(3, 1); t.push(moved); } },
+    });
+    const { data, error } = await fetchAllRows(builder, 10);
+    assert.equal(error, null);
+    assert.equal(data.length, 25);
+    assert.equal(new Set(data.map((r) => r.id)).size, 25);
+  });
+
+  test('Doppelte Zeilen an Seitengrenzen werden entfernt', async () => {
+    const dupBuilder = {
+      order() { return dupBuilder; },
+      range(from) {
+        const pages = [[{ id: 'a' }, { id: 'b' }], [{ id: 'b' }, { id: 'c' }], []];
+        return Promise.resolve({ data: pages[from / 2] || [], error: null });
+      },
+    };
+    const { data } = await fetchAllRows(dupBuilder, 2);
+    assert.deepEqual(data.map((r) => r.id), ['a', 'b', 'c']);
   });
 });
 
