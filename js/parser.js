@@ -1651,12 +1651,31 @@ function setCheckDropdownSelected(rootId, values) {
 // sein (z.B. supabaseClient.from('horses').select('*')) - .range() wird
 // hier je Seite selbst angehängt.
 async function fetchAllRows(queryBuilder, pageSize = 1000) {
-  let rows = [];
+  // Stabile Sortierung nach id (an eine vorhandene Sortierung des Aufrufers
+  // angehängt, sie bleibt maßgeblich): .range() OHNE ORDER BY liefert keine
+  // garantierte Reihenfolge - zwischen zwei Seiten-Abrufen kann sich die
+  // physische Zeilenreihenfolge ändern (z.B. wenn die Verwandtschafts-
+  // Berechnung oder jemand Pferde aktualisiert), dann fehlen einzelne Pferde
+  // in der zusammengesetzten Liste oder tauchen doppelt auf. Folge z.B.:
+  // bei einzelnen Fohlen verschwanden die "Bestes Kind"-Sterne, weil ein
+  // Geschwister im geladenen Bestand fehlte.
+  queryBuilder = queryBuilder.order('id', { ascending: true });
+  const rows = [];
+  const seenIds = new Set();
   let from = 0;
   for (;;) {
     const { data, error } = await queryBuilder.range(from, from + pageSize - 1);
     if (error) return { data: rows.length ? rows : null, error };
-    rows = rows.concat(data || []);
+    for (const row of data || []) {
+      // Zeilen mit id nur einmal übernehmen (Sicherheitsnetz gegen Doppelte
+      // an Seitengrenzen, falls zwischen zwei Abrufen ein Pferd neu
+      // angelegt wurde).
+      if (row && row.id !== undefined) {
+        if (seenIds.has(row.id)) continue;
+        seenIds.add(row.id);
+      }
+      rows.push(row);
+    }
     if (!data || data.length < pageSize) break;
     from += pageSize;
   }
@@ -1789,7 +1808,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isDoubledAllele, halveDoubledAllele, pintoPatternsFromColors,
     presentGenesSummary, parentHomozygousLoci, parentColorHints,
     pintoParentHints, parentsMightHavePearl, missingDataLabels,
-    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects,
+    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects, fetchAllRows,
     RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
   };
 }
