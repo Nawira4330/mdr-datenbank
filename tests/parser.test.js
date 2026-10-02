@@ -16,7 +16,7 @@ const {
   missingDataLabels,
   cycleTristateItem,
   RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
-  findPedigreeSuspects, parseHorseText, fetchAllRows,
+  findPedigreeSuspects, parseHorseText, fetchAllRows, genderGroup,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -453,6 +453,16 @@ describe('fetchAllRows: stabile Seitenabrufe (kein Verlust/keine Doppelten bei s
     };
     const { data } = await fetchAllRows(dupBuilder, 2);
     assert.deepEqual(data.map((r) => r.id), ['a', 'b', 'c']);
+  });
+});
+
+describe('genderGroup: Geschlecht robust zuordnen (Bestes-Kind-Gruppen)', () => {
+  test('männlich/weiblich inkl. Fohlen, unabhängig von Schreibweise', () => {
+    for (const g of ['Hengst', 'Hengstfohlen', 'hengstfohlen', ' Hengstfohlen ', 'Hengst-Fohlen', 'HENGSTFOHLEN', 'Wallach']) assert.equal(genderGroup(g), 'male', g);
+    for (const g of ['Stute', 'Stutfohlen', 'stutfohlen', 'Stut-Fohlen', 'STUTE']) assert.equal(genderGroup(g), 'female', g);
+  });
+  test('unbekannt/leer/nur "Fohlen" -> null (kein Raten)', () => {
+    for (const g of ['Fohlen', '', null, undefined, 'Pony']) assert.equal(genderGroup(g), null, String(g));
   });
 });
 
