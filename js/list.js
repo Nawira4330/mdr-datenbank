@@ -10,7 +10,18 @@
 // es, mit eigener, bereits schlanker Abfrage). Wird ein Feld hier künftig
 // gebraucht, muss es zuerst in diese Liste aufgenommen werden, sonst bleibt
 // es in den geladenen Zeilen einfach undefined.
-const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composition, coat_color, disease_free, birthdate, owner, breeding_allowed, hlp_slp, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides, exterior_genetics, exterior_descriptive, temperament, tournament_potential, pedigree, notes, image_url, tags, updated_at';
+//
+// "exterior_genetics:exterior_genetics->overall" (statt der vollen Spalte)
+// spart hier den mit Abstand größten Brocken (Egress-Audit 2026-10-04,
+// Nutzerwunsch "Egress reduzieren"): quickPerfStats/computeDerived lesen
+// aus dem kompletten Bestand ausschließlich .overall.percent (Ext%),
+// NIE .rows (die 14-zeilige Genotyp-Tabelle je Pferd, ~1,27 MB/1000
+// Zeilen - nur auf der einzelnen Pferdeseite gebraucht, die weiterhin
+// select('*') nutzt und die Zeilen dort unverändert bekommt). Der
+// PostgREST-Pfadausdruck liefert dadurch direkt {score, percent} statt
+// {overall: {score, percent}, rows: [...]} - die beiden Lesestellen unten
+// greifen deshalb bewusst auf .percent statt .overall.percent zu.
+const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composition, coat_color, disease_free, birthdate, owner, breeding_allowed, hlp_slp, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides, exterior_genetics:exterior_genetics->overall, exterior_descriptive, temperament, tournament_potential, pedigree, notes, image_url, tags, updated_at';
 
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
@@ -396,7 +407,10 @@ function quickPerfStats(h) {
   return {
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
     extAvg: averageScore(h.exterior_descriptive, scoreExteriorTerm),
-    extPercent: h.exterior_genetics?.overall?.percent ?? null,
+    // Kein .overall.percent: allHorsesCache liefert hier nur noch das
+    // bereits auf .overall zugeschnittene Objekt direkt, siehe
+    // HORSE_LIST_COLUMNS.
+    extPercent: h.exterior_genetics?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
 }
@@ -1012,7 +1026,10 @@ function computeDerived(h) {
     presentGenes: genes.map((g) => g.alleles).join(' '),
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
     extAvg: averageScore(h.exterior_descriptive, scoreExteriorTerm),
-    extPercent: h.exterior_genetics?.overall?.percent ?? null,
+    // Kein .overall.percent: allHorsesCache liefert hier nur noch das
+    // bereits auf .overall zugeschnittene Objekt direkt, siehe
+    // HORSE_LIST_COLUMNS.
+    extPercent: h.exterior_genetics?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
 }
@@ -1111,7 +1128,10 @@ function wireScrollTop() {
 // von den Übersichts-Filtern) - wie durchschnitt.js, aber nur die vier
 // hier gebrauchten Werte statt der vollen Ergebnis-Tabelle.
 async function computeCompareBaseline() {
-  let q = supabaseClient.from('horses').select('tournament_potential, exterior_descriptive, exterior_genetics, temperament');
+  // exterior_genetics:exterior_genetics->overall statt der vollen Spalte -
+  // unten wird nur .percent gelesen, nicht die 14-zeilige Genotyp-Tabelle
+  // (siehe gleiche Begründung bei HORSE_LIST_COLUMNS, Egress-Audit 2026-10-04).
+  let q = supabaseClient.from('horses').select('tournament_potential, exterior_descriptive, exterior_genetics:exterior_genetics->overall, temperament');
   const breed = document.querySelector('#cmp-breed').value;
   const zzl = document.querySelector('#cmp-zzl').value;
   const owner = document.querySelector('#cmp-owner').value;
@@ -1139,7 +1159,7 @@ async function computeCompareBaseline() {
       return raw != null && raw !== '' ? Number(raw) : null;
     })),
     ext: avg(data.map((h) => averageScore(h.exterior_descriptive, scoreExteriorTerm))),
-    extPercent: avg(data.map((h) => h.exterior_genetics?.overall?.percent ?? null)),
+    extPercent: avg(data.map((h) => h.exterior_genetics?.percent ?? null)),
     int: avg(data.map((h) => averageScore(h.temperament, scoreTemperamentTerm))),
   };
 }
