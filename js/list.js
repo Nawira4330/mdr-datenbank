@@ -21,7 +21,22 @@
 // PostgREST-Pfadausdruck liefert dadurch direkt {score, percent} statt
 // {overall: {score, percent}, rows: [...]} - die beiden Lesestellen unten
 // greifen deshalb bewusst auf .percent statt .overall.percent zu.
-const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composition, coat_color, disease_free, birthdate, owner, breeding_allowed, hlp_slp, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides, exterior_genetics:exterior_genetics->overall, exterior_descriptive, temperament, tournament_potential, pedigree, notes, image_url, tags, updated_at';
+// "pedigree_father/_mother: pedigree->ancestors->0/1" (statt der vollen
+// Spalte) - zweiter großer Egress-Hebel nach exterior_genetics
+// (Egress-Audit 2026-10-04): loadBestChildBadges/parentRecordsForRow
+// brauchen aus dem kompletten Bestand nur Vater- und Mutter-Name (die
+// ersten zwei von bis zu 14 Stammbaum-Einträgen je Pferd), nie die
+// restliche Ahnentafel - die zeigt weiterhin nur die einzelne
+// Pferdeseite, die select('*') nutzt. Geprüft (2026-10-04): alle ~1236
+// Pferde liegen aktuell im {ancestors:[...]}-Format vor, das ältere reine
+// Array-Format (siehe auskommentierte Fallback-Logik in
+// loadBestChildBadges/parentRecordsForRow) kommt in der Praxis nicht mehr
+// vor und wird vom aktuellen Parser auch nicht mehr erzeugt - ein
+// hypothetisches Pferd in altem Format bekäme hier einfach kein
+// Vater/Mutter-Objekt (pedigree_father/_mother bleiben null), fiele also
+// nur aus der Bestes-Kind-Gruppierung raus, genau wie ein Pferd ganz ohne
+// Stammbaum-Daten.
+const HORSE_LIST_COLUMNS = 'id, name, external_id, gender, breed, breed_composition, coat_color, disease_free, birthdate, owner, breeding_allowed, hlp_slp, genetic_diseases, disease_gene_overrides, colors, color_gene_overrides, exterior_genetics:exterior_genetics->overall, exterior_descriptive, temperament, tournament_potential, pedigree_father:pedigree->ancestors->0, pedigree_mother:pedigree->ancestors->1, notes, image_url, tags, updated_at';
 
 let currentSort = { field: 'name', dir: 'asc' };
 let selectedIds = new Set();
@@ -470,19 +485,18 @@ function loadBestChildBadges() {
   const sonsByFather = new Map();
   const daughtersByMother = new Map();
   for (const h of data) {
-    // Erste zwei Stammbaum-Einträge sind laut Spiel immer Vater und
-    // Mutter in dieser Reihenfolge (siehe parseHorseText/
-    // parentRecordsForRow weiter oben).
-    const ancestors = Array.isArray(h.pedigree) ? h.pedigree.slice(1) : (h.pedigree?.ancestors || []);
+    // Vater-/Mutter-Name kommen direkt aus den bereits auf die ersten
+    // zwei Stammbaum-Einträge zugeschnittenen Spalten (siehe
+    // HORSE_LIST_COLUMNS) statt aus der vollen pedigree-Spalte.
     const group = genderGroup(h.gender);
     if (group === 'male') {
-      const fatherName = ancestors[0]?.name;
+      const fatherName = h.pedigree_father?.name;
       if (!fatherName) continue;
       const list = sonsByFather.get(fatherName) || [];
       list.push({ id: h.id, stats: quickPerfStats(h) });
       sonsByFather.set(fatherName, list);
     } else if (group === 'female') {
-      const motherName = ancestors[1]?.name;
+      const motherName = h.pedigree_mother?.name;
       if (!motherName) continue;
       const list = daughtersByMother.get(motherName) || [];
       list.push({ id: h.id, stats: quickPerfStats(h) });
@@ -552,8 +566,9 @@ function isBetterInEveryMetric(a, b) {
 // ohne eigene Abfrage, da geneIndex bereits den kompletten Bestand enthält.
 function parentRecordsForRow(row) {
   if (!geneIndex) return [];
-  const ancestors = Array.isArray(row.pedigree) ? row.pedigree.slice(1) : (row.pedigree?.ancestors || []);
-  const parentNames = [ancestors[0]?.name, ancestors[1]?.name].filter(Boolean);
+  // Vater-/Mutter-Name direkt aus den zugeschnittenen Spalten (siehe
+  // HORSE_LIST_COLUMNS) statt aus der vollen pedigree-Spalte.
+  const parentNames = [row.pedigree_father?.name, row.pedigree_mother?.name].filter(Boolean);
   return parentNames.map((n) => geneIndex.get(n)).filter(Boolean);
 }
 
