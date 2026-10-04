@@ -36,9 +36,13 @@ function fillSelect(selector, values) {
 }
 
 function buildQuery() {
+  // exterior_genetics:exterior_genetics->overall statt der vollen Spalte -
+  // computeDerived() unten liest nur .percent, nie die 14-zeilige
+  // Genotyp-Tabelle (Egress-Audit 2026-10-04, gleiche Begründung wie
+  // HORSE_LIST_COLUMNS in list.js).
   let q = supabaseClient
     .from('horses')
-    .select('tournament_potential, exterior_descriptive, exterior_genetics, temperament, owner, breed, gender, breeding_allowed, tags');
+    .select('tournament_potential, exterior_descriptive, exterior_genetics:exterior_genetics->overall, temperament, owner, breed, gender, breeding_allowed, tags');
 
   const owner = document.querySelector('#d-owner').value;
   const gender = document.querySelector('#d-gender').value;
@@ -66,7 +70,7 @@ function computeDerived(h) {
   return {
     gp: gpRaw != null && gpRaw !== '' ? Number(gpRaw) : null,
     extAvg: averageScore(h.exterior_descriptive, scoreExteriorTerm),
-    extPercent: h.exterior_genetics?.overall?.percent ?? null,
+    extPercent: h.exterior_genetics?.percent ?? null,
     intAvg: averageScore(h.temperament, scoreTemperamentTerm),
   };
 }
