@@ -95,7 +95,7 @@ function buildHorseEmbed(horse, eltern = {}) {
       { name: 'Steckbrief', value: steckbriefValue(d) },
       { name: 'Eltern', value: elternValue(father, fatherName, mother, motherName) },
       { name: 'Farbgenetik', value: farbgenetikValue(d) },
-      { name: 'Leistungswerte', value: `GP ${d.gp}\nExt ${d.ext} (${d.extPercent})\nInt ${d.int}\nZZL ${d.zzlIcon}\nHLP/SLP ${d.hlpSlp}` },
+      { name: 'Leistungswerte', value: `GP ${d.gp}\nExt ${d.ext} (${d.extPercent})\nInt ${d.int}\nZZL ${d.zzlIcon}\nHLP/SLP ${d.hlpSlp}\nEKH ${d.ekh}` },
       { name: 'Besitzer', value: d.owner },
     );
 
@@ -120,7 +120,7 @@ function formatRelativeLine(horse, extraLabel) {
   return (
     `${genderIcon(horse.gender)} **${d.name}**${suffix}\n` +
     `Farbe: ${d.coatColor} | ZZL: ${d.zzl} | Besitzer: ${d.owner}\n` +
-    `GP: ${d.gp} | Ext: ${d.ext} | Ext%: ${d.extPercent} | Int: ${d.int} | HLP/SLP: ${d.hlpSlp}`
+    `GP: ${d.gp} | Ext: ${d.ext} | Ext%: ${d.extPercent} | Int: ${d.int} | HLP/SLP: ${d.hlpSlp} | EKH: ${d.ekh}`
   );
 }
 
@@ -175,32 +175,6 @@ function buildOffspringEmbed(horse, offspring) {
   return embed;
 }
 
-// Farben angelehnt an HORSE_TAG_OPTIONS in js/parser.js (--danger/--warning/
-// --success/--tag-blue/--tag-purple), damit die Einfaerbung auch hier
-// intuitiv nach Ampel-/Kategorie-Logik funktioniert statt zufaellig zu sein
-// wie bei colorForHorse.
-const TAG_EMBED_COLORS = {
-  Verkauf: 0xe03131,
-  Reserviert: 0xf08c00,
-  Bleibt: 0x2f9e44,
-  GBH: 0x9c36b5,
-};
-
-function buildTagSearchEmbed(tagLabel, horses) {
-  const embed = new EmbedBuilder()
-    .setColor(TAG_EMBED_COLORS[tagLabel] || COLOR)
-    .setTitle(`Pferde mit Schlagwort „${tagLabel}"`);
-
-  const lines = horses.map((h) => {
-    const note = (h.tags || []).find((t) => t.label === tagLabel)?.note;
-    return formatRelativeLine(h, note);
-  });
-
-  embed.addFields(...linesToFields(tagLabel, lines));
-
-  return embed;
-}
-
 function buildHelpEmbed() {
   return new EmbedBuilder()
     .setColor(COLOR)
@@ -209,43 +183,40 @@ function buildHelpEmbed() {
       {
         name: '/mdrdb pferd',
         value:
-          'Pferd per Namenssuche (Dropdown) anzeigen: Rasse, Geschlecht, Farbe, Farbgenetik, ' +
-          'Leistungswerte (GP/Ext/Ext%/Int), Besitzer und Eltern. Danach oeffnet sich ein ' +
-          'privates Menue, um zusaetzlich Geschwister/Halbgeschwister oder Nachkommen ' +
-          'oeffentlich zu posten.',
+          'Zeigt Pferdedaten an: Rasse, Geschlecht, Alter, Eltern, Farbe/Farbgenetik, Leistungswerte ' +
+          '(GP/Ext/Ext%/Int/ZZL/HLP-SLP), Besitzer. Durchsuchbar per Name und/oder Schlagwort ' +
+          '(Verkauf/Reserviert/Bleibt/GBH/LastFoal/???) und/oder Besitzer - mindestens eines von ' +
+          'dreien angeben. Ergibt das mehrere Treffer (bis 25), erscheint ein Auswahlmenue zum ' +
+          'Ankreuzen mehrerer Pferde; bei mehr als 25 Treffern werden direkt alle gepostet. Zu ' +
+          'jedem so geposteten Pferd oeffnet sich zusaetzlich ein privates Menue, um Geschwister/' +
+          'Halbgeschwister oder Nachkommen oeffentlich zu posten. Beim Schlagwort "Bleibt" ohne ' +
+          'Besitzer-Angabe werden automatisch nur die eigenen Pferde gezeigt (siehe ' +
+          '/mdrdb-register), sonst immer alle Treffer.',
       },
       {
-        name: '/mdrdb-rassen  _(nur Admin, für andere unsichtbar)_',
+        name: '/mdrdb-rassen  _(nur "Server verwalten", für andere unsichtbar)_',
         value:
           'Legt fest, welche Rassen auf diesem Server ueberhaupt durchsuchbar sind ' +
           '(Mehrfachauswahl, keine Auswahl = alle Rassen).',
       },
       {
-        name: '/mdrdb-kanal  _(nur Admin, für andere unsichtbar)_',
+        name: '/mdrdb-kanal  _(nur "Server verwalten", für andere unsichtbar)_',
         value:
           'Legt fuer den aktuellen Kanal zwei unabhaengige Filter fest: Zuchtzulassung ' +
           '(alle / nur ohne / nur mit) und Geschlecht (Stute/Hengst/Wallach, ' +
           '"Stute"/"Hengst" schliessen die jeweiligen Fohlen mit ein; keine Auswahl = alle).',
       },
       {
-        name: '/mdrdb-tag',
+        name: '/mdrdb-register',
         value:
-          'Listet alle Pferde mit einem bestimmten Schlagwort auf (Verkauf/Reserviert/Bleibt/' +
-          'GBH), optional per Namensausschnitt eingegrenzt.',
+          'Hinterlegt deinen Besitzernamen, damit dir in der Namenssuche aller Befehle ' +
+          '(z.B. /mdrdb pferd) nur noch deine eigenen Pferde vorgeschlagen werden.',
       },
-      {
-        name: '/mdrdb-verkaufen  _(nur der/die aktuelle Besitzer*in)_',
-        value:
-          'Markiert ein Pferd mit dem Schlagwort "Verkauf" inkl. Kaeufer-Notiz. Aendert NICHT ' +
-          'das Besitzer-Feld - das passiert erst mit /mdrdb-besitzer, sobald der Verkauf ' +
-          'abgeschlossen ist.',
-      },
-      {
-        name: '/mdrdb-besitzer  _(nur der/die aktuelle Besitzer*in)_',
-        value:
-          'Aendert das Besitzer-Feld eines Pferdes und entfernt dabei automatisch ein ' +
-          'vorhandenes "Verkauf"-Schlagwort (der Verkauf ist dann abgeschlossen).',
-      },
+      // /mdrdb-verkaufen und /mdrdb-besitzer: deaktiviert (Nutzerwunsch
+      // 2026-10-04, siehe deploy-commands.js/index.js) - hier bewusst
+      // nicht mehr aufgefuehrt, damit die Hilfe nicht laengst
+      // abgeschaltete Befehle bewirbt. Zum Reaktivieren hier einfach
+      // wieder einfuegen.
       {
         name: '/mdrdb hilfe',
         value: 'Zeigt diese Uebersicht.',
@@ -257,6 +228,5 @@ module.exports = {
   buildHorseEmbed,
   buildSiblingsEmbed,
   buildOffspringEmbed,
-  buildTagSearchEmbed,
   buildHelpEmbed,
 };

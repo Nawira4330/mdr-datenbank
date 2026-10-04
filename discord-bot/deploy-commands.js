@@ -21,13 +21,26 @@ const commands = [
     .addSubcommand((sub) =>
       sub
         .setName('pferd')
-        .setDescription('Zeigt Pferdedaten aus der MDR-Pferdedatenbank an')
+        .setDescription('Zeigt Pferdedaten an - nach Name und/oder Schlagwort/Besitzer durchsuchbar')
+        .addStringOption((option) =>
+          option.setName('name').setDescription('Optional: (Teil-)Name des Pferdes').setRequired(false).setAutocomplete(true),
+        )
         .addStringOption((option) =>
           option
-            .setName('name')
-            .setDescription('Name des Pferdes')
-            .setRequired(true)
-            .setAutocomplete(true),
+            .setName('tag')
+            .setDescription('Optional: nur Pferde mit diesem Schlagwort')
+            .setRequired(false)
+            .addChoices(
+              { name: 'Verkauf', value: 'Verkauf' },
+              { name: 'Reserviert', value: 'Reserviert' },
+              { name: 'Bleibt', value: 'Bleibt' },
+              { name: 'GBH', value: 'GBH' },
+              { name: 'LastFoal', value: 'LastFoal' },
+              { name: '???', value: '???' },
+            ),
+        )
+        .addStringOption((option) =>
+          option.setName('besitzer').setDescription('Optional: nur Pferde mit diesem Besitzer').setRequired(false),
         ),
     )
     .addSubcommand((sub) =>
@@ -38,65 +51,49 @@ const commands = [
     .toJSON(),
   new SlashCommandBuilder()
     .setName('mdrdb-rassen')
-    .setDescription('Legt fest, welche Rassen auf diesem Server durchsuchbar sind (nur Admin)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDescription('Legt fest, welche Rassen auf diesem Server durchsuchbar sind (nur "Server verwalten")')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
   new SlashCommandBuilder()
     .setName('mdrdb-kanal')
-    .setDescription('Legt fest, welche Pferde (Zuchtzulassung/Geschlecht) in diesem Kanal angezeigt werden (nur Admin)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDescription('Legt fest, welche Pferde in diesem Kanal angezeigt werden (nur "Server verwalten")')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON(),
+  // "verkaufen" und "besitzer": bewusst deaktiviert (Nutzerwunsch
+  // 2026-10-04) - aus der Registrierung genommen, damit sie bei Discord
+  // beim Tippen von "/" gar nicht mehr erscheinen. Implementierung bleibt
+  // vollstaendig erhalten (siehe handleVerkaufenCommand/
+  // handleBesitzerCommand in index.js, dort zusaetzlich per Sperre
+  // abgesichert) - zum Reaktivieren hier einfach wieder einkommentieren
+  // und deploy-commands.js erneut ausfuehren.
+  // new SlashCommandBuilder()
+  //   .setName('mdrdb-verkaufen')
+  //   .setDescription('Markiert ein Pferd als verkauft (Schlagwort "Verkauf" + Kaeufer) - nur fuer den/die Besitzer*in')
+  //   .addStringOption((option) =>
+  //     option.setName('pferd').setDescription('Name des Pferdes').setRequired(true).setAutocomplete(true),
+  //   )
+  //   .addStringOption((option) =>
+  //     option.setName('kaeufer').setDescription('An wen wurde verkauft?').setRequired(true),
+  //   )
+  //   .toJSON(),
+  // new SlashCommandBuilder()
+  //   .setName('mdrdb-besitzer')
+  //   .setDescription('Aendert den Besitzer eines Pferdes (entfernt Schlagwort "Verkauf") - nur fuer den/die Besitzer*in')
+  //   .addStringOption((option) =>
+  //     option.setName('pferd').setDescription('Name des Pferdes').setRequired(true).setAutocomplete(true),
+  //   )
+  //   .addStringOption((option) =>
+  //     option.setName('neuer_besitzer').setDescription('Name des neuen Besitzers/der neuen Besitzerin').setRequired(true),
+  //   )
+  //   .toJSON(),
+  // Speichert die Discord-ID -> Besitzername Zuordnung lokal (siehe
+  // registrations.js) - keine Admin-Beschraenkung, jede Person registriert
+  // nur sich selbst.
   new SlashCommandBuilder()
-    .setName('mdrdb-tag')
-    .setDescription('Listet Pferde mit einem bestimmten Schlagwort auf')
+    .setName('mdrdb-register')
+    .setDescription('Hinterlegt deinen Besitzernamen fuer die Namenssuche (zeigt dir ueberall nur eigene Pferde)')
     .addStringOption((option) =>
-      option
-        .setName('tag')
-        .setDescription('Welches Schlagwort?')
-        .setRequired(true)
-        .addChoices(
-          { name: 'Verkauf', value: 'Verkauf' },
-          { name: 'Reserviert', value: 'Reserviert' },
-          { name: 'Bleibt', value: 'Bleibt' },
-          { name: 'GBH', value: 'GBH' },
-        ),
-    )
-    .addStringOption((option) =>
-      option
-        .setName('pferd')
-        .setDescription('Optional: Ergebnis eingrenzen (nur Pferde mit dem gewaehlten Tag)')
-        .setRequired(false)
-        .setAutocomplete(true),
-    )
-    .toJSON(),
-  // "verkaufen" und "besitzer" sind bewusst zwei getrennte Befehle statt
-  // einer gemeinsamen Aktion: /mdrdb-verkaufen setzt nur das Schlagwort
-  // "Verkauf" (Pferd gehoert der verkaufenden Person noch), /mdrdb-besitzer
-  // vollzieht die eigentliche Uebergabe und entfernt dabei automatisch das
-  // "Verkauf"-Schlagwort (siehe tags.js/index.js). Beide sind oeffentlich
-  // sichtbar (keine setDefaultMemberPermissions) - die eigentliche
-  // Berechtigungspruefung (nur der/die aktuelle Besitzer*in laut
-  // Besitzer-Feld, plus Bot-Owner) passiert manuell im Code
-  // (requireHorseOwner in index.js), da sie sich nicht ueber Discords
-  // rollenbasierte Berechtigungen abbilden laesst.
-  new SlashCommandBuilder()
-    .setName('mdrdb-verkaufen')
-    .setDescription('Markiert ein Pferd als verkauft (Schlagwort "Verkauf" + Kaeufer) - nur fuer den/die Besitzer*in')
-    .addStringOption((option) =>
-      option.setName('pferd').setDescription('Name des Pferdes').setRequired(true).setAutocomplete(true),
-    )
-    .addStringOption((option) =>
-      option.setName('kaeufer').setDescription('An wen wurde verkauft?').setRequired(true),
-    )
-    .toJSON(),
-  new SlashCommandBuilder()
-    .setName('mdrdb-besitzer')
-    .setDescription('Aendert den Besitzer eines Pferdes (entfernt Schlagwort "Verkauf") - nur fuer den/die Besitzer*in')
-    .addStringOption((option) =>
-      option.setName('pferd').setDescription('Name des Pferdes').setRequired(true).setAutocomplete(true),
-    )
-    .addStringOption((option) =>
-      option.setName('neuer_besitzer').setDescription('Name des neuen Besitzers/der neuen Besitzerin').setRequired(true),
+      option.setName('besitzername').setDescription('Dein Name wie im Besitzer-Feld der Pferde').setRequired(true),
     )
     .toJSON(),
 ];

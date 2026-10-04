@@ -109,6 +109,39 @@ function ageDisplay(birthdateIso) {
   return parts.join(', ');
 }
 
+// Portiert aus js/list.js (isDiseaseClear/affectedDiseaseLabels) fuer die
+// EKH-Spalte (Erbkrankheiten). Ein Locuswert gilt als unauffaellig, wenn
+// er (ohne "/"-Trenner) nur aus grossem "N" (normal) besteht - jede
+// Abweichung bedeutet Traeger/betroffen; das Risikoallel-Kuerzel ist nicht
+// immer klein geschrieben (z.B. "LF/NN" bei LFS), ein reiner
+// Kleinbuchstaben-Check wuerde solche Faelle uebersehen. "Nicht getestet"
+// zaehlt weder als getestet noch als betroffen.
+function isEkhUntested(value) {
+  return /nicht getestet/i.test(value || '');
+}
+function isDiseaseClear(value) {
+  const cleaned = (value || '').replace(/\//g, '');
+  return cleaned === '' || /^N+$/.test(cleaned);
+}
+
+// Zusaetzlich zu tatsaechlich getesteten (und auffaelligen) Erbkrankheiten
+// auch manuell als Traeger/betroffen bestaetigte, noch nicht getestete
+// Krankheiten mit einbeziehen (siehe disease_gene_overrides) - "frei"/
+// unbekannt zaehlt dagegen nicht als betroffen.
+function affectedDiseaseLabels(horse) {
+  const diseases = (horse.genetic_diseases || []).filter((d) => !isEkhUntested(d.value));
+  const tested = diseases.filter((d) => !isDiseaseClear(d.value)).map((d) => d.label);
+  const testedCodes = new Set(diseases.map((d) => d.label));
+  const ov = horse.disease_gene_overrides || {};
+  const manual = Object.keys(ov).filter((code) => (ov[code] === 'het' || ov[code] === 'hom') && !testedCodes.has(code));
+  return [...tested, ...manual];
+}
+
+function ekhDisplay(horse) {
+  const affected = affectedDiseaseLabels(horse);
+  return affected.length ? affected.join(', ') : DASH;
+}
+
 // Berechnet alle Anzeige-Felder fuer ein "horses"-Row (Supabase select('*')).
 // GP bleibt bewusst der Rohstring aus tournament_potential (wie in
 // horseForm.js tournamentSummaryHtml angezeigt), statt wie in list.js
@@ -164,6 +197,7 @@ function computeDisplayFields(horse, parents = []) {
     zzlIcon: zzlIcon(horse.breeding_allowed),
     hlpSlp: hlpSlpDisplay(horse.hlp_slp),
     age: ageDisplay(horse.birthdate),
+    ekh: ekhDisplay(horse),
   };
 }
 

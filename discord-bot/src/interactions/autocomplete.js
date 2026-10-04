@@ -1,6 +1,20 @@
 const { getGuildSettings, getChannelSettings } = require('../settings');
 const { horseMatchesFilters } = require('../filters');
 const { fetchAllHorsesLight } = require('../pedigree');
+const { getRegisteredOwner } = require('../registrations');
+const { ownerNameMatches } = require('../ownership');
+
+// Ist die aufrufende Person per /mdrdb-register angemeldet, werden in
+// JEDER Namenssuche des Bots nur noch ihre eigenen Pferde vorgeschlagen
+// (siehe registrations.js/ownership.js) - ohne Registrierung bleibt es
+// beim bisherigen Verhalten (alle Pferde durchsuchbar). Ein exaktes
+// Eintippen eines fremden Namens funktioniert weiterhin (die Daten sind
+// nicht geheim), nur der Vorschlags-Dropdown wird eingegrenzt.
+function applyOwnerRegistration(interaction, horses) {
+  const registeredOwner = getRegisteredOwner(interaction.user.id);
+  if (!registeredOwner) return horses;
+  return horses.filter((h) => ownerNameMatches(h.owner, [registeredOwner]));
+}
 
 const RESULT_LIMIT = 25;
 // Es wird mehr als RESULT_LIMIT geladen, da Rassen-/Kanal-Filter danach
@@ -45,6 +59,7 @@ async function handleAutocomplete(interaction) {
     const channelSettings = getChannelSettings(interaction.channelId);
     filtered = matches.filter((h) => horseMatchesFilters(h, guildSettings, channelSettings));
   }
+  filtered = applyOwnerRegistration(interaction, filtered);
 
   await interaction.respond(filtered.slice(0, RESULT_LIMIT).map((h) => ({ name: h.name, value: h.name })));
 }
@@ -72,6 +87,7 @@ async function handleTagPferdAutocomplete(interaction) {
     const channelSettings = getChannelSettings(interaction.channelId);
     matches = matches.filter((h) => horseMatchesFilters(h, guildSettings, channelSettings));
   }
+  matches = applyOwnerRegistration(interaction, matches);
 
   await interaction.respond(matches.slice(0, RESULT_LIMIT).map((h) => ({ name: h.name, value: h.name })));
 }

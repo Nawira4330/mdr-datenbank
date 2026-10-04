@@ -2,16 +2,27 @@
 
 Discord-Bot fuer die [MDR Pferdedatenbank](../README.md):
 
-- **`/mdrdb pferd`** durchsucht per Autocomplete-Dropdown die Pferdenamen und
-  postet Steckbrief (Rasse/Geschlecht/Farbe), Farbgenetik, Leistungswerte
-  (GP/Ext/Ext%/Int) und Besitzer in den Chat. Danach oeffnet sich ein
-  privates Auswahlmenue, mit dem sich zusaetzlich Eltern, Geschwister/
-  Halbgeschwister oder Nachkommen des Pferds oeffentlich in den Kanal posten
-  lassen - das Menue bleibt offen, bis "4 - fertig" gewaehlt wird.
-- **`/mdrdb-rassen`** (nur Server-Administrator*innen) legt fest, welche
+- **`/mdrdb pferd`** durchsucht die Pferdedatenbank nach Name (Teilstring,
+  mit Autocomplete-Vorschlaegen) und/oder Schlagwort (Verkauf/Reserviert/
+  Bleibt/GBH/LastFoal/???) und/oder Besitzer - mindestens eines von den
+  dreien ist Pflicht (sonst waeren das alle ~1000 Pferde auf einmal). Jeder
+  Treffer wird als Karte gepostet: Rasse/Geschlecht/Alter, Eltern, Farbe/
+  Farbgenetik, Leistungswerte (GP/Ext/Ext%/Int/ZZL/HLP-SLP), Besitzer. Ergibt
+  die Suche 2-25 Treffer, erscheint zuerst ein privates Auswahlmenue zum
+  Ankreuzen mehrerer Pferde; bei mehr als 25 Treffern werden direkt alle
+  gepostet. Jede so geposteten Karte ist eine eigene, einzeln loesch-/
+  beantwortbare Nachricht, zu der sich zusaetzlich ein privates Menue
+  oeffnet, mit dem sich Geschwister/Halbgeschwister oder Nachkommen des
+  Pferds oeffentlich posten lassen - das Menue bleibt offen, bis "fertig"
+  gewaehlt wird. Beim Schlagwort "Bleibt" ohne explizite Besitzer-Angabe
+  (typischerweise mit Abstand die meisten Treffer) werden automatisch nur
+  die eigenen Pferde gezeigt (per `/mdrdb-register` oder ersatzweise
+  Discord-Anzeigename/Nutzername/Spitzname, siehe `src/ownership.js`), um
+  keine Nachrichtenflut auszuloesen.
+- **`/mdrdb-rassen`** (nur Personen mit "Server verwalten") legt fest, welche
   Rassen auf diesem Server ueberhaupt durchsuchbar sind (Mehrfachauswahl,
   keine Auswahl = keine Einschraenkung, alle Rassen).
-- **`/mdrdb-kanal`** (nur Server-Administrator*innen) legt pro Kanal zwei
+- **`/mdrdb-kanal`** (nur Personen mit "Server verwalten") legt pro Kanal zwei
   unabhaengige Filter fest: Zuchtzulassung (alle / nur ohne ZZL, z.B. fuer
   einen "Fohlen"-Kanal / nur mit ZZL) und Geschlecht (Mehrfachauswahl aus
   Stute/Hengst/Wallach, keine Auswahl = alle Geschlechter - "Stute"
@@ -19,27 +30,43 @@ Discord-Bot fuer die [MDR Pferdedatenbank](../README.md):
   Hengstfohlen, siehe GENDER_GROUPS in `src/filters.js`). Beide Filter
   lassen sich unabhaengig voneinander setzen und gelten gleichzeitig
   (UND-verknuepft).
-- **`/mdrdb-tag`** listet alle Pferde mit einem bestimmten Schlagwort
-  (Verkauf/Reserviert/Bleibt/GBH) auf, optional per
-  Namensausschnitt eingegrenzt.
+- **`/mdrdb-verkaufen`** und **`/mdrdb-besitzer`** sind aktuell **deaktiviert**
+  (nicht registriert, siehe `deploy-commands.js`/`src/index.js`) - Beschreibung
+  unten bleibt als Referenz fuer eine spaetere Reaktivierung stehen.
 - **`/mdrdb-verkaufen`** (nur der/die aktuelle Besitzer*in laut
-  Besitzer-Feld, oder der Bot-Owner) markiert ein Pferd mit dem Schlagwort
+  Besitzer-Feld, oder der Bot-Owner) markiert ein Pferd - oder per
+  Auswahlmenue mehrere eigene Pferde gleichzeitig - mit dem Schlagwort
   "Verkauf" inkl. Kaeufer-Notiz. Aendert **nicht** das Besitzer-Feld - das
   Pferd gehoert bis zur eigentlichen Uebergabe weiter der verkaufenden
   Person.
 - **`/mdrdb-besitzer`** (nur der/die aktuelle Besitzer*in, oder der
-  Bot-Owner) aendert das Besitzer-Feld eines Pferdes und entfernt dabei
+  Bot-Owner) aendert das Besitzer-Feld eines Pferdes - oder per
+  Auswahlmenue mehrerer eigener Pferde gleichzeitig - und entfernt dabei
   automatisch ein vorhandenes "Verkauf"-Schlagwort, da der Verkauf damit
   abgeschlossen ist.
+- **`/mdrdb-register`** hinterlegt den eigenen Besitzernamen (lokal, siehe
+  `src/registrations.js`) - ab dann schlagen alle Namenssuchen im Bot
+  (auch `/mdrdb pferd`) nur noch die eigenen Pferde vor. Ein exakt
+  eingetippter fremder Name funktioniert weiterhin (die Daten sind nicht
+  geheim), nur der Autocomplete-Dropdown wird eingegrenzt.
 - **`/mdrdb hilfe`** zeigt eine Uebersicht aller Befehle.
+
+Bei `/mdrdb pferd`, `/mdrdb-verkaufen` und `/mdrdb-besitzer` ist die
+Namenseingabe eine Teilstring-Suche (nicht mehr exakt) - ergibt sie mehr als
+einen Treffer (max. 25), zeigt der Bot ein echtes Mehrfachauswahl-Menue mit
+Haekchen (siehe `src/interactions/horseSelect.js` und
+`src/interactions/pendingActions.js`), bevor er die ausgewaehlten Pferde
+anzeigt bzw. die Aenderung darauf anwendet.
 
 `/mdrdb-rassen` und `/mdrdb-kanal` sind bewusst eigene Befehle (nicht
 Unterbefehle von `/mdrdb`) und ueber `setDefaultMemberPermissions`
-(Administrator) registriert - Discord blendet sie damit fuer normale
-Mitglieder in der Befehlsliste komplett aus, nicht nur beim Ausfuehren.
-Server-Admins koennen das ueber die Server-Einstellungen unter
-"Integrationen" bei Bedarf fuer weitere Rollen freigeben; der Bot prueft
-die Berechtigung zusaetzlich selbst als zweite Absicherung.
+("Server verwalten" - bewusst nicht das strengere "Administrator", damit
+auch Moderator-Rollen ohne volles Admin-Recht darauf zugreifen koennen)
+registriert - Discord blendet sie damit fuer alle anderen Mitglieder in der
+Befehlsliste komplett aus, nicht nur beim Ausfuehren. Server-Admins koennen
+das ueber die Server-Einstellungen unter "Integrationen" bei Bedarf fuer
+weitere Rollen freigeben; der Bot prueft die Berechtigung zusaetzlich
+selbst als zweite Absicherung.
 
 Alle Einschraenkungen gelten sowohl fuer die Autocomplete-Vorschlaege als
 auch beim Nachschlagen eines exakt eingetippten Namens - man kann sie also

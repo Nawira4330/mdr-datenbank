@@ -24,4 +24,21 @@ async function fetchHorseById(id) {
   return data;
 }
 
-module.exports = { fetchHorseByName, fetchHorseById };
+// Namenssuche (Teilstring, nicht exakt) fuer die Mehrfachauswahl bei
+// /mdrdb pferd, /mdrdb-verkaufen und /mdrdb-besitzer - liefert nur die
+// fuer Anzeige/Filterung noetigen Spalten (kein select('*')), da bei
+// mehreren Treffern ohnehin per fetchHorseByName nachgeladen wird, sobald
+// tatsaechlich ausgewaehlte Pferde bearbeitet werden.
+async function searchHorsesByName(query, limit = 50) {
+  let q = supabase
+    .from('horses')
+    .select('name, breed, breeding_allowed, gender, owner')
+    .order('name')
+    .limit(limit);
+  if (query?.trim()) q = q.ilike('name', `%${query.trim()}%`);
+  const { data, error } = await q;
+  if (error) throw new Error(`Supabase-Fehler bei der Namenssuche "${query}": ${error.message}`);
+  return data || [];
+}
+
+module.exports = { fetchHorseByName, fetchHorseById, searchHorsesByName };

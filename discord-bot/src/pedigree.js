@@ -10,6 +10,7 @@ const HORSE_COLUMNS = [
   'id', 'name', 'gender', 'breed', 'coat_color', 'colors', 'notes', 'owner',
   'exterior_genetics', 'exterior_descriptive', 'temperament', 'tournament_potential', 'pedigree',
   'breeding_allowed', 'hlp_slp', 'tags', 'birthdate',
+  'purebred_pct', 'breed_composition', 'image_url', 'external_id',
 ].join(', ');
 
 const PAGE_SIZE = 1000;
