@@ -185,7 +185,7 @@ function buildHelpEmbed() {
         value:
           'Zeigt Pferdedaten an: Rasse, Geschlecht, Alter, Eltern, Farbe/Farbgenetik, Leistungswerte ' +
           '(GP/Ext/Ext%/Int/ZZL/HLP-SLP), Besitzer. Durchsuchbar per Name und/oder Schlagwort ' +
-          '(Verkauf/Reserviert/Bleibt/GBH/LastFoal/???) und/oder Besitzer - mindestens eines von ' +
+          '(Verkauf/Reserviert/Bleibt/GBH/LastFoal/???/Exen/FT/Turnier/Beritt/Zucht) und/oder Besitzer - mindestens eines von ' +
           'dreien angeben. Ergibt das mehrere Treffer (bis 25), erscheint ein Auswahlmenue zum ' +
           'Ankreuzen mehrerer Pferde; bei mehr als 25 Treffern werden direkt alle gepostet. Zu ' +
           'jedem so geposteten Pferd oeffnet sich zusaetzlich ein privates Menue, um Geschwister/' +

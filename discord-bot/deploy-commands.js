@@ -37,6 +37,11 @@ const commands = [
               { name: 'GBH', value: 'GBH' },
               { name: 'LastFoal', value: 'LastFoal' },
               { name: '???', value: '???' },
+              { name: 'Exen', value: 'Exen' },
+              { name: 'FT', value: 'FT' },
+              { name: 'Turnier', value: 'Turnier' },
+              { name: 'Beritt', value: 'Beritt' },
+              { name: 'Zucht', value: 'Zucht' },
             ),
         )
         .addStringOption((option) =>

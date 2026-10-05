@@ -1370,6 +1370,11 @@ const HORSE_TAG_OPTIONS = [
   { label: 'GBH', color: 'var(--tag-purple)' },
   { label: 'LastFoal', color: 'var(--info)' },
   { label: '???', color: 'var(--tag-slate)' },
+  { label: 'Exen', color: 'var(--tag-brown)' },
+  { label: 'FT', color: 'var(--tag-teal)' },
+  { label: 'Turnier', color: 'var(--tag-cyan)' },
+  { label: 'Beritt', color: 'var(--tag-navy)' },
+  { label: 'Zucht', color: 'var(--tag-pink)' },
 ];
 
 function tagColor(label) {
