@@ -22,7 +22,13 @@ die() { printf '\nABBRUCH: %s\n' "$*" >&2; exit 1; }
 
 [ -d "$OLD" ] || die "Alte Kopie nicht gefunden: $OLD"
 [ -d "$NEW" ] || die "Repo-Ordner nicht gefunden: $NEW"
-[ "$(cd "$OLD" && pwd)" != "$(cd "$NEW" && pwd)" ] || die "Alte Kopie und Repo-Ordner sind derselbe Ordner - nichts umzustellen."
+# pwd -P loest Verknuepfungen (Symlinks) auf - ist die "alte Kopie" nur ein
+# Link auf den Repo-Ordner, laeuft der Bot bereits aus dem Repo.
+if [ "$(cd "$OLD" && pwd -P)" = "$(cd "$NEW" && pwd -P)" ]; then
+  printf '\nNichts umzustellen: %s ist derselbe Ordner wie %s (Verknuepfung).\n' "$OLD" "$NEW"
+  printf 'Der Bot laeuft bereits aus dem Repo. Zum Aktualisieren genuegt:\n  cd ~/mdr-datenbank && git pull && pm2 restart %s\n' "$APP"
+  exit 0
+fi
 [ -f "$OLD/.env" ] || die "Keine .env in $OLD gefunden."
 command -v pm2 >/dev/null || die "pm2 nicht gefunden."
 command -v npm >/dev/null || die "npm nicht gefunden."
@@ -44,18 +50,25 @@ if [ -f "$NEW/.env" ]; then
     b="$(grep -E "^${key}=" "$NEW/.env" | head -1 | sha256sum | cut -c1-16 || true)"
     if [ "$a" = "$b" ]; then printf '  %-28s gleich\n' "$key"; else printf '  %-28s ABWEICHEND (alte Kopie wird uebernommen)\n' "$key"; fi
   done < <(sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$OLD/.env")
-  cp -a "$NEW/.env" "$NEW/.env.vor-umstellung-$TS"
+  # Sicherungskopie ausserhalb des Repo-Ordners (nicht versehentlich committen).
+  cp -a "$NEW/.env" "$HOME/.env.mdrdb-bot.vor-umstellung-$TS"
 fi
-cp -a "$OLD/.env" "$NEW/.env"
+# Ist es ohnehin dieselbe Datei (Verknuepfung/Hardlink), gibt es nichts zu kopieren.
+if [ ! "$OLD/.env" -ef "$NEW/.env" ]; then
+  cp -a "$OLD/.env" "$NEW/.env"
+fi
 chmod 600 "$NEW/.env"
 
 say "4/6 data/ (Server-/Kanal-Einstellungen, Registrierungen) uebernehmen"
 if [ -d "$NEW/data" ] && [ -n "$(ls -A "$NEW/data" 2>/dev/null)" ]; then
-  mv "$NEW/data" "$NEW/data.vor-umstellung-$TS"
-  printf '  vorhandenes data/ im Repo-Ordner gesichert als data.vor-umstellung-%s\n' "$TS"
+  # Gesichert ausserhalb des Repo-Ordners (data/ ist dort ignoriert, Kopien mit anderem Namen waeren es nicht).
+  mv "$NEW/data" "$HOME/mdrdb-bot-data.vor-umstellung-$TS"
+  printf '  vorhandenes data/ im Repo-Ordner gesichert als ~/mdrdb-bot-data.vor-umstellung-%s\n' "$TS"
 fi
 if [ -d "$OLD/data" ]; then
-  cp -a "$OLD/data" "$NEW/data"
+  # Inhalt kopieren ("/." statt Ordner), sonst entsteht data/data, falls data/ schon (leer) existiert.
+  mkdir -p "$NEW/data"
+  cp -a "$OLD/data/." "$NEW/data/"
   ls -1 "$NEW/data" | sed 's/^/  uebernommen: /'
 else
   mkdir -p "$NEW/data"
