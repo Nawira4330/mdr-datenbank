@@ -27,7 +27,16 @@ async function handleDeleteButton(interaction) {
     return;
   }
   await interaction.deferUpdate();
-  await interaction.message.delete();
+  try {
+    await interaction.message.delete();
+  } catch (err) {
+    if (err.code !== 'ChannelNotCached') throw err;
+    // Der Bot kennt den Kanal nicht (z.B. Befehl in einem Server genutzt, in
+    // dem der Bot selbst nicht installiert ist) - Message.delete() braucht
+    // aber den Kanal-Cache. Ueber das Interaktions-Token loeschen geht auch
+    // ohne (gilt 15 Minuten ab dem Klick, reicht fuer diesen Zweck).
+    await interaction.deleteReply();
+  }
 }
 
 module.exports = { CUSTOM_ID_PREFIX, buildDeleteRow, handleDeleteButton };

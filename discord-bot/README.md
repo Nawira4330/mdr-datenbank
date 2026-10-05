@@ -155,6 +155,28 @@ einfach `npm install` und `npm start` dort ausfuehren; `.env` nicht mit
 hochladen, sondern die Variablen im jeweiligen Dienst als Umgebungsvariablen
 setzen).
 
+### Updates auf dem Server (pm2)
+
+Der Bot muss aus dem Git-Repo laufen (`~/mdr-datenbank/discord-bot`), damit
+ein Update nur `git pull` + `pm2 restart` braucht:
+
+```bash
+cd ~/mdr-datenbank && git pull && pm2 restart mdrdb-bot
+```
+
+Hat sich die Befehlsstruktur geaendert (z.B. neue Auswahlmoeglichkeiten wie
+Schlagwoerter), vorher zusaetzlich:
+
+```bash
+cd ~/mdr-datenbank/discord-bot && node deploy-commands.js
+```
+
+Laeuft der pm2-Prozess noch aus einer alten, getrennten Kopie (Pruefen:
+`pm2 describe mdrdb-bot | grep "script path"` - zeigt dann nicht auf den
+Repo-Ordner), stellt `scripts/umstellen-auf-repo.sh` ihn sicher um: sichert
+die alte Kopie, uebernimmt `.env` und `data/`, installiert die Abhaengigkeiten
+und rollt bei einem Startfehler automatisch zurueck.
+
 ## Berechnung pruefen (optional, ohne Discord)
 
 ```powershell
