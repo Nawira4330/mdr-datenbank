@@ -11,7 +11,7 @@ beide nutzen **dasselbe** Supabase-Projekt und dasselbe Egress-Kontingent.
 
 ## Deploy
 - Entwicklung auf dem Arbeitsbranch, dann nach `main` bringen (z.B. temp-Branch von `origin/main`, `git cherry-pick`, `git push origin temp:main`). `main` = live (GitHub Pages).
-- Datenbank-Migrationen (`supabase/migration_*.sql`) führt der Nutzer **manuell** im Supabase-SQL-Editor aus – immer dazusagen, wenn eine neu ist (offen: `migration_045_app_settings.sql`, `migration_046_updated_at_nur_bei_echten_aenderungen.sql`).
+- Datenbank-Migrationen (`supabase/migration_*.sql`) führt der Nutzer **manuell** im Supabase-SQL-Editor aus – immer dazusagen, wenn eine neu ist (offen: `migration_045_app_settings.sql`, `migration_046_updated_at_nur_bei_echten_aenderungen.sql` (ausgeführt), `migration_047_relatedness_gezielt_markieren.sql`).
 - Discord-Bot-Änderungen greifen erst nach `git pull` + Neustart auf dem Server (per SSH, vom Nutzer).
 - Supabase-Domain ist aus der Claude-Sitzung nicht erreichbar (Netzwerk-Policy) – keine Live-Daten abrufbar; bei Datenfragen den Nutzer um Beispieltext/Screenshot bitten.
 
