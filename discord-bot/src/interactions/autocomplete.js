@@ -64,21 +64,28 @@ async function handleAutocomplete(interaction) {
   await interaction.respond(filtered.slice(0, RESULT_LIMIT).map((h) => ({ name: h.name, value: h.name })));
 }
 
-// Namenssuche fuer die "pferd"-Option von /mdrdb-tag - schlaegt anders als
+// Namenssuche fuer die "name"-Option von /mdrdb pferd - schlaegt anders als
 // handleAutocomplete() oben NUR Pferde vor, die das in derselben Eingabe
 // bereits gewaehlte "tag" tragen (per interaction.options.getString('tag')
 // aus der noch laufenden Interaktion gelesen, kein eigener Zustand noetig).
-// Ist "tag" noch nicht gewaehlt (z.B. wenn zuerst in "pferd" getippt wird),
-// gibt es noch keine sinnvolle Eingrenzung - dann leere Vorschlagsliste.
+// Ist "tag" nicht gewaehlt (der Normalfall: nur nach Name suchen), gibt es
+// keine Eingrenzung - dann normale Namenssuche. Eine leere Liste waere hier
+// falsch: dann bekaeme man bei /mdrdb pferd name: gar keine Vorschlaege.
 async function handleTagPferdAutocomplete(interaction) {
   const tagLabel = interaction.options.getString('tag');
   if (!tagLabel) {
-    await interaction.respond([]);
+    await handleAutocomplete(interaction);
     return;
   }
 
   const focused = (interaction.options.getFocused() || '').trim().toLowerCase();
-  const allHorses = await fetchAllHorsesLight();
+  let allHorses;
+  try {
+    allHorses = await fetchAllHorsesLight();
+  } catch {
+    await interaction.respond([]);
+    return;
+  }
   let matches = allHorses.filter((h) => (h.tags || []).some((t) => t.label === tagLabel));
   if (focused) matches = matches.filter((h) => (h.name || '').toLowerCase().includes(focused));
 
