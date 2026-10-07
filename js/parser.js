@@ -1375,6 +1375,7 @@ const HORSE_TAG_OPTIONS = [
   { label: 'Turnier', color: 'var(--tag-cyan)' },
   { label: 'Beritt', color: 'var(--tag-navy)' },
   { label: 'Zucht', color: 'var(--tag-pink)' },
+  { label: 'Training', color: 'var(--tag-olive)' },
 ];
 
 function tagColor(label) {

@@ -4,7 +4,7 @@ Discord-Bot fuer die [MDR Pferdedatenbank](../README.md):
 
 - **`/mdrdb pferd`** durchsucht die Pferdedatenbank nach Name (Teilstring,
   mit Autocomplete-Vorschlaegen) und/oder Schlagwort (Verkauf/Reserviert/
-  Bleibt/GBH/LastFoal/???/Exen/FT/Turnier/Beritt/Zucht) und/oder Besitzer -
+  Bleibt/GBH/LastFoal/???/Exen/FT/Turnier/Beritt/Zucht/Training) und/oder Besitzer -
   mindestens eines von den
   dreien ist Pflicht (sonst waeren das alle ~1000 Pferde auf einmal). Jeder
   Treffer wird als Karte gepostet: Rasse/Geschlecht/Alter, Eltern, Farbe/

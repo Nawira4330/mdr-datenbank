@@ -42,6 +42,7 @@ const commands = [
               { name: 'Turnier', value: 'Turnier' },
               { name: 'Beritt', value: 'Beritt' },
               { name: 'Zucht', value: 'Zucht' },
+              { name: 'Training', value: 'Training' },
             ),
         )
         .addStringOption((option) =>
