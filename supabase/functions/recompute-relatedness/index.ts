@@ -531,18 +531,60 @@ Deno.serve(async () => {
   // fehlen (derselbe Bug, der letzte Woche im Frontend gefunden und mit
   // fetchAllRows() behoben wurde - hier dieselbe Loesung, nur lokal in der
   // Edge Function, da hier kein Zugriff auf js/supabaseClient.js besteht).
-  const horses: HorseRow[] = [];
-  const PAGE_SIZE = 1000;
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data: page, error: fetchError } = await supabase
-      .from('horses')
-      .select('id, name, owner, gender, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament, traits, disciplines, genetic_diseases, computed_tournament_values, relatedness_stale, tags')
-      .range(from, from + PAGE_SIZE - 1);
-    if (fetchError) {
-      return new Response(JSON.stringify({ error: fetchError.message }), { status: 500 });
+  async function fetchHorsePages(
+    columns: string,
+    onlyWithoutTournamentValues = false,
+  ): Promise<{ rows: HorseRow[]; error: string | null }> {
+    const rows: HorseRow[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let query = supabase.from('horses').select(columns);
+      if (onlyWithoutTournamentValues) query = query.is('computed_tournament_values', null);
+      const { data: page, error: fetchError } = await query.range(from, from + PAGE_SIZE - 1);
+      if (fetchError) return { rows, error: fetchError.message };
+      rows.push(...((page || []) as unknown as HorseRow[]));
+      if (!page || page.length < PAGE_SIZE) break;
     }
-    horses.push(...((page || []) as HorseRow[]));
-    if (!page || page.length < PAGE_SIZE) break;
+    return { rows, error: null };
+  }
+
+  // Egress: ein voller Abruf ALLER Spalten kostete ~11 MB je Lauf (und ein
+  // Durchlauf braucht 15-30 Laeufe). Die Verwandtschaft braucht davon nur die
+  // Spalten in RELATEDNESS_COLUMNS (~3 MB); "exterior_genetics" reicht in der
+  // Kurzform ".overall" (nur Ext% wird gelesen), die schweren Spalten traits/
+  // disciplines/genetic_diseases/computed_tournament_values und die
+  // Genetik-Detailtabelle entfallen. Wer hier ein weiteres Feld im
+  // Verwandten-Cache anzeigen will, muss es ZUSAETZLICH hier eintragen.
+  // Die vollen Spalten (FULL_COLUMNS) werden nur fuer Pferde geholt, die den
+  // Turnierwerte-Nachtrag noch brauchen (siehe unten) - das ist ein seltener
+  // Einmal-Nachtrag fuer neue/aelteren Pferde ohne berechnete Werte.
+  const RELATEDNESS_COLUMNS = 'id, name, owner, gender, pedigree, tournament_potential, exterior_descriptive, exterior_genetics:exterior_genetics->overall, temperament, relatedness_stale, tags';
+  const FULL_COLUMNS = 'id, name, owner, gender, pedigree, tournament_potential, exterior_descriptive, exterior_genetics, temperament, traits, disciplines, genetic_diseases, computed_tournament_values, relatedness_stale, tags';
+  const PAGE_SIZE = 1000;
+
+  let horses: HorseRow[] = [];
+  if (needRelatedness) {
+    const { rows, error: fetchError } = await fetchHorsePages(RELATEDNESS_COLUMNS);
+    if (fetchError) {
+      return new Response(JSON.stringify({ error: fetchError }), { status: 500 });
+    }
+    // Der Kurz-Abruf liefert exterior_genetics direkt als ".overall"-Objekt -
+    // zurueck in die Form { overall: ... } bringen, die computeDerived erwartet.
+    horses = rows.map((r) => ({
+      ...r,
+      exterior_genetics: r.exterior_genetics ? ({ overall: r.exterior_genetics } as unknown as HorseRow['exterior_genetics']) : null,
+    }));
+  }
+
+  // Turnierwerte-Nachtrag: volle Zeilen nur fuer Pferde ohne berechnete Werte.
+  const tournamentBackfillById = new Map<string, HorseRow>();
+  if (needTournamentBackfill) {
+    const { rows, error: fetchError } = await fetchHorsePages(FULL_COLUMNS, true);
+    if (fetchError) {
+      return new Response(JSON.stringify({ error: fetchError }), { status: 500 });
+    }
+    for (const r of rows) tournamentBackfillById.set(r.id, r);
+    // Ohne Verwandtschafts-Lauf genuegen genau diese Pferde als Arbeitsliste.
+    if (!needRelatedness) horses = rows;
   }
 
   const childrenByParentName = new Map<string, HorseRow[]>();
@@ -655,9 +697,13 @@ Deno.serve(async () => {
       entry.relatedness_cache = [...closeRelatives, ...extendedRelatives];
       hasChange = true;
     }
-    if (h.computed_tournament_values == null) {
-      entry.computed_tournament_values = computeTournamentValues(h);
-      entry.computed_lp_result = checkLP(h);
+    // Nur fuer Pferde, die beim Abruf (siehe oben) noch keine berechneten
+    // Turnierwerte hatten - dafuer liegen die vollen Spalten vor (der
+    // schlanke Verwandtschafts-Abruf hat traits/disciplines/... nicht).
+    const forTournamentBackfill = tournamentBackfillById.get(h.id);
+    if (forTournamentBackfill) {
+      entry.computed_tournament_values = computeTournamentValues(forTournamentBackfill);
+      entry.computed_lp_result = checkLP(forTournamentBackfill);
       hasChange = true;
     }
     if (hasChange) {
