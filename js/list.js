@@ -349,10 +349,41 @@ async function loadUserSettings(session) {
 // damit loadHorses() bei einem fehlgeschlagenen Abruf weiterhin die
 // gewohnte Fehlermeldung in der Tabelle anzeigen kann (siehe dort) - diese
 // Funktion bleibt trotzdem die EINZIGE Stelle, die allHorsesCache setzt.
+//
+// Egress (Nutzerwunsch 2026-10-08): ein Abruf kostet ~3,7 MB und passierte bei
+// JEDEM Aufruf der Übersicht. Jetzt über js/horsesCache.js (loadWithCache): der
+// Bestand liegt im Browser (IndexedDB) und wird nur dann neu vom Server geholt,
+// wenn sich laut winziger Prüfabfrage (updated_at + Anzahl der Pferde)
+// etwas geändert hat - das ist seit migration_046 zuverlässig, weil updated_at
+// nur noch bei ECHTEN Änderungen springt. Nach einem eigenen Speichern/
+// Löschen/Bulk-Update (loadHorses) wird dadurch ganz normal neu geladen.
+// Kann die Prüfung nicht beantwortet werden, wird voll geladen
+// (unknownMeansUnchanged: false) - nach einer eigenen Änderung darf die
+// Liste nie stillschweigend veraltet bleiben.
+let allHorsesVersion = null;
+
 async function loadAllHorsesCache() {
-  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(HORSE_LIST_COLUMNS));
-  allHorsesCache = !error && data ? data : [];
-  return { error };
+  const res = await loadWithCache({
+    cacheKey: 'overview_horses_v1',
+    tables: ['horses'],
+    sig: HORSE_LIST_COLUMNS,
+    knownVersion: allHorsesCache ? allHorsesVersion : null,
+    unknownMeansUnchanged: false,
+    fetchFresh: async () => {
+      const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(HORSE_LIST_COLUMNS));
+      return { value: data, error };
+    },
+  });
+  if (res.error) {
+    allHorsesCache = [];
+    allHorsesVersion = null;
+    return { error: res.error };
+  }
+  if (!res.unchanged) {
+    allHorsesCache = res.value || [];
+    allHorsesVersion = res.version;
+  }
+  return { error: null };
 }
 
 // Baut den Farbgenetik-Eltern-Hinweis-Index aus dem bereits geladenen

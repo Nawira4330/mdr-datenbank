@@ -30,3 +30,4 @@ beide nutzen **dasselbe** Supabase-Projekt und dasselbe Egress-Kontingent.
 - Geschlecht nie per exaktem Text vergleichen – `genderGroup()` nutzen.
 - Stammbaum-Prüfung (`findPedigreeSuspects` in `js/parser.js`): Treffer nur, wenn Name = Rasse-Wert UND Rasse-Feld kein Rasse-Wert, mindestens 2 Treffer je Stammbaum; Rasse-Werte nur aus `horses.breed`, nie aus Vorfahren-Feldern.
 - `discord-bot/src/mdrGenetics.js` ist ein manuell synchron zu haltender Port aus `js/parser.js`.
+- `js/horsesCache.js` (IndexedDB-Zwischenspeicher, `loadWithCache`) existiert identisch in `mdr-planer/js/horsesCache.js` – Änderungen immer in beiden Repos spiegeln.
