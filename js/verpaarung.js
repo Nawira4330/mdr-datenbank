@@ -39,10 +39,35 @@ async function init() {
 // Deckhengst/Stute als Freitext mit Vorschlägen aus den bereits
 // angelegten Pferden (keine feste Verknüpfung, damit auch Pferde
 // außerhalb dieser Datenbank eingetragen werden können).
+// Bestandsabrufe dieser Seite laufen ueber den IndexedDB-Zwischenspeicher
+// (js/horsesCache.js): nur eine winzige Aktualitaets-Pruefung, der volle
+// Abruf nur bei geaendertem Bestand. Innerhalb einer Sitzung wird zusaetzlich
+// die Abfrage selbst nur einmal je Spaltenliste ausgefuehrt (knownVersion), bei
+// einem erneuten Aufruf nach eigenem Speichern aber wieder geprueft.
+const verpaarungHorseCache = new Map();
+async function loadVerpaarungHorses(columns, cacheKey) {
+  const known = verpaarungHorseCache.get(cacheKey);
+  const res = await loadWithCache({
+    cacheKey,
+    tables: ['horses'],
+    sig: columns,
+    knownVersion: known ? known.version : null,
+    unknownMeansUnchanged: false,
+    fetchFresh: async () => {
+      const { data, error } = await fetchAllRows(supabaseClient.from('horses').select(columns));
+      return { value: data, error };
+    },
+  });
+  if (res.error) return { data: null, error: res.error };
+  if (res.unchanged) return { data: known.data, error: null };
+  verpaarungHorseCache.set(cacheKey, { version: res.version, data: res.value || [] });
+  return { data: res.value || [], error: null };
+}
+
 async function populateHorseNames() {
   // fetchAllRows statt eines einzelnen .select() - sonst könnten Pferde
   // jenseits der ersten 1000 Zeilen in den Namensvorschlägen fehlen.
-  const { data } = await fetchAllRows(supabaseClient.from('horses').select('name, breed').order('name'));
+  const { data } = await loadVerpaarungHorses('name, breed', 'verpaarung_name_breed_v1');
   const datalist = document.querySelector('#horse-names');
   nameToBreed = new Map();
   (data || []).forEach((h) => {
@@ -62,7 +87,7 @@ async function populateBreedFilter() {
   // fetchAllRows statt eines einzelnen .select() - sonst könnten seltene
   // Rassen, die nur bei Pferden jenseits der ersten 1000 Zeilen vorkommen,
   // in der Auswahl fehlen.
-  const { data } = await fetchAllRows(supabaseClient.from('horses').select('breed'));
+  const { data } = await loadVerpaarungHorses('name, breed', 'verpaarung_name_breed_v1');
   const breeds = new Set((data || []).map((h) => normalizeBreed(h.breed)).filter(Boolean));
   breeds.delete('American Paint Horse');
   breeds.delete('Rasselos');
@@ -355,7 +380,7 @@ function closeFoalModal() {
 async function findPedigreeCandidate(stallion, mare, excludeName) {
   // fetchAllRows statt eines einzelnen .select() - sonst könnte ein
   // passendes Fohlen jenseits der ersten 1000 Zeilen übersehen werden.
-  const { data, error } = await fetchAllRows(supabaseClient.from('horses').select('id, name, pedigree'));
+  const { data, error } = await loadVerpaarungHorses('id, name, pedigree', 'verpaarung_pedigree_v1');
   if (error || !data) return null;
   const norm = (s) => (s || '').trim().toLowerCase();
   return data.find((h) => {
