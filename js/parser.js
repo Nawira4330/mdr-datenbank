@@ -447,7 +447,12 @@ function parsePedigree(lines, mainBreed) {
   const segment = lines.slice(startIdx + 1, endIdx)
     .filter(Boolean)
     .filter((l) => l !== 'Stammbaum')
-    .filter((l) => !/^\d{1,2}\.\d{1,2}\.\d{4},\s*\d{1,2}:\d{2}\t/.test(l));
+    .filter((l) => !/^\d{1,2}\.\d{1,2}\.\d{4},\s*\d{1,2}:\d{2}\t/.test(l))
+    // Tabellenkopf der Besitzhistorie ("Datum<TAB>User<TAB>Erhalten durch"):
+    // das Spiel liefert ihn inzwischen mit. Ohne Filter wuerde er als Name des
+    // Pferdes selbst gelesen und der ganze Stammbaum um eine Zeile verschoben
+    // (Name und Rasse aller Vorfahren erscheinen vertauscht).
+    .filter((l) => !/^Datum\s*\t/.test(l));
 
   const ancestors = [];
   let current = null;

@@ -411,6 +411,25 @@ Kopf	Zu großer Kopf
   });
 });
 
+describe('Besitzhistorie mit Tabellenkopf (Datum / User / Erhalten durch) vor dem Stammbaum', () => {
+  const text = [
+    '*Iced* Heaven -)B(-', '23 Jahre, 11 Monate', ' Stute', ' Rasselos', 'Zum Pferd', 'Geburtstag: 26.10.2024',
+    'Besitzhistorie', 'Datum\tUser\tErhalten durch', '26.10.2024, 00:20\tIce\tGeburt', 'Stammbaum',
+    '*Iced* Heaven -)B(-', 'Rasselos', 'Potential: 331',
+    'Holy Valentine Erica Scots', 'Rasselos', 'Potential: 317',
+    'Honey Valentine Erica Scots', 'Lusitano', 'Potential: 306',
+    'Exterieur', 'Körperbau',
+  ].join('\n');
+
+  test('Kopfzeile wird nicht als Pferdename gelesen, Name und Rasse der Vorfahren bleiben richtig', () => {
+    const { ancestors } = parseHorseText(text).pedigree;
+    assert.deepEqual(ancestors.map((a) => [a.name, a.breed]), [
+      ['Holy Valentine Erica Scots', 'Rasselos'],
+      ['Honey Valentine Erica Scots', 'Lusitano'],
+    ]);
+  });
+});
+
 describe('fetchAllRows: stabile Seitenabrufe (kein Verlust/keine Doppelten bei sich ändernder Tabelle)', () => {
   // Minimaler Supabase-Query-Builder-Ersatz: .order() setzt eine Sortierung,
   // .range() liefert die Seite. "onPage" erlaubt, die Tabelle zwischen zwei
