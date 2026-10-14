@@ -11,15 +11,17 @@ beide nutzen **dasselbe** Supabase-Projekt und dasselbe Egress-Kontingent.
 
 ## Deploy
 - Entwicklung auf dem Arbeitsbranch, dann nach `main` bringen (z.B. temp-Branch von `origin/main`, `git cherry-pick`, `git push origin temp:main`). `main` = live (GitHub Pages).
-- Datenbank-Migrationen (`supabase/migration_*.sql`) führt der Nutzer **manuell** im Supabase-SQL-Editor aus – immer dazusagen, wenn eine neu ist (offen: `migration_045_app_settings.sql`, `migration_046_updated_at_nur_bei_echten_aenderungen.sql` (ausgeführt), `migration_047_relatedness_gezielt_markieren.sql` (ausgeführt), `migration_048_hintergrund_updates_guenstig.sql` (ausgeführt)).
+- Datenbank-Migrationen (`supabase/migration_*.sql`) führt der Nutzer **manuell** im Supabase-SQL-Editor aus – immer dazusagen, wenn eine neu ist (offen: `migration_045_app_settings.sql`, `migration_046_updated_at_nur_bei_echten_aenderungen.sql` (ausgeführt), `migration_047_relatedness_gezielt_markieren.sql` (ausgeführt), `migration_048_hintergrund_updates_guenstig.sql` (ausgeführt), `migration_049_pferdebilder_speicher.sql` (neu, offen)).
 - Discord-Bot-Änderungen greifen erst nach `git pull` + Neustart auf dem Server (per SSH, vom Nutzer).
 - Edge Function `supabase/functions/recompute-relatedness`: Änderungen greifen erst nach `supabase functions deploy recompute-relatedness` (vom Nutzer, nicht von `main`/GitHub Pages).
+- Edge Function `supabase/functions/store-horse-image` (Pferdebilder in den eigenen Speicher): braucht `migration_049` und `supabase functions deploy store-horse-image` (vom Nutzer). Bis dahin bleibt beim Speichern der Spiel-Link stehen (Hinweis im Formular, kein Fehler).
 - Supabase-Domain ist aus der Claude-Sitzung nicht erreichbar (Netzwerk-Policy) – keine Live-Daten abrufbar; bei Datenfragen den Nutzer um Beispieltext/Screenshot bitten.
 
 ## Vorgaben des Nutzers (gelten dauerhaft)
 - **Update-Texte** für Mitzüchter: Discord-Formatierung (`#`/`##`, `**fett**`, `-` Listen), im Kopierblock, auf Nachrichten à max. 2000 Zeichen verteilt, **ohne Admin-Themen** (Verwaltung, Migrationen, Cron, Egress, Bot-Technik, Admin-Schalter) und ohne Emojis.
 - **Verwaltung**: Prüfungen laufen nur auf Klick auf „Erneut prüfen“, nie automatisch beim Öffnen; beim Öffnen wird keine Pferdeliste geladen.
-- **Bilder** werden nicht in den Supabase-Speicher hochgeladen: beim Seiten-Paste bleibt nur der Bildlink aus dem Spieltext in `image_url` (kein Upload).
+- **Bilder** (Nutzerwunsch 14.10.2026, ersetzt die frühere Regel „nur Link“): Beim Speichern holt die Edge Function `store-horse-image` das Spielbild, verkleinert es (360 px, PNG bei Transparenz sonst JPEG, plus 96-px-Vorschau `_t`) und legt es im Bucket `horse-images` unter `<pferde-id>/<zeitstempel>.png|jpg` ab; `image_url` zeigt dann dorthin, `image_source_url` merkt die Spiel-Adresse (nur bei geänderter Adresse wird neu geholt). Beim Löschen eines Pferds und beim Ersetzen des Bilds werden die Dateien mitgelöscht – immer über `deleteHorsesAndImages`/`removeStoredHorseImage` in `js/parser.js`, nie per SQL (sonst bleiben Leichen im Speicher). Die Übersicht zeigt die Vorschau (`horseImageThumbUrl`).
+- **Löschen in der Übersicht**: Mehrfach-Löschen per Popup für alle Konten, aber nur eigene Pferde (Besitzer = Konto); Admin-Konten dürfen alle. Der einzelne ✗-Button je Zeile bleibt Admin-only.
 - Eingefügter Spieltext (`horses.raw_text`) wird gespeichert; global abschaltbar per Admin-Schalter in den Einstellungen (`app_settings.store_raw_text`).
 - Discord-Bot: Farbe/Genetik so anzeigen wie die Übersicht (`presentGenesSummary` inkl. Eltern-Bezug) – nicht eigenständig neu erfinden.
 - Filter mit Dreifach-Zustand (Klick = nur diese, 2. Klick = ausschließen, 3. = neutral) bei Schlagwörtern, Rassen, Farbwünschen.

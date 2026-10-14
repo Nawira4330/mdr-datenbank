@@ -16,7 +16,7 @@ const {
   missingDataLabels,
   cycleTristateItem,
   RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
-  findPedigreeSuspects, parseHorseText, fetchAllRows, genderGroup,
+  findPedigreeSuspects, parseHorseText, fetchAllRows, genderGroup, horseImageThumbUrl,
 } = require('../js/parser.js');
 
 // Tage-Offset statt fester Kalenderdaten, damit die Tests unabhängig vom
@@ -427,6 +427,20 @@ describe('Besitzhistorie mit Tabellenkopf (Datum / User / Erhalten durch) vor de
       ['Holy Valentine Erica Scots', 'Rasselos'],
       ['Honey Valentine Erica Scots', 'Lusitano'],
     ]);
+  });
+});
+
+describe('horseImageThumbUrl: Vorschau-Datei zum gespeicherten Pferdebild', () => {
+  const id = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  const base = 'https://x.supabase.co/storage/v1/object/public/horse-images/';
+  test('Pferde-Ordner-Format -> _t-Datei (png und jpg)', () => {
+    assert.equal(horseImageThumbUrl(base + id + '/1760000000000.png'), base + id + '/1760000000000_t.png');
+    assert.equal(horseImageThumbUrl(base + id + '/1760000000000.jpg'), base + id + '/1760000000000_t.jpg');
+  });
+  test('alte Bilder ohne Ordner, Spiel-Links und leere Werte bleiben unveraendert', () => {
+    assert.equal(horseImageThumbUrl(base + '1700000000-abcd1234.jpg'), base + '1700000000-abcd1234.jpg');
+    assert.equal(horseImageThumbUrl('https://www.morning-dust-ranch.de/x/793014_007.png'), 'https://www.morning-dust-ranch.de/x/793014_007.png');
+    assert.equal(horseImageThumbUrl(null), null);
   });
 });
 

@@ -1058,6 +1058,13 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
     ownCarrierResults.push({ trait, result: await autoInheritFromParents(payload, trait) });
   }
 
+  // Das aus dem Spiel kopierte Bild hat dieselbe Adresse wie beim letzten
+  // Speichern -> bereits gesichertes Bild im eigenen Speicher behalten (wird nur
+  // bei geaenderter Spiel-Adresse neu geholt).
+  if (beforeRecord?.image_source_url && payload.image_url === beforeRecord.image_source_url) {
+    payload.image_url = beforeRecord.image_url;
+  }
+
   let error;
   let insertedId;
   if (targetId) {
@@ -1085,6 +1092,21 @@ async function performSave(formData, payload, session, targetId, beforeRecord) {
       errorEl.textContent = 'Speichern fehlgeschlagen: ' + error.message;
     }
     return;
+  }
+
+  // Bild im eigenen Speicher: eine ersetzte/entfernte Datei wird geloescht, eine
+  // neue Spiel-Adresse wird jetzt abgeholt (Edge Function). Schlaegt das fehl,
+  // bleibt der Spiel-Link wie bisher stehen.
+  const savedId = targetId || insertedId;
+  const oldImageUrl = beforeRecord?.image_url || null;
+  if (oldImageUrl && oldImageUrl !== payload.image_url) await removeStoredHorseImage(oldImageUrl);
+  if (savedId && payload.image_url && !horseImageStoragePath(payload.image_url)) {
+    setImageParseStatus('Bild wird im eigenen Speicher gesichert…');
+    const stored = await storeHorseImage(savedId);
+    if (stored.status !== 'stored') {
+      console.warn('Bild nicht gesichert:', stored);
+      setImageParseStatus('⚠️ Bild konnte nicht im eigenen Speicher gesichert werden (' + (stored.error || stored.status) + ') – es bleibt der Link zum Spielbild.');
+    }
   }
 
   // Läuft nach dem eigentlichen Speichern, damit "payload" garantiert die
@@ -1206,7 +1228,7 @@ function onBulkSessionFinish() {
 async function onDelete() {
   if (!editingId) return;
   if (!(await showConfirmModal('Pferd löschen', 'Dieses Pferd wirklich unwiderruflich löschen?', 'Löschen'))) return;
-  const { error } = await supabaseClient.from('horses').delete().eq('id', editingId);
+  const { error } = await deleteHorsesAndImages(editingId);
   if (error) {
     document.getElementById('form-error').textContent = 'Löschen fehlgeschlagen: ' + error.message;
     return;

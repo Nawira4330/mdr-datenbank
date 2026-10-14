@@ -64,13 +64,14 @@
         Egress-Verbrauch bei jedem künftigen Betrachten. Bereits kleine eigene Bilder
         werden übersprungen (erkennbar an der Dateigröße) – ein Durchlauf lässt sich
         also jederzeit unterbrechen und später erneut starten, ohne bereits erledigte
-        Bilder doppelt anzufassen. Migriert außerdem extern verlinkte Bilder (z.B.
-        direkt vom Spiel) einmalig in den eigenen Speicher, unabhängig von der
-        Dateigröße – behebt den Bug, dass der Discord-Bot manche Bilder nicht anzeigt,
-        obwohl sie in der Datenbank hinterlegt sind (extern verlinkte Bilder lassen
-        sich von Discords Servern oft nicht zuverlässig laden). Schlägt die Migration
-        bei einem extern verlinkten Bild fehl (meist ein CORS-Problem), hilft nur das
-        manuelle Neu-Einfügen im Bearbeiten-Formular des jeweiligen Pferds.
+        Bilder doppelt anzufassen. Übernimmt außerdem Bilder, die noch auf das Spiel
+        verlinken, einmalig in den eigenen Speicher (verkleinert, mit kleiner Vorschau
+        für die Übersicht) – das macht die Edge Function <code>store-horse-image</code>
+        auf dem Server (der Browser darf Spielbilder nicht selbst laden). Ist der
+        Spiel-Link schon tot (HTTP 404), bleibt er unverändert; dann hilft nur, das
+        Pferd im Spiel neu zu kopieren und im Bearbeiten-Formular einzufügen. Beim
+        Speichern eines Pferds mit neuer Bild-Adresse und beim Löschen eines Pferds
+        passiert das künftig automatisch.
       </p>
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
         <button type="button" id="backfill-start-btn" class="secondary">▶️ Start</button>

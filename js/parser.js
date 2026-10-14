@@ -1747,6 +1747,91 @@ async function compressImageFile(file, maxDimension = 1600, quality = 0.85) {
   }
 }
 
+// --- Pferdebilder im eigenen Speicher (Bucket "horse-images") ---
+// Nutzerwunsch 2026-10-14: Bilder liegen im eigenen Speicher (statt nur als Link
+// auf das Spiel, wo sie verschwinden koennen), werden nur beim Aendern der
+// Bild-Adresse neu geholt und beim Loeschen des Pferds mitgeloescht. Die
+// Edge Function store-horse-image (supabase/functions) holt das Spielbild beim
+// Speichern ab, verkleinert es und legt es unter <pferde-id>/<zeitstempel>.png|jpg
+// plus kleiner Vorschau <zeitstempel>_t.png|jpg ab (siehe migration_049).
+const HORSE_IMAGE_BUCKET = 'horse-images';
+
+// Kleine Vorschau-Datei zu einem gespeicherten Pferdebild (nur fuer Bilder im
+// Pferde-Ordner-Format, sonst die Adresse unveraendert) - fuer die kleinen
+// Bilder der Uebersichtstabelle.
+function horseImageThumbUrl(url) {
+  if (typeof url !== 'string') return url;
+  return url.replace(/(\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/\d+)\.(png|jpg)$/i, '$1_t.$2');
+}
+
+// Pfad im Bucket, falls die Adresse auf eine Datei im eigenen Bucket zeigt.
+function horseImageStoragePath(url) {
+  if (typeof url !== 'string') return null;
+  const prefix = supabaseClient.storage.from(HORSE_IMAGE_BUCKET).getPublicUrl('').data.publicUrl;
+  return url.startsWith(prefix) ? decodeURIComponent(url.slice(prefix.length)) : null;
+}
+
+// Holt/verkleinert/speichert das Bild eines gespeicherten Pferds (Edge Function).
+// Liefert { status, ... } - "stored" bei Erfolg, sonst bleibt die Bild-Adresse
+// unveraendert (z.B. "fetch-failed" bei einem toten Spiel-Link). Wirft nie.
+async function storeHorseImage(horseId) {
+  try {
+    const { data, error } = await supabaseClient.functions.invoke('store-horse-image', { body: { horse_id: horseId } });
+    if (error) return { status: 'error', error: error.message };
+    return data || { status: 'error', error: 'leere Antwort' };
+  } catch (e) {
+    return { status: 'error', error: String(e?.message || e) };
+  }
+}
+
+// Loescht die Datei(en) einer ersetzten/entfernten Bild-Adresse im eigenen
+// Bucket (Bild und Vorschau). Aeltere Dateien ohne Pferde-Ordner koennen von
+// mehreren Pferden gemeinsam genutzt werden - die werden nur geloescht, wenn
+// kein Pferd mehr darauf zeigt. Best-effort, wirft nie.
+async function removeStoredHorseImage(url) {
+  try {
+    const path = horseImageStoragePath(url);
+    if (!path) return;
+    if (!path.includes('/')) {
+      const { count } = await supabaseClient.from('horses').select('id', { count: 'exact', head: true }).eq('image_url', url);
+      if (count) return;
+    }
+    const paths = [path];
+    const thumbPath = horseImageStoragePath(horseImageThumbUrl(url));
+    if (thumbPath && thumbPath !== path) paths.push(thumbPath);
+    await supabaseClient.storage.from(HORSE_IMAGE_BUCKET).remove(paths);
+  } catch (e) {
+    console.warn('Bild im Speicher konnte nicht entfernt werden:', e);
+  }
+}
+
+// Loescht Pferde UND ihre Bilder im eigenen Speicher (einheitlich fuer alle
+// Loesch-Stellen). Liefert { error }; die Bilder werden erst nach erfolgreichem
+// Loeschen der Pferde entfernt (best-effort).
+async function deleteHorsesAndImages(ids) {
+  const list = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+  if (!list.length) return { error: null };
+  const { data: rows } = await supabaseClient.from('horses').select('id, image_url').in('id', list);
+  const { error } = await supabaseClient.from('horses').delete().in('id', list);
+  if (error) return { error };
+  try {
+    const bucket = supabaseClient.storage.from(HORSE_IMAGE_BUCKET);
+    const paths = [];
+    for (const id of list) {
+      const { data: files } = await bucket.list(id);
+      (files || []).forEach((f) => paths.push(id + '/' + f.name));
+    }
+    if (paths.length) await bucket.remove(paths);
+    for (const r of rows || []) {
+      const p = horseImageStoragePath(r.image_url);
+      if (p && !p.includes('/')) await removeStoredHorseImage(r.image_url);
+    }
+  } catch (e) {
+    console.warn('Bilder gelöschter Pferde konnten nicht entfernt werden:', e);
+  }
+  return { error: null };
+}
+
 // Ersatz für window.prompt() - native prompt()-Dialoge werden in manchen
 // Browsern/Kontexten (z.B. eingebettete Ansichten, manche mobile Browser,
 // nach "Diese Seite daran hindern, weitere Dialoge zu erstellen") ohne
@@ -1833,7 +1918,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isDoubledAllele, halveDoubledAllele, pintoPatternsFromColors,
     presentGenesSummary, parentHomozygousLoci, parentColorHints,
     pintoParentHints, parentsMightHavePearl, missingDataLabels,
-    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects, fetchAllRows, genderGroup,
+    TRISTATE_CYCLE, cycleTristateItem, findPedigreeSuspects, fetchAllRows, genderGroup, horseImageThumbUrl,
     RECESSIVE_CARRIER_TRAITS, isVisiblyHomozygousForTrait,
   };
 }

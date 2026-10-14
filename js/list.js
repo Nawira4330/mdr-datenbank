@@ -128,6 +128,7 @@ let allHorsesCache = null;
 // Benutzername (vor dem @) des eingeloggten Kontos - fuer den
 // "Nur meine"-Schnellfilter beim Besitzer (siehe onOnlyMyHorses).
 let currentIdentity = null;
+let currentIsAdmin = false;
 // Namens-Index (Name -> {colors, coat_color, notes, color_gene_overrides})
 // über den KOMPLETTEN Bestand, für die Eltern-Hinweise bei der
 // Farbgenetik (siehe genesOfRow/loadGeneIndex) - z.B. damit ein Fohlen
@@ -144,10 +145,12 @@ async function init() {
   if (!session) return;
   currentSession = session;
   currentIdentity = session.user.email.split('@')[0];
-  if (!isAdminSession(session)) {
-    // Löschen (einzeln wie mehrfach) bleibt in der Übersicht dem Admin
-    // vorbehalten - versteckt per CSS (siehe style.css), damit rowHtml()
-    // nicht zwei verschiedene Markup-Varianten pflegen muss.
+  currentIsAdmin = isAdminSession(session);
+  if (!currentIsAdmin) {
+    // Der einzelne ✗-Button je Zeile bleibt dem Admin vorbehalten - versteckt
+    // per CSS (siehe style.css), damit rowHtml() nicht zwei verschiedene
+    // Markup-Varianten pflegen muss. Mehrfach-Löschen ("Ausgewählte löschen")
+    // steht allen offen, aber nur für die eigenen Pferde (siehe onBulkDelete).
     document.body.classList.add('hide-delete');
   }
   wireFilterForm();
@@ -670,7 +673,16 @@ async function showMissingDataNotice(session) {
 // hier aber nur die eigenen Pferde.
 function showPedigreeErrorNotice(session) {
   const identity = session.user.email.split('@')[0].toLowerCase();
-  const { suspects } = findPedigreeSuspects(allHorsesCache || []);
+  // Die Uebersichtsliste laedt aus Egress-Gruenden nur Vater und Mutter
+  // (pedigree_father/pedigree_mother = Vorfahren 0 und 1), nicht den ganzen
+  // Stammbaum. Das genuegt hier: ein verrutschter Stammbaum betrifft ALLE
+  // Eintraege ab der verrutschten Stelle, also immer auch Vater UND Mutter
+  // (Mindestanzahl 2 Treffer, siehe PEDIGREE_AUDIT_MIN_HITS).
+  const probes = (allHorsesCache || []).map((h) => ({
+    ...h,
+    pedigree: { ancestors: [h.pedigree_father, h.pedigree_mother].filter(Boolean) },
+  }));
+  const { suspects } = findPedigreeSuspects(probes);
   const own = suspects
     .filter((s) => (s.horse.owner || '').toLowerCase() === identity)
     .map((s) => ({ ...s.horse, _why: s.details.map((d) => `${d.name} (Rasse-Feld: ${d.breed || '–'})`).join('; ') }))
@@ -1605,7 +1617,7 @@ function rowHtml(h) {
     ? `<a class="btn secondary icon-btn" href="https://www.morning-dust-ranch.de/index2.php?site=pferd&id=${encodeURIComponent(h.external_id)}" target="_blank" rel="noopener" title="Zum Pferd im Spiel">🔗</a>`
     : '';
   const imageCell = h.image_url
-    ? `<a href="view.html?id=${h.id}"><img class="table-thumb" src="${escapeHtml(h.image_url)}" alt="" loading="lazy" /></a>`
+    ? `<a href="view.html?id=${h.id}"><img class="table-thumb" src="${escapeHtml(horseImageThumbUrl(h.image_url))}" alt="" loading="lazy" /></a>`
     : '';
   const nameCls = ['name-cell', overallCmpClass(d)].filter(Boolean).join(' ');
   const isFavorite = favoriteHorseIds.has(h.id);
@@ -1709,15 +1721,18 @@ function wireDeleteModal() {
   });
 }
 
-function openDeleteModal(rows) {
+function openDeleteModal(rows, foreignCount = 0) {
   pendingDeleteIds = rows.map((r) => r.id);
   const list = document.querySelector('#delete-modal-list');
   list.innerHTML = rows.map((r) => {
     const owner = r.owner ? ` — Besitzer: ${escapeHtml(r.owner)}` : '';
     return `<li>${escapeHtml(r.name || '(ohne Name)')}${owner}</li>`;
   }).join('');
+  const foreignNote = foreignCount
+    ? ` (${foreignCount} fremde${foreignCount === 1 ? 's Pferd wird' : ' Pferde werden'} nicht gelöscht)`
+    : '';
   document.querySelector('#delete-modal-count').textContent =
-    rows.length === 1 ? '1 Pferd wirklich unwiderruflich löschen?' : `${rows.length} Pferde wirklich unwiderruflich löschen?`;
+    (rows.length === 1 ? '1 Pferd wirklich unwiderruflich löschen?' : `${rows.length} Pferde wirklich unwiderruflich löschen?`) + foreignNote;
   document.querySelector('#delete-modal').hidden = false;
 }
 
@@ -1727,12 +1742,13 @@ function closeDeleteModal() {
 }
 
 async function confirmDelete() {
-  const ids = pendingDeleteIds;
+  // Sicherheitsnetz: Nicht-Admins loeschen hier nie fremde Pferde, auch wenn die
+  // Liste zwischenzeitlich anders aussieht.
+  const ownerById = new Map((allHorsesCache || []).map((h) => [h.id, h.owner]));
+  const ids = pendingDeleteIds.filter((id) => canDeleteHorse({ owner: ownerById.get(id) }));
   closeDeleteModal();
   if (!ids.length) return;
-  const { error } = ids.length === 1
-    ? await supabaseClient.from('horses').delete().eq('id', ids[0])
-    : await supabaseClient.from('horses').delete().in('id', ids);
+  const { error } = await deleteHorsesAndImages(ids);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);
     return;
@@ -2649,10 +2665,23 @@ function updateBulkBar() {
   }
 }
 
+// Eigenes Pferd = Besitzer entspricht dem Konto (Gross-/Kleinschreibung egal).
+// Admin-Konten duerfen alle Pferde loeschen.
+function canDeleteHorse(horse) {
+  if (currentIsAdmin) return true;
+  return (horse.owner || '').trim().toLowerCase() === (currentIdentity || '').toLowerCase();
+}
+
 function onBulkDelete() {
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
   if (!rows.length) return;
-  openDeleteModal(rows);
+  const own = rows.filter(canDeleteHorse);
+  const foreignCount = rows.length - own.length;
+  if (!own.length) {
+    alert('Du kannst nur deine eigenen Pferde löschen – unter den ausgewählten ist keins von dir.');
+    return;
+  }
+  openDeleteModal(own, foreignCount);
 }
 
 // --- Schlagwörter für mehrere ausgewählte Pferde auf einmal (siehe

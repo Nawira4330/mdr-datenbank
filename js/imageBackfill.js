@@ -98,6 +98,23 @@ async function runImageBackfill() {
     const isOwn = url.startsWith(bucketUrlPrefix);
     const horseIds = byUrl.get(url);
     statusEl.textContent = `${i + 1}/${total} …`;
+    if (!isOwn) {
+      // Der Browser darf Spielbilder wegen CORS nicht selbst laden - die Edge Function
+      // store-horse-image holt, verkleinert und speichert sie je Pferd (siehe
+      // migration_049_pferdebilder_speicher.sql).
+      for (const horseId of horseIds) {
+        const res = await storeHorseImage(horseId);
+        if (res.status === 'stored') {
+          migratedCount++;
+          backfillLog(`📥 Ins eigene Speicher übernommen: ${formatBytes(res.bytes)} (+ Vorschau ${formatBytes(res.thumbBytes)})`);
+        } else {
+          failedCount++;
+          backfillLog(`❌ Bild nicht übernommen (${res.error || res.status}) – Link bleibt bestehen, Pferd im Spiel neu kopieren und einfügen`);
+        }
+      }
+      progressBar.value = i + 1;
+      continue;
+    }
     try {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error('Download fehlgeschlagen (HTTP ' + resp.status + ')');
@@ -126,6 +143,7 @@ async function runImageBackfill() {
           const newUrl = supabaseClient.storage.from('horse-images').getPublicUrl(path).data.publicUrl;
           const { error: updErr } = await supabaseClient.from('horses').update({ image_url: newUrl }).in('id', horseIds);
           if (updErr) throw updErr;
+          await removeStoredHorseImage(url); // alte, groessere Datei entfernen
           const horseWord = `${horseIds.length} Pferd${horseIds.length === 1 ? '' : 'e'}`;
           if (isOwn) {
             savedBytes += blob.size - compressed.size;

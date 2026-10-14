@@ -269,7 +269,7 @@ async function confirmStockCheckDelete() {
   document.getElementById('delete-modal').hidden = true;
   if (!rows.length) return;
   const ids = rows.map((h) => h.id);
-  const { error } = await supabaseClient.from('horses').delete().in('id', ids);
+  const { error } = await deleteHorsesAndImages(ids);
   if (error) {
     alert('Löschen fehlgeschlagen: ' + error.message);
     return;
