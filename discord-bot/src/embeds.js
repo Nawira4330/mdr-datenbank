@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { computeDisplayFields, DASH } = require('./horseStats');
+const { computeDisplayFields, tournamentValuesForDisplay, DASH } = require('./horseStats');
 
 const COLOR = 0x8b5e3c;
 
@@ -79,6 +79,32 @@ function elternValue(father, fatherName, mother, motherName) {
   return `${elternLine('Vater', father, fatherName)}\n\n${elternLine('Mutter', mother, motherName)}`;
 }
 
+// Turnierwerte je Disziplin (nur das Hauptpferd, siehe horses.js withTournament):
+// "Disziplin  Wert (LK, Int)", staerkste zuerst, Schwellen je LK siehe
+// tournamentValuesForDisplay. Ohne gespeicherte Turnierwerte (Spalte nicht
+// geladen oder noch nicht berechnet) entfaellt das Feld ganz. Passt die Liste nicht in
+// ein Feld (max. 1024 Zeichen), wird sie auf weitere Felder verteilt.
+function turnierwerteFields(horse) {
+  const all = horse.computed_tournament_values;
+  if (!Array.isArray(all) || !all.length) return [];
+  const shown = tournamentValuesForDisplay(all);
+  if (!shown.length) {
+    return [{ name: 'Turnierwerte', value: 'Keine Disziplin über den Mindestwerten (LK10 ab 141, LK9 ab 201, LK8 ab 231).' }];
+  }
+  const lines = shown.map((v) => {
+    const int = v.interieur != null ? `, Int ${v.interieur.toFixed(2).replace('.', ',')}` : '';
+    return `**${v.name}** ${v.wert} (LK${v.lk}${int})`;
+  });
+  const chunks = [];
+  let current = '';
+  for (const line of lines) {
+    const next = current ? `${current}\n${line}` : line;
+    if (next.length > 1024) { chunks.push(current); current = line; } else { current = next; }
+  }
+  if (current) chunks.push(current);
+  return chunks.map((value, i) => ({ name: i === 0 ? `Turnierwerte (${shown.length})` : 'Turnierwerte (Fortsetzung)', value }));
+}
+
 function buildHorseEmbed(horse, eltern = {}) {
   const { father, fatherName, mother, motherName } = eltern;
   // father/mother sind hier schon vollstaendig geladen (select('*'), siehe
@@ -96,6 +122,7 @@ function buildHorseEmbed(horse, eltern = {}) {
       { name: 'Eltern', value: elternValue(father, fatherName, mother, motherName) },
       { name: 'Farbgenetik', value: farbgenetikValue(d) },
       { name: 'Leistungswerte', value: `GP ${d.gp}\nExt ${d.ext} (${d.extPercent})\nInt ${d.int}\nZZL ${d.zzlIcon}\nHLP/SLP ${d.hlpSlp}\nEKH ${d.ekh}` },
+      ...turnierwerteFields(horse),
       { name: 'Besitzer', value: d.owner },
     );
 
@@ -184,7 +211,7 @@ function buildHelpEmbed() {
         name: '/mdrdb pferd',
         value:
           'Zeigt Pferdedaten an: Rasse, Geschlecht, Alter, Eltern, Farbe/Farbgenetik, Leistungswerte ' +
-          '(GP/Ext/Ext%/Int/ZZL/HLP-SLP), Besitzer. Durchsuchbar per Name und/oder Schlagwort ' +
+          '(GP/Ext/Ext%/Int/ZZL/HLP-SLP), Turnierwerte (LK10 nur ab 141, LK9 ab 201, LK8 ab 231), Besitzer. Durchsuchbar per Name und/oder Schlagwort ' +
           '(Verkauf/Reserviert/Bleibt/GBH/LastFoal/???/Exen/FT/Turnier/Beritt/Zucht/Training) und/oder Besitzer - mindestens eines von ' +
           'dreien angeben. Ergibt das mehrere Treffer (bis 25), erscheint ein Auswahlmenue zum ' +
           'Ankreuzen mehrerer Pferde; bei mehr als 25 Treffern werden direkt alle gepostet. Zu ' +

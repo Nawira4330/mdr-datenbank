@@ -12,8 +12,11 @@ const BOT_HORSE_COLUMNS = [
   'pedigree', 'breeding_allowed', 'hlp_slp', 'tags', 'birthdate', 'image_url',
 ].join(', ');
 
-async function fetchHorseByName(name) {
-  const { data, error } = await supabase.from('horses').select(BOT_HORSE_COLUMNS).eq('name', name).maybeSingle();
+// Turnierwerte (computed_tournament_values, ca. 3 KB) nur fuer das Hauptpferd der
+// Karte laden, nicht fuer Eltern/Treffer-Listen (Egress): withTournament: true.
+async function fetchHorseByName(name, { withTournament = false } = {}) {
+  const columns = withTournament ? `${BOT_HORSE_COLUMNS}, computed_tournament_values` : BOT_HORSE_COLUMNS;
+  const { data, error } = await supabase.from('horses').select(columns).eq('name', name).maybeSingle();
   if (error) throw new Error(`Supabase-Fehler beim Laden von "${name}": ${error.message}`);
   return data;
 }

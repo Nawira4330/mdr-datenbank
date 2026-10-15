@@ -234,7 +234,7 @@ async function buildFullHorseEmbed(horse) {
 // Suchtreffer-Objekte zu verwenden), da diese je nach Suchpfad nicht alle
 // fuer die Karte noetigen Spalten (Farbe, Werte, EKH, ...) enthalten.
 async function postHorseFollowUp(interaction, name) {
-  const horse = await fetchHorseByName(name);
+  const horse = await fetchHorseByName(name, { withTournament: true });
   if (!horse) return;
 
   await interaction.followUp({
@@ -254,7 +254,7 @@ async function postHorseFollowUp(interaction, name) {
 // bereits deferReply() aufgerufen hat (handleMdrdbCommand tut das immer,
 // bevor die Trefferzahl bekannt ist).
 async function postSingleHorseWithSubmenu(interaction, name) {
-  const horse = await fetchHorseByName(name);
+  const horse = await fetchHorseByName(name, { withTournament: true });
   if (!horse) {
     await interaction.editReply({ content: `Pferd "${name}" wurde nicht mehr gefunden.` });
     return;

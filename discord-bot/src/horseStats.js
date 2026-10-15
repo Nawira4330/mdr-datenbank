@@ -201,7 +201,26 @@ function computeDisplayFields(horse, parents = []) {
   };
 }
 
+// Turnierwerte je Disziplin (horses.computed_tournament_values, siehe
+// js/tournamentScoring.js: { category, name, wert, interieur, lk, complete }).
+// Nutzerwunsch 2026-10-15: in niedrigen Leistungsklassen nur die staerkeren
+// Disziplinen zeigen - LK10 nur Wert ueber 140, LK9 nur ueber 200, LK8 nur
+// ueber 230; ab LK7 aufwaerts (bessere Klassen) alles.
+const TOURNAMENT_MIN_WERT_BY_LK = { 10: 140, 9: 200, 8: 230 };
+
+function tournamentValuesForDisplay(values) {
+  return (Array.isArray(values) ? values : [])
+    .filter((v) => v && v.complete && v.wert != null && v.lk != null)
+    .filter((v) => {
+      const min = TOURNAMENT_MIN_WERT_BY_LK[v.lk];
+      return min == null || v.wert > min;
+    })
+    .sort((a, b) => b.wert - a.wert || String(a.name).localeCompare(String(b.name), 'de'));
+}
+
 module.exports = {
+  tournamentValuesForDisplay,
+  TOURNAMENT_MIN_WERT_BY_LK,
   averageScore,
   scoreExteriorTerm,
   scoreTemperamentTerm,
