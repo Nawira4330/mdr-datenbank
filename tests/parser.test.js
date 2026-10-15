@@ -499,3 +499,16 @@ describe('genderGroup: Geschlecht robust zuordnen (Bestes-Kind-Gruppen)', () => 
   });
 });
 
+
+describe('Cream-Locus: höchstens zwei Kopien (Bugreport "CrCr Cr")', () => {
+  const ph = 'Perlino Champagne Splashed White';
+  const alleles = (genes) => genes.filter((g) => g.locus === 'Cream').map((g) => g.alleles);
+  test('Perlino + garantierte Cr-Kopie vom Elternteil -> nur CrCr', () => {
+    const genes = presentGenesSummary([], ph, null, null, [{ locus: 'Cream', alleles: 'Cr' }], null, false);
+    assert.deepEqual(alleles(genes), ['CrCr']);
+  });
+  test('Perlino + pl-Elternteil -> Cr und pl (zwei Kopien)', () => {
+    const genes = presentGenesSummary([], ph, null, null, [{ locus: 'Cream', alleles: 'pl' }], null, true);
+    assert.deepEqual(alleles(genes).sort(), ['Cr', 'pl']);
+  });
+});

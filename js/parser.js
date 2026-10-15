@@ -1248,10 +1248,20 @@ function presentGenesSummary(colorRows, coatColorName, notes, horseName, parentH
     const key = h.locus + h.allele;
     if (seen.has(key)) continue;
     seen.add(key);
-    inferred.push({ locus: h.locus, alleles: h.allele, source: h.source });
+    inferred.push({ locus: h.locus, alleles: h.allele, source: h.source, baseKey: hKey });
   }
 
-  return sortGenesForDisplay([...confirmed, ...manual, ...inferred]);
+  // Ein Locus hat nur zwei Kopien: liegt zu demselben Allel sowohl eine
+  // reinerbige Angabe ("CrCr", z.B. aus "Perlino") als auch eine einfache
+  // ("Cr", z.B. garantierte Kopie eines reinerbigen Elternteils) vor, gilt
+  // nur die reinerbige - sonst erschienen beide gleichzeitig ("CrCr Cr",
+  // Bugreport "Fohlen_Aliada x ~Sun~ X 4Leafs Prisma Angels Bliss").
+  const doubledKeys = new Set(inferred.filter((g) => isDoubledAllele(g.alleles)).map((g) => g.baseKey));
+  const collapsed = inferred
+    .filter((g) => isDoubledAllele(g.alleles) || !doubledKeys.has(g.baseKey))
+    .map(({ baseKey, ...g }) => g);
+
+  return sortGenesForDisplay([...confirmed, ...manual, ...collapsed]);
 }
 
 // Rezessive Merkmale, die sich nur reinerbig zeigen (Flaxen: "flfl",
