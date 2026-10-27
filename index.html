@@ -280,6 +280,7 @@
       </div>
       <div id="bulk-actions" hidden>
         <span id="selected-count" class="muted small"></span>
+        <button type="button" id="bulk-share-btn" class="secondary small">📤 Teilen / Kopieren</button>
         <button type="button" id="bulk-tag-btn" class="secondary small">🏷️ Schlagwort zuweisen</button>
         <button type="button" id="bulk-tag-remove-btn" class="secondary small">🏷️ Schlagwort entfernen</button>
         <button type="button" id="bulk-owner-btn" class="secondary small">🔄 Besitzer wechseln</button>
@@ -357,6 +358,36 @@
       </div>
     </div>
 
+    <div id="share-modal" class="modal-overlay" hidden>
+      <div class="modal-box share-modal-box">
+        <h2>Pferde teilen / kopieren</h2>
+        <p id="share-modal-count" class="muted"></p>
+        <fieldset class="share-fieldset">
+          <legend>Enthaltene Angaben</legend>
+          <div id="share-fields" class="share-fields"></div>
+          <label class="share-field"><input type="checkbox" id="share-with-links" checked /> Spiel-Links zu den Pferden anhängen (Text, Teilen, Bildlink)</label>
+        </fieldset>
+        <div id="share-preview" class="share-preview"></div>
+        <p id="share-status" class="small"></p>
+        <div class="share-actions">
+          <span class="share-actions-label">Text</span>
+          <button type="button" class="secondary small" data-share-action="text">Text kopieren (Discord)</button>
+          <button type="button" class="secondary small" data-share-action="tsv">Tabelle kopieren (Excel)</button>
+          <span id="share-text-count" class="muted small"></span>
+        </div>
+        <div class="share-actions">
+          <span class="share-actions-label">Bild</span>
+          <button type="button" class="secondary small" data-share-action="image">Bild kopieren</button>
+          <button type="button" class="secondary small" data-share-action="save">Bild speichern</button>
+          <button type="button" id="share-native-btn" class="secondary small" data-share-action="native" hidden>Teilen …</button>
+          <button type="button" class="secondary small" data-share-action="link" title="Legt das Bild kurz im Speicher ab und kopiert dessen Link, in Discord/WhatsApp erscheint dann das Bild.">Bildlink kopieren</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="share-modal-close" class="secondary">Schließen</button>
+        </div>
+      </div>
+    </div>
+
     <div id="bulk-tag-modal" class="modal-overlay" hidden>
       <div class="modal-box">
         <h2 id="bulk-tag-modal-title">Schlagwort zuweisen</h2>
@@ -417,5 +448,6 @@
   <script src="js/nav.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/list.js"></script>
+  <script src="js/shareHorses.js"></script>
 </body>
 </html>

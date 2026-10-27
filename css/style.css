@@ -1330,6 +1330,18 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
 .modal-box li { margin: 0.2rem 0; font-weight: 600; }
 .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
 
+/* Teilen / Kopieren (siehe js/shareHorses.js) */
+.share-modal-box { max-width: 780px; }
+.share-fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 0.6rem 0; padding: 0.5rem 0.8rem; }
+.share-fieldset legend { font-size: 0.8rem; color: var(--muted); padding: 0 0.3rem; }
+.share-fields { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; margin-bottom: 0.3rem; }
+.share-field { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; }
+.share-field input[type="checkbox"] { width: auto; flex: none; margin: 0; }
+.share-preview { max-height: 40vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: #cfe9fb; }
+.share-preview canvas { display: block; }
+.share-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
+.share-actions-label { min-width: 3rem; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+
 /* Gilt für Tablet UND Handy (siehe max-width unten) - die Tabelle mit
    ihren 16 Spalten wird auch auf Tablet-Breite (z.B. 768px, Hochformat)
    ohne diesen Umbau unleserlich gestaucht, deshalb ein deutlich
