@@ -35,9 +35,11 @@ const SHARE_FIELDS = [
   { key: 'parents', label: 'Eltern' },
   { key: 'owner', label: 'Besitzer' },
   { key: 'tags', label: 'Schlagwörter' },
+  { key: 'link', label: 'Spiel-Link' },
 ];
-const SHARE_DEFAULT_KEYS = ['image', 'breed', 'gender', 'age', 'color', 'genes', 'gp', 'ext', 'extPct', 'int', 'zzl', 'owner'];
-const SHARE_PREF_KEY = 'mdr_share_fields_v1';
+const SHARE_DEFAULT_KEYS = ['image', 'breed', 'gender', 'age', 'color', 'genes', 'gp', 'ext', 'extPct', 'int', 'zzl', 'owner', 'link'];
+// v2: "Spiel-Link" ist jetzt eine eigene Angabe (Standard an)
+const SHARE_PREF_KEY = 'mdr_share_fields_v2';
 const SHARE_DISCORD_LIMIT = 2000;
 const SHARE_LINK_MAX_AGE_DAYS = 14;
 
@@ -77,11 +79,11 @@ function shareCardModel(view, keys) {
   if (shareHas(keys, 'owner') && view.owner) rows.push({ label: 'Besitzer', value: view.owner });
   if (shareHas(keys, 'tags') && view.tags) rows.push({ label: 'Schlagwörter', value: view.tags });
 
-  return { title: view.name, sub, rows, stats, link: view.link || '' };
+  return { title: view.name, sub, rows, stats, link: shareHas(keys, 'link') ? view.link || '' : '' };
 }
 
-// Discord-Formatierung (**fett**, `Code`); Links nur, wenn withLinks gesetzt ist.
-function shareText(views, keys, { withLinks = true } = {}) {
+// Discord-Formatierung (**fett**, `Code`); der Spiel-Link steht drin, wenn "link" gewählt ist.
+function shareText(views, keys) {
   return views.map((view) => {
     const m = shareCardModel(view, keys);
     const lines = [m.sub ? `**${m.title}** – ${m.sub}` : `**${m.title}**`];
@@ -89,7 +91,7 @@ function shareText(views, keys, { withLinks = true } = {}) {
     if (colorRow) lines.push(`Farbe: ${[colorRow.value, colorRow.code ? `\`${colorRow.code}\`` : ''].filter(Boolean).join(' ')}`);
     if (m.stats.length) lines.push(m.stats.join(' | '));
     for (const r of m.rows) if (r.label !== 'Farbe') lines.push(`${r.label}: ${r.value}`);
-    if (withLinks && m.link) lines.push(m.link);
+    if (m.link) lines.push(m.link);
     return lines.join('\n');
   }).join('\n\n');
 }
@@ -168,7 +170,7 @@ function shareViewOf(h) {
 const SHARE_CARD = {
   width: 760, pad: 16, gap: 14, imgW: 200, imgH: 150, radius: 12,
   fontStack: "'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif",
-  colors: { bg: '#cfe9fb', card: '#ffffff', border: '#d8d8d8', text: '#4a4a4a', muted: '#7a7a7a', accent: '#6b9d00', imgBg: '#f1f6e6', code: '#2f5d00' },
+  colors: { bg: '#cfe9fb', card: '#ffffff', border: '#d8d8d8', text: '#4a4a4a', muted: '#7a7a7a', accent: '#6b9d00', imgBg: '#f1f6e6', code: '#2f5d00', link: '#2f7fd1' },
 };
 
 function shareRoundRect(ctx, x, y, w, h, r) {
@@ -229,6 +231,10 @@ async function renderShareSheet(views, keys) {
     }
     if (m.stats.length) add(m.stats.join('  |  '), 15, 700, C.colors.accent, 5);
     for (const r of m.rows) if (r.label !== 'Farbe') add(`${r.label}: ${r.value}`, 14, 400, C.colors.text, 3);
+    // Ein Bild kann keinen klickbaren Link enthalten - der Link steht deshalb
+    // sichtbar in der Kachel (zum Abtippen/Scannen) UND wird beim Kopieren,
+    // Teilen und im Bildlink als Text mitgegeben.
+    if (m.link) add(m.link, 12, 400, C.colors.link, 3);
     const textH = lines.reduce((s, l) => s + l.h, 0);
     const height = Math.max(textH, withImage ? C.imgH : 0) + C.pad * 2;
     return { lines, height, image: images[i] || null };
@@ -327,13 +333,13 @@ function shareSetStatus(message, isError = false) {
   el.style.color = isError ? 'var(--danger)' : 'var(--muted)';
 }
 
-function shareWithLinks() {
-  return document.querySelector('#share-with-links').checked;
+// Link-Zeilen "Name: Link" - nur, wenn "Spiel-Link" angehakt ist.
+function shareLinksText() {
+  return shareHas(shareSelectedKeys(), 'link') ? shareLinks(shareViews) : '';
 }
 
 function shareFullText() {
-  const keys = shareSelectedKeys();
-  return shareText(shareViews, keys, { withLinks: shareWithLinks() });
+  return shareText(shareViews, shareSelectedKeys());
 }
 
 async function shareCopyToClipboard(text) {
@@ -394,9 +400,15 @@ async function shareDo(action) {
         shareSetStatus('Dieser Browser kann keine Bilder kopieren – bitte „Bild speichern“ nutzen.', true);
         return;
       }
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareCanvasBlob(shareCurrent.canvas) })]);
-      shareSetStatus(shareWithLinks() && shareLinks(shareViews)
-        ? 'Bild kopiert. Die Links stehen separat im „Text kopieren“ bzw. „Bildlink“.'
+      // Bild UND Link-Text in einer Zwischenablage-Eintragung: Programme, die beides
+      // annehmen (z.B. WhatsApp Web beim Einfügen), übernehmen den Link mit; die
+      // übrigen nehmen das Bild (der Link steht ohnehin sichtbar in der Kachel).
+      const links = shareLinksText();
+      const item = { 'image/png': shareCanvasBlob(shareCurrent.canvas) };
+      if (links) item['text/plain'] = new Blob([links], { type: 'text/plain' });
+      await navigator.clipboard.write([new ClipboardItem(item)]);
+      shareSetStatus(links
+        ? 'Bild kopiert (Link steht in der Kachel und liegt als Text mit in der Zwischenablage).'
         : 'Bild kopiert.');
     } else if (action === 'save') {
       const blob = await shareCanvasBlob(shareCurrent.canvas);
@@ -412,15 +424,14 @@ async function shareDo(action) {
     } else if (action === 'native') {
       const blob = await shareCanvasBlob(shareCurrent.canvas);
       const file = new File([blob], 'pferde.png', { type: 'image/png' });
-      const links = shareWithLinks() ? shareLinks(shareViews) : '';
-      const data = { files: [file], title: 'MDR Pferde', text: links };
+      const data = { files: [file], title: 'MDR Pferde', text: shareLinksText() };
       if (!navigator.canShare?.(data)) { shareSetStatus('Teilen mit Bild wird von diesem Browser nicht unterstützt.', true); return; }
       await navigator.share(data);
       shareSetStatus('Geteilt.');
     } else if (action === 'link') {
       shareSetStatus('Bildlink wird erstellt …');
       const url = await shareUploadSheet(shareCurrent.canvas);
-      const links = shareWithLinks() ? shareLinks(shareViews) : '';
+      const links = shareLinksText();
       await shareCopyToClipboard(links ? `${url}\n${links}` : url);
       shareSetStatus(`Bildlink kopiert (gültig ca. ${SHARE_LINK_MAX_AGE_DAYS} Tage) – in Discord/WhatsApp einfügen.`);
     }
@@ -482,7 +493,6 @@ function wireShareModal() {
     if (e.target.id === 'share-modal') closeShareModal();
   });
   document.querySelector('#share-fields').addEventListener('change', shareUpdatePreview);
-  document.querySelector('#share-with-links').addEventListener('change', shareUpdatePreview);
   document.querySelectorAll('[data-share-action]').forEach((b) => {
     b.addEventListener('click', () => shareDo(b.dataset.shareAction));
   });

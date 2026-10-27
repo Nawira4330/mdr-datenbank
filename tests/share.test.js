@@ -24,13 +24,13 @@ describe('shareText (Discord-Formatierung)', () => {
     ].join('\n'));
   });
 
-  test('nur ausgewählte Felder erscheinen, ohne Links auf Wunsch', () => {
-    const t = shareText([view()], ['gp', 'owner'], { withLinks: false });
+  test('nur ausgewählte Felder erscheinen, ohne Link wenn nicht gewählt', () => {
+    const t = shareText([view()], ['gp', 'owner']);
     assert.equal(t, '**Fohlen_Aliada**\nGP 331\nBesitzer: Ice');
   });
 
   test('Ext% allein, optionale Felder (Eltern, Schlagwörter, EKH, HLP/SLP)', () => {
-    const t = shareText([view()], ['extPct', 'hlp', 'ekh', 'parents', 'tags'], { withLinks: false });
+    const t = shareText([view()], ['extPct', 'hlp', 'ekh', 'parents', 'tags']);
     assert.equal(t, [
       '**Fohlen_Aliada**',
       'Ext% 55,5% | HLP/SLP - | EKH HERDA',
@@ -40,17 +40,24 @@ describe('shareText (Discord-Formatierung)', () => {
   });
 
   test('mehrere Pferde durch Leerzeile getrennt; fehlende Werte werden weggelassen', () => {
-    const t = shareText([view(), view({ name: 'B', gp: '', ext: '', extPct: '', int: '', link: '' })], ['gp', 'ext', 'int', 'zzl'], {});
+    const t = shareText([view(), view({ name: 'B', gp: '', ext: '', extPct: '', int: '', link: '' })], ['gp', 'ext', 'int', 'zzl', 'link']);
     assert.equal(t, '**Fohlen_Aliada**\nGP 331 | Ext 2,50 | Int 2,10 | ZZL Ja\nhttps://www.morning-dust-ranch.de/index2.php?site=pferd&id=864841\n\n**B**\nZZL Ja');
   });
 
   test('Farbe ohne Genetik und umgekehrt', () => {
-    assert.match(shareText([view()], ['color'], { withLinks: false }), /Farbe: Perlino Champagne$/);
-    assert.match(shareText([view()], ['genes'], { withLinks: false }), /Farbe: `E A1 CrCr Ch`$/);
+    assert.match(shareText([view()], ['color']), /Farbe: Perlino Champagne$/);
+    assert.match(shareText([view()], ['genes']), /Farbe: `E A1 CrCr Ch`$/);
   });
 });
 
 describe('shareTsv / shareLinks / shareCardModel', () => {
+  test('Spiel-Link nur mit Angabe "link": Text, Tabelle und Kartenmodell', () => {
+    assert.equal(shareCardModel(view(), ['gp']).link, '');
+    assert.equal(shareCardModel(view(), ['gp', 'link']).link, view().link);
+    assert.ok(!shareText([view()], ['gp']).includes('morning-dust-ranch'));
+    assert.match(shareTsv([view()], ['link']), /^Name\tSpiel-Link\nFohlen_Aliada\thttps:\/\/www\.morning-dust-ranch\.de/);
+  });
+
   test('Tabelle: Kopfzeile + eine Zeile je Pferd, Tabs/Zeilenumbrüche entschärft, Bild-Spalte entfällt', () => {
     const tsv = shareTsv([view({ name: 'A\tB', owner: 'x\ny' })], ['image', 'gp', 'owner']);
     assert.equal(tsv, 'Name\tGP\tBesitzer\nA B\t331\tx y');
