@@ -152,7 +152,8 @@ function shareViewOf(h) {
     int: d.intAvg != null ? fmt(d.intAvg) : '',
     zzl: zzlDisplay(h.breeding_allowed),
     hlp: hlpSlpDisplay(h.hlp_slp),
-    ekh: affected.join(', '),
+    // Ohne Erbkrankheiten ausdruecklich "keine" (leer wuerde die Angabe verschwinden lassen)
+    ekh: affected.length ? affected.join(', ') : 'keine',
     parents: parentNames,
     owner: h.owner || '',
     tags: (h.tags || []).map((t) => (t.note ? `${t.label}: ${t.note}` : t.label)).join(', '),
