@@ -1339,6 +1339,9 @@ code { background: rgba(125,125,125,0.12); padding: 1px 5px; border-radius: 4px;
 .share-field input[type="checkbox"] { width: auto; flex: none; margin: 0; }
 .share-preview { max-height: 40vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: #cfe9fb; }
 .share-preview canvas { display: block; }
+.share-link-list { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.6rem; }
+.share-link-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.share-link-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .share-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
 .share-actions-label { min-width: 3rem; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 

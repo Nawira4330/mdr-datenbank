@@ -474,6 +474,17 @@ function openShareModal() {
   document.querySelector('#share-modal-count').textContent =
     `${shareViews.length} Pferd${shareViews.length === 1 ? '' : 'e'} ausgewählt`;
   document.querySelector('#share-native-btn').hidden = !(navigator.canShare && navigator.share);
+  // Der Link im Bild selbst ist nicht markierbar - daher je Pferd ein eigener Kopieren-Knopf.
+  const linkRows = shareViews
+    .map((v, i) => ({ v, i }))
+    .filter(({ v }) => v.link)
+    .map(({ v, i }) => `<div class="share-link-row">
+      <span class="share-link-name" title="${escapeHtml(v.name)}">${escapeHtml(v.name)}</span>
+      <button type="button" class="secondary small" data-share-copy-link="${i}">Link kopieren</button>
+    </div>`);
+  document.querySelector('#share-link-list').innerHTML = linkRows.length
+    ? `<div class="muted small">Pferde-Links einzeln kopieren:</div>${linkRows.join('')}`
+    : '';
   document.querySelector('#share-modal').hidden = false;
   shareUpdatePreview();
 }
@@ -495,6 +506,17 @@ function wireShareModal() {
   document.querySelector('#share-fields').addEventListener('change', shareUpdatePreview);
   document.querySelectorAll('[data-share-action]').forEach((b) => {
     b.addEventListener('click', () => shareDo(b.dataset.shareAction));
+  });
+  document.querySelector('#share-link-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-share-copy-link]');
+    if (!btn) return;
+    const view = shareViews[Number(btn.dataset.shareCopyLink)];
+    try {
+      await shareCopyToClipboard(view.link);
+      shareSetStatus(`Link zu „${view.name}“ kopiert.`);
+    } catch (err) {
+      shareSetStatus('Fehlgeschlagen: ' + (err?.message || err), true);
+    }
   });
 }
 

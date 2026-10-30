@@ -1343,6 +1343,25 @@ function matchesGenetikLocus(row, locusName) {
   return genesOfRow(row).some((g) => g.locus === locusName);
 }
 
+// Mehrere eingeschlossene Gene gelten als UND (z.B. Champagne UND Dun) - die
+// beiden Varianten DESSELBEN Gens (pl/plpl, fl/flfl) aber als ODER: "mind. 1x"
+// enthaelt "reinerbig" als Teilmenge, per UND blieben bei "pl + plpl" sonst nur
+// die reinerbigen Pferde uebrig (Nutzerreport 2026-10-30).
+const GENETIK_VARIANT_GROUPS = {
+  __pearl__: 'pearl', __pearl_doubled__: 'pearl',
+  __flaxen__: 'flaxen', __flaxen_doubled__: 'flaxen',
+};
+
+function matchesGenetikIncludes(row, includeLoci) {
+  const groups = new Map();
+  for (const locus of includeLoci) {
+    const key = GENETIK_VARIANT_GROUPS[locus] || locus;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(locus);
+  }
+  return [...groups.values()].every((loci) => loci.some((locus) => matchesGenetikLocus(row, locus)));
+}
+
 // Ein Erbkrankheiten-Locuswert gilt als unauffällig, wenn er (ohne die
 // "/"-Trenner) ausschließlich aus großem "N" (normal) besteht - jede
 // Abweichung bedeutet Träger/betroffen. Wichtig: das Risikoallel-Kürzel
@@ -1455,7 +1474,7 @@ function applyClientFilters(rows) {
       const rowBreed = normalizeBreed(row.breed) || 'Rasselos';
       if (!preferredBreeds.includes(rowBreed)) return false;
     }
-    if (genetikState.include.length && !genetikState.include.every((locus) => matchesGenetikLocus(row, locus))) return false;
+    if (genetikState.include.length && !matchesGenetikIncludes(row, genetikState.include)) return false;
     if (genetikState.exclude.some((locus) => matchesGenetikLocus(row, locus))) return false;
     if (ekhState.include.length && !matchesEkh(row, ekhState.include)) return false;
     if (ekhState.exclude.some((code) => matchesEkh(row, [code]))) return false;

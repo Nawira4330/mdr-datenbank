@@ -1461,6 +1461,15 @@ function colorGeneticsHtml(rows, coatColorName, notes, horseName, parentHints, o
     const list = (hintsByLocus[h.locus] ||= []);
     if (!list.some((x) => x.allele === h.allele)) list.push(h);
   }
+  // Ein Locus hat nur zwei Kopien: gibt es zu einem Allel sowohl eine
+  // reinerbige Angabe (z.B. "flfl" laut Fellfarbe) als auch die einfache
+  // ("fl" laut Elternteil), gilt nur die reinerbige - sonst stuenden beide
+  // nebeneinander ("mindestens flfl (laut Fellfarbe/Notiz), mindestens fl (laut
+  // Elternteil)"). Gleiche Regel wie in presentGenesSummary (parser.js).
+  for (const locus of Object.keys(hintsByLocus)) {
+    const list = hintsByLocus[locus];
+    hintsByLocus[locus] = list.filter((h) => !list.some((o) => o.allele === h.allele + h.allele));
+  }
 
   // Flaxen wird vom Spiel nie als eigener Locus getestet (siehe
   // presentGenesSummary in parser.js) und taucht deshalb nie in "rows"
