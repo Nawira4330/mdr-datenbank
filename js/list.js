@@ -2714,11 +2714,20 @@ function updateBulkBar() {
   }
 }
 
-// Eigenes Pferd = Besitzer entspricht dem Konto (Gross-/Kleinschreibung egal).
-// Admin-Konten duerfen alle Pferde loeschen.
+// Eigenes Pferd = Besitzer entspricht dem Konto. Verglichen wird ohne
+// Gross-/Kleinschreibung, Leerzeichen, Punkte, Binde-/Unterstriche und
+// Akzente: das Konto heisst z.B. "victoria.leclerc" oder "VictoriaLeclerc",
+// im Besitzer-Feld steht aber "Victoria Leclerc" (Bugreport: Mehrfach-
+// Loeschen meldete "keins von dir", obwohl nach dem eigenen Namen
+// gefiltert war). Admin-Konten duerfen alle Pferde loeschen.
+function normalizeOwnerName(name) {
+  return (name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s._-]+/g, '');
+}
+
 function canDeleteHorse(horse) {
   if (currentIsAdmin) return true;
-  return (horse.owner || '').trim().toLowerCase() === (currentIdentity || '').toLowerCase();
+  const identity = normalizeOwnerName(currentIdentity);
+  return !!identity && normalizeOwnerName(horse.owner) === identity;
 }
 
 function onBulkDelete() {
@@ -2727,7 +2736,11 @@ function onBulkDelete() {
   const own = rows.filter(canDeleteHorse);
   const foreignCount = rows.length - own.length;
   if (!own.length) {
-    alert('Du kannst nur deine eigenen Pferde löschen – unter den ausgewählten ist keins von dir.');
+    // Konto- und Besitzername nennen, damit bei einem echten Namens-
+    // Unterschied (z.B. Konto "victoria" vs. Besitzer "Victoria Leclerc")
+    // erkennbar ist, woran es liegt.
+    const owners = [...new Set(rows.map((r) => r.owner || '(ohne Besitzer)'))].slice(0, 5).join(', ');
+    alert(`Du kannst nur deine eigenen Pferde löschen – unter den ausgewählten ist keins von dir.\nDein Konto: ${currentIdentity}\nBesitzer der ausgewählten Pferde: ${owners}`);
     return;
   }
   openDeleteModal(own, foreignCount);
