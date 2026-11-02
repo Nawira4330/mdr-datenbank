@@ -2265,6 +2265,39 @@ function onBulkOwnerChange() {
   document.querySelector('#bulk-owner-modal').hidden = false;
 }
 
+// Sammel-Änderungen (Besitzer/Schlagwörter für mehrere Pferde): früher
+// feuerten alle Updates GLEICHZEITIG (Promise.all) - bei vielen markierten
+// Pferden liefen einzelne Anfragen deshalb in Zeitüberschreitungen bzw.
+// Verbindungsfehler ("5 von 18 konnten nicht aktualisiert werden"), obwohl
+// die Pferde selbst in Ordnung waren (jedes Update löst in der Datenbank
+// zusätzlich noch den Referenzdaten-Trigger aus). Jetzt in kleinen
+// Gruppen nacheinander, Fehlschläge werden einmal automatisch wiederholt.
+// Gibt die Pferde zurück, bei denen es auch danach nicht geklappt hat.
+const BULK_UPDATE_CONCURRENCY = 3;
+async function bulkUpdateHorses(rows, buildPayload) {
+  const attempt = async (row) => {
+    const { error } = await supabaseClient.from('horses').update(buildPayload(row)).eq('id', row.id);
+    return error ? { row, error } : null;
+  };
+  const runAll = async (list) => {
+    const failed = [];
+    for (let i = 0; i < list.length; i += BULK_UPDATE_CONCURRENCY) {
+      const results = await Promise.all(list.slice(i, i + BULK_UPDATE_CONCURRENCY).map(attempt));
+      failed.push(...results.filter(Boolean));
+    }
+    return failed;
+  };
+  const firstFailed = await runAll(rows);
+  if (!firstFailed.length) return [];
+  return runAll(firstFailed.map((f) => f.row));
+}
+
+function alertBulkUpdateFailures(failed, total) {
+  if (!failed.length) return;
+  const names = failed.slice(0, 10).map((f) => f.row.name || '(ohne Name)').join(', ');
+  alert(`${failed.length} von ${total} Pferden konnten nicht aktualisiert werden (auch nach erneutem Versuch): ${names}${failed.length > 10 ? ' …' : ''}\nGrund: ${failed[0].error.message}`);
+}
+
 async function confirmBulkOwnerChange() {
   const newOwner = document.querySelector('#bulk-owner-name').value.trim();
   const tagsToRemove = [...document.querySelectorAll('#bulk-owner-tags-checkboxes [data-bulk-owner-tag-checkbox]:checked')]
@@ -2273,15 +2306,12 @@ async function confirmBulkOwnerChange() {
   if (!newOwner) return;
 
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
-  const results = await Promise.all(
-    rows.map((row) => {
-      const payload = { owner: newOwner };
-      if (tagsToRemove.length) payload.tags = (row.tags || []).filter((t) => !tagsToRemove.includes(t.label));
-      return supabaseClient.from('horses').update(payload).eq('id', row.id);
-    }),
-  );
-  const failed = results.filter((r) => r.error);
-  if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].error.message}`);
+  const failed = await bulkUpdateHorses(rows, (row) => {
+    const payload = { owner: newOwner };
+    if (tagsToRemove.length) payload.tags = (row.tags || []).filter((t) => !tagsToRemove.includes(t.label));
+    return payload;
+  });
+  alertBulkUpdateFailures(failed, rows.length);
   await loadHorses();
 }
 
@@ -2677,7 +2707,7 @@ async function confirmBulkTag() {
 
   const chosenLabels = chosen.map((c) => c.label);
   const rows = lastRenderedRows.filter((r) => selectedIds.has(r.id));
-  const results = await Promise.all(rows.map((row) => {
+  const failed = await bulkUpdateHorses(rows, (row) => {
     let newTags;
     if (bulkTagMode === 'remove') {
       newTags = (row.tags || []).filter((t) => !chosenLabels.includes(t.label));
@@ -2685,10 +2715,9 @@ async function confirmBulkTag() {
       const existingLabels = new Set((row.tags || []).map((t) => t.label));
       newTags = [...(row.tags || []), ...chosen.filter((c) => !existingLabels.has(c.label))];
     }
-    return supabaseClient.from('horses').update({ tags: newTags }).eq('id', row.id);
-  }));
-  const failed = results.filter((r) => r.error);
-  if (failed.length) alert(`${failed.length} von ${rows.length} Pferden konnten nicht aktualisiert werden: ${failed[0].error.message}`);
+    return { tags: newTags };
+  });
+  alertBulkUpdateFailures(failed, rows.length);
   await loadHorses();
 }
 
