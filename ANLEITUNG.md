@@ -138,8 +138,8 @@ ist):
   Bild wirklich geprüft wurde. Spätestens wenn das Pferd 4 wird,
   verschwindet er ohnehin. War ein Pferd bei der Ersteingabe bereits über
   3 Jahre alt, erscheint der Hinweis für dieses Pferd gar nicht erst.
-- **„X Pferd(e) über 25 Jahre – automatisch mit „GBH“ markiert“** –
-  Pferde über 25 Jahren bekommen automatisch das Schlagwort „GBH“
+- **„X Pferd(e) ab 25 Jahren – automatisch mit „GBH“ markiert“** –
+  Pferde ab 25 Jahren bekommen automatisch das Schlagwort „GBH“
   zugewiesen (falls noch nicht vorhanden), dieser Kasten listet sie zur
   Bestätigung auf.
 
