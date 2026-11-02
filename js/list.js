@@ -711,7 +711,7 @@ function showPedigreeErrorNotice(session) {
 // - Pferde, die genau 3 Spieljahre alt sind (ihr viertes Spieljahr läuft
 //   gerade) - im Spiel ändert sich das Pferdebild meist mit 3 Jahren,
 //   der Hinweis verschwindet von selbst wieder, sobald das Pferd 4 wird.
-// - Pferde über 25 Spieljahre - bekommen automatisch das Schlagwort
+// - Pferde ab 25 Spieljahren - bekommen automatisch das Schlagwort
 //   "GBH" zugewiesen, falls noch nicht vorhanden, und werden hier als
 //   Bestätigung aufgelistet.
 async function checkAgeNotices(session) {
@@ -767,7 +767,7 @@ async function checkAgeNotices(session) {
     '<p>Im Spiel ändert sich das Pferdebild meist mit 3 Jahren - bitte prüfen und ggf. aktualisieren:</p>',
   );
 
-  const over25 = withAge.filter((h) => h.age.years > 25);
+  const over25 = withAge.filter((h) => h.age.years >= 25);
   for (const h of over25) {
     if (!(h.tags || []).some((t) => t.label === 'GBH')) {
       const merged = [...(h.tags || []), { label: 'GBH' }];
@@ -779,14 +779,14 @@ async function checkAgeNotices(session) {
     'age25',
     '#age25-notice',
     over25,
-    `${over25.length} Pferd${over25.length === 1 ? '' : 'e'} über 25 Jahre - automatisch mit „GBH" markiert`,
-    '<p>Pferde über 25 Jahren gelten als zu alt für Zucht/Turnier und wurden deshalb automatisch mit dem Schlagwort „GBH" (Gnadenbrot) markiert:</p>',
+    `${over25.length} Pferd${over25.length === 1 ? '' : 'e'} ab 25 Jahren - automatisch mit „GBH" markiert`,
+    '<p>Pferde ab 25 Jahren gelten als zu alt für Zucht/Turnier und wurden deshalb automatisch mit dem Schlagwort „GBH" (Gnadenbrot) markiert:</p>',
   );
 }
 
 // Zeigt einen der 3 einzeln abschaltbaren Alters-Hinweise nur, wenn er
 // nicht in den Einstellungen ausgeblendet wurde (siehe hiddenNotices) -
-// die zugrunde liegende Automatik (z.B. GBH-Vergabe bei "Über 25 Jahre")
+// die zugrunde liegende Automatik (z.B. GBH-Vergabe bei "Ab 25 Jahren")
 // läuft unabhängig davon immer, betroffen ist nur die Anzeige.
 function renderAgeNoticeIfEnabled(key, selector, horses, summaryText, introHtml, confirmable) {
   if (hiddenNotices.has(key)) {
