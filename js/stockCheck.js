@@ -34,6 +34,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 let currentMissingInGame = [];
 const stockCheckMissingSelected = new Set();
 
+// Pferde, die im Spiel beim eigenen Konto stehen, in der Datenbank aber noch
+// unter einem ANDEREN Besitzer (z.B. frisch gekauft, Besitzerwechsel noch
+// nicht nachgezogen) - Mehrfachauswahl + "Auf mich übertragen" (Nutzer-
+// Bugreport: bei vorhandenen, gekauften Pferden gab es keine Aktion).
+let currentElsewhere = [];
+const stockCheckElsewhereSelected = new Set();
+let stockCheckOwnIdentity = '';
+
 // Rassen-Auswahl richtet sich nach "Sichtbare Rassen in der Übersicht"
 // oben auf derselben Seite (user_settings.preferred_breeds) statt jede
 // Rasse aus der Datenbank anzubieten (Nutzerwunsch) - ist dort nichts
@@ -210,6 +218,53 @@ function missingInGameSectionHtml() {
   `;
 }
 
+// Abschnitt "steht in der Datenbank bei einem anderen Besitzer" mit
+// Mehrfachauswahl und Übertragen auf das eigene Konto.
+function elsewhereSectionHtml() {
+  const rows = currentElsewhere;
+  if (!rows.length) return '';
+  const allChecked = rows.every((h) => stockCheckElsewhereSelected.has(h.id));
+  const list = rows.map((h) => `
+        <li>
+          <label style="display:flex; align-items:center; gap:0.4rem; font-weight:normal;">
+            <input type="checkbox" data-stock-elsewhere-select="${stockCheckEscapeHtml(h.id)}" style="width:auto;"${stockCheckElsewhereSelected.has(h.id) ? ' checked' : ''} />
+            ${stockCheckEscapeHtml(h.name || '(ohne Name)')}${h.breed ? ` (${stockCheckEscapeHtml(h.breed)})` : ''} – aktuell bei „${stockCheckEscapeHtml(h.owner || '(ohne Besitzer)')}"
+          </label>
+        </li>`).join('');
+  return `
+    <p class="group-heading">🔁 Im Spiel bei dir, in der Datenbank aber noch bei einem anderen Besitzer</p>
+    <p class="small muted">Vermutlich gekauft oder übernommen – über die Kästchen auswählen und auf dein Konto („${stockCheckEscapeHtml(stockCheckOwnIdentity)}") übertragen.</p>
+    <div class="form-actions" style="margin: 0.4rem 0;">
+      <label style="display:flex; align-items:center; gap:0.4rem; font-weight:normal;">
+        <input type="checkbox" id="stock-check-elsewhere-select-all" style="width:auto;"${allChecked ? ' checked' : ''} /> Alle auswählen
+      </label>
+      <button type="button" id="stock-check-elsewhere-take-btn" class="small"${stockCheckElsewhereSelected.size ? '' : ' disabled'}>Auf mich übertragen</button>
+      <span class="small muted">${stockCheckElsewhereSelected.size} ausgewählt</span>
+    </div>
+    <ul class="stock-check-missing-list">${list}</ul>`;
+}
+
+function renderElsewhereSection() {
+  document.getElementById('stock-check-elsewhere-section').innerHTML = elsewhereSectionHtml();
+}
+
+async function confirmStockCheckTakeOver() {
+  const rows = currentElsewhere.filter((h) => stockCheckElsewhereSelected.has(h.id));
+  if (!rows.length) return;
+  const names = rows.slice(0, 10).map((h) => `${h.name} (${h.owner || 'ohne Besitzer'})`).join('\n');
+  const more = rows.length > 10 ? `\n… und ${rows.length - 10} weitere` : '';
+  if (!confirm(`${rows.length} Pferd${rows.length === 1 ? '' : 'e'} auf „${stockCheckOwnIdentity}" übertragen?\n\n${names}${more}`)) return;
+  const ids = rows.map((h) => h.id);
+  const { error } = await supabaseClient.from('horses').update({ owner: stockCheckOwnIdentity }).in('id', ids);
+  if (error) {
+    alert('Besitzerwechsel fehlgeschlagen: ' + error.message);
+    return;
+  }
+  currentElsewhere = currentElsewhere.filter((h) => !ids.includes(h.id));
+  ids.forEach((id) => stockCheckElsewhereSelected.delete(id));
+  renderElsewhereSection();
+}
+
 function renderMissingInGameSection() {
   document.getElementById('stock-check-missing-section').innerHTML = missingInGameSectionHtml();
 }
@@ -225,6 +280,17 @@ function wireStockCheckMissingActions() {
       if (e.target.checked) stockCheckMissingSelected.add(id);
       else stockCheckMissingSelected.delete(id);
       renderMissingInGameSection();
+    } else if (e.target.matches('[data-stock-elsewhere-select]')) {
+      const id = e.target.dataset.stockElsewhereSelect;
+      if (e.target.checked) stockCheckElsewhereSelected.add(id);
+      else stockCheckElsewhereSelected.delete(id);
+      renderElsewhereSection();
+    } else if (e.target.id === 'stock-check-elsewhere-select-all') {
+      currentElsewhere.forEach((h) => {
+        if (e.target.checked) stockCheckElsewhereSelected.add(h.id);
+        else stockCheckElsewhereSelected.delete(h.id);
+      });
+      renderElsewhereSection();
     } else if (e.target.id === 'stock-check-missing-select-all') {
       currentMissingInGame.forEach((h) => {
         if (e.target.checked) stockCheckMissingSelected.add(h.id);
@@ -237,6 +303,7 @@ function wireStockCheckMissingActions() {
   document.addEventListener('click', (e) => {
     if (e.target.id === 'stock-check-missing-delete-btn') openStockCheckDeleteModal();
     else if (e.target.id === 'stock-check-missing-owner-btn') openStockCheckOwnerModal();
+    else if (e.target.id === 'stock-check-elsewhere-take-btn') confirmStockCheckTakeOver();
   });
 
   document.getElementById('delete-modal-cancel').addEventListener('click', () => {
@@ -365,7 +432,7 @@ async function runStockCheck(ownIdentity) {
     .filter((e) => !ownSet.has(e.name.toLowerCase()))
     .map((e) => {
       const elsewhere = (byNameLower.get(e.name.toLowerCase()) || []).find((h) => !isOwn(h));
-      return { ...e, elsewhereOwner: elsewhere ? elsewhere.owner : null };
+      return { ...e, elsewhereOwner: elsewhere ? elsewhere.owner : null, elsewhereId: elsewhere ? elsewhere.id : null };
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
@@ -377,17 +444,26 @@ async function runStockCheck(ownIdentity) {
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
   stockCheckMissingSelected.clear();
 
+  stockCheckOwnIdentity = ownIdentity;
+  currentElsewhere = missingInDb
+    .filter((e) => e.elsewhereId)
+    .map((e) => ({ id: e.elsewhereId, name: e.name, breed: e.breed, owner: e.elsewhereOwner }));
+  stockCheckElsewhereSelected.clear();
+
   const list = (items, empty) => items.length ? `<ul>${items.join('')}</ul>` : `<p class="small muted">${empty}</p>`;
 
-  const missingInDbHtml = missingInDb.map((e) => e.elsewhereOwner
-    ? `<li>${stockCheckEscapeHtml(e.name)} (${stockCheckEscapeHtml(e.breed)}) – ⚠️ steht bereits unter Besitzer „${stockCheckEscapeHtml(e.elsewhereOwner)}" in der Datenbank</li>`
-    : `<li>${stockCheckEscapeHtml(e.name)} (${stockCheckEscapeHtml(e.breed)})</li>`);
+  // Pferde, die schon bei einem anderen Besitzer in der Datenbank stehen,
+  // erscheinen unten im eigenen Übertragen-Abschnitt (elsewhereSectionHtml).
+  const missingInDbHtml = missingInDb
+    .filter((e) => !e.elsewhereId)
+    .map((e) => `<li>${stockCheckEscapeHtml(e.name)} (${stockCheckEscapeHtml(e.breed)})</li>`);
 
   resultEl.innerHTML = `
     ${duplicateWarningHtml}
     <p class="small muted">${entries.length} von ${allEntries.length} erkannten Pferden berücksichtigt (Rassen: ${[...selectedBreeds].map(stockCheckEscapeHtml).join(', ')}), ${ownHorses.length} eigene Pferde in der Datenbank (Besitzer „${stockCheckEscapeHtml(ownIdentity)}").</p>
     <p class="group-heading">🆕 Im Spiel vorhanden, aber (noch) nicht bei deinen Pferden in der Datenbank</p>
     ${list(missingInDbHtml, 'Keine – alles eingetragen.')}
+    <div id="stock-check-elsewhere-section">${elsewhereSectionHtml()}</div>
     <div id="stock-check-missing-section">${missingInGameSectionHtml()}</div>
   `;
 }
